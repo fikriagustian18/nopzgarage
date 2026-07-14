@@ -22,6 +22,7 @@ import {
   Book,
   ImagePlus,
   Database,
+  CreditCard,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -46,6 +47,11 @@ export function AdminSidebar() {
       href: "/admin/employees",
       label: "Karyawan",
       icon: Users,
+    },
+    {
+      href: "/admin/payroll",
+      label: "Gaji & Payroll",
+      icon: CreditCard,
     },
     {
       href: "/admin/inventory",

@@ -19,6 +19,7 @@ import {
   Globe,
   User,
   Database,
+  CreditCard,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -51,6 +52,11 @@ export function MobileSidebar() {
       href: "/admin/employees",
       label: "Karyawan",
       icon: Users,
+    },
+    {
+      href: "/admin/payroll",
+      label: "Gaji & Payroll",
+      icon: CreditCard,
     },
     {
       href: "/admin/inventory",
