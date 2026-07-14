@@ -1,6 +1,7 @@
 'use server';
 
 import { prisma } from '@/lib/prisma';
+import { startOfDay } from 'date-fns';
 
 /**
  * Mencari status order berdasarkan plat nomor kendaraan (Fitur Tracking Public).
@@ -56,14 +57,31 @@ export async function searchOrderByPlate(plateNumber: string) {
       };
     }
 
-    // Sensor nama customer untuk privacy (hanya huruf pertama)
-    const sanitizedOrders = orders.map(order => ({
-      ...order,
-      custName: order.custName.charAt(0) + '***',
-      totalPrice: Number(order.totalPrice), // Convert Decimal to number
-      totalPaid: Number(order.totalPaid),   // Convert Decimal to number
-      createdAt: order.createdAt.toISOString(), // Convert Date to string
-      updatedAt: order.updatedAt.toISOString()  // Convert Date to string
+    // Sensor nama customer untuk privacy (hanya huruf pertama) dan hitung queuePosition
+    const sanitizedOrders = await Promise.all(orders.map(async (order) => {
+      let queuePosition = null;
+      if (order.status === 'QUEUE') {
+        const start = startOfDay(order.createdAt);
+        queuePosition = await prisma.order.count({
+          where: {
+            status: 'QUEUE',
+            createdAt: {
+              gte: start,
+              lte: order.createdAt
+            }
+          }
+        });
+      }
+
+      return {
+        ...order,
+        custName: order.custName.charAt(0) + '***',
+        totalPrice: Number(order.totalPrice), // Convert Decimal to number
+        totalPaid: Number(order.totalPaid),   // Convert Decimal to number
+        createdAt: order.createdAt.toISOString(), // Convert Date to string
+        updatedAt: order.updatedAt.toISOString(),  // Convert Date to string
+        queuePosition
+      };
     }));
 
     return { success: true, orders: sanitizedOrders };
@@ -73,3 +91,4 @@ export async function searchOrderByPlate(plateNumber: string) {
     return { success: false, error: 'Terjadi kesalahan saat mencari data. Silakan coba lagi.' };
   }
 }
+

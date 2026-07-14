@@ -6,12 +6,15 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Search, Gauge, ArrowLeft, Loader2, AlertCircle, CheckCircle, CheckCircle2, Clock, Wrench, Settings } from "lucide-react";
+import { Search, Gauge, ArrowLeft, Loader2, AlertCircle, CheckCircle, CheckCircle2, Clock, Wrench, Settings, Printer } from "lucide-react";
 import Link from "next/link";
 import { format } from "date-fns";
 import { id } from "date-fns/locale";
 
 import { ThemeToggle } from "@/components/ThemeToggle"; // Import ThemeToggle
+import { ExportButton } from "@/components/export/ExportButton";
+import { exportInvoice } from "@/lib/export/reports/invoice-export";
+import type { InvoiceExport } from "@/lib/export/types";
 
 export default function StatusPage() {
   const [plateNumber, setPlateNumber] = useState("");
@@ -24,7 +27,7 @@ export default function StatusPage() {
     setError("");
     setOrders([]);
     setLoading(true);
-
+ 
     const result = await searchOrderByPlate(plateNumber);
     
     setLoading(false);
@@ -143,7 +146,7 @@ export default function StatusPage() {
                                                 <p className="text-sm text-muted-foreground">Plat: {order.plateNumber}</p>
                                                 <p className="text-xs text-muted-foreground mt-1">Customer: {order.custName}</p>
                                             </div>
-                                            <div className="text-right space-y-2">
+                                            <div className="text-right space-y-2 flex flex-col items-end">
                                                 <Badge className={`${statusInfo.color} border`}>
                                                     <StatusIcon className="h-3 w-3 mr-1" />
                                                     {statusInfo.label}
@@ -151,6 +154,11 @@ export default function StatusPage() {
                                                 <Badge variant="outline" className={paymentInfo.color}>
                                                     {paymentInfo.label}
                                                 </Badge>
+                                                {order.status === 'QUEUE' && order.queuePosition !== null && (
+                                                    <div className="mt-2 text-xs font-bold text-yellow-600 bg-yellow-50 dark:bg-yellow-950/30 px-2.5 py-1 rounded-full border border-yellow-200 dark:border-yellow-900/50">
+                                                        Nomor Antrian: Q-{String(order.queuePosition).padStart(2, '0')}
+                                                    </div>
+                                                )}
                                             </div>
                                         </div>
 
@@ -240,12 +248,45 @@ export default function StatusPage() {
                                                 </span>
                                             </div>
                                             {order.paymentStatus === 'PAID' && (
-                                                <div className="text-center pt-2">
+                                                <div className="text-center pt-2 pb-2">
                                                     <Badge className="bg-green-600 text-white flex items-center gap-1 w-fit mx-auto">
                                                         <CheckCircle2 className="h-3 w-3" /> LUNAS
                                                     </Badge>
                                                 </div>
                                             )}
+
+                                            {/* Action Buttons: Print Estimate / Receipt */}
+                                            <div className="pt-4 flex justify-end border-t border-border/50">
+                                                <ExportButton
+                                                    title={order.paymentStatus === 'PAID' ? `Kuitansi_${order.id.slice(-6)}` : `Estimasi_${order.id.slice(-6)}`}
+                                                    label={order.paymentStatus === 'PAID' ? "Cetak Bukti Pembayaran" : "Cetak Estimasi Biaya"}
+                                                    variant="outline"
+                                                    size="sm"
+                                                    icon={<Printer className="h-4 w-4" />}
+                                                    onExport={async (exportFormat, orientation) => {
+                                                        const invoiceData: InvoiceExport = {
+                                                            invoiceNumber: `INV-${order.id.slice(-6).toUpperCase()}`,
+                                                            invoiceDate: new Date(order.createdAt),
+                                                            dueDate: new Date(new Date(order.createdAt).getTime() + 7 * 24 * 60 * 60 * 1000),
+                                                            customerName: order.custName,
+                                                            customerAddress: "-",
+                                                            items: items.map((item: any) => ({
+                                                                description: item.name,
+                                                                quantity: item.qty,
+                                                                unitPrice: item.price,
+                                                                total: item.qty * item.price
+                                                            })),
+                                                            subtotal: order.totalPrice,
+                                                            tax: 0,
+                                                            discount: 0,
+                                                            total: order.totalPrice,
+                                                            paymentStatus: order.paymentStatus === 'PAID' ? 'LUNAS' : order.paymentStatus === 'PARTIAL' ? 'DP' : 'BELUM BAYAR',
+                                                            notes: `Kendaraan: ${order.vehicle} (${order.plateNumber || '-'}) \nKeluhan: ${order.complaint}`
+                                                        };
+                                                        return await exportInvoice(invoiceData, exportFormat, orientation);
+                                                    }}
+                                                />
+                                            </div>
                                         </div>
                                     </CardContent>
                                 </Card>

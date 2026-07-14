@@ -82,7 +82,7 @@ export function MobileSidebar() {
   const userRole = session?.user?.role;
   const filteredMenuItems = menuItems.filter((item) => {
     if (userRole === "ADMIN") {
-      return item.href === "/admin/orders" || item.href === "/admin/inventory";
+      return item.href === "/admin/orders" || item.href === "/admin/inventory" || item.href === "/admin";
     }
     if (userRole === "OWNER") {
       return item.href !== "/admin/orders";

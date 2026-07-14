@@ -2,6 +2,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useSession } from "next-auth/react";
 import { RoleGuard } from "@/components/RoleGuard";
 import { getDashboardStats } from "@/app/actions/dashboard";
 import { getEmployees } from "@/app/actions/employees";
@@ -59,6 +60,8 @@ import {
 import { getBankColor } from "@/lib/constants/banks";
 
 export default function AdminDashboard() {
+  const { data: session } = useSession();
+  const userRole = session?.user?.role;
   const [stats, setStats] = useState<any>(null);
   const [employees, setEmployees] = useState<any[]>([]);
   const [orders, setOrders] = useState<any[]>([]);

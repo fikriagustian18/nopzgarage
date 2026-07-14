@@ -27,6 +27,8 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { signOut } from "next-auth/react";
+import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 
 interface EmployeeDashboardClientProps {
   employee: any;
@@ -35,6 +37,26 @@ interface EmployeeDashboardClientProps {
 
 export function EmployeeDashboardClient({ employee, user }: EmployeeDashboardClientProps) {
   const [activeTab, setActiveTab] = useState("overview");
+  const router = useRouter();
+  const [updatingId, setUpdatingId] = useState<string | null>(null);
+
+  const handleUpdateStatus = async (orderId: string, newStatus: string) => {
+    setUpdatingId(orderId);
+    try {
+      const { updateOrderStatus } = await import("@/app/actions/orders");
+      const res = await updateOrderStatus(orderId, newStatus as any);
+      if (res.success) {
+        toast.success("Status berhasil diperbarui!");
+        router.refresh();
+      } else {
+        toast.error("Gagal memperbarui status: " + res.error);
+      }
+    } catch (err) {
+      toast.error("Terjadi kesalahan: " + err.message);
+    } finally {
+      setUpdatingId(null);
+    }
+  };
 
   if (!employee) {
     return (
@@ -198,6 +220,22 @@ export function EmployeeDashboardClient({ employee, user }: EmployeeDashboardCli
                                   </li>
                                ))}
                             </ul>
+                            {employee.activeOrder.status === 'IN_PROGRESS' && (
+                               <div className="mt-4 pt-4 border-t flex justify-end">
+                                  <Button 
+                                     onClick={() => handleUpdateStatus(employee.activeOrder.id, 'READY')}
+                                     disabled={updatingId === employee.activeOrder.id}
+                                     className="bg-green-600 hover:bg-green-700 text-white font-bold gap-2 w-full md:w-auto"
+                                  >
+                                     {updatingId === employee.activeOrder.id ? (
+                                        <Loader2 className="h-4 w-4 animate-spin" />
+                                     ) : (
+                                        <CheckCircle className="h-4 w-4" />
+                                     )}
+                                     Selesaikan Pekerjaan
+                                  </Button>
+                               </div>
+                            )}
                          </div>
                       </div>
                    </CardContent>
@@ -246,6 +284,21 @@ export function EmployeeDashboardClient({ employee, user }: EmployeeDashboardCli
                                       </ul>
                                   ) : "Detail items tidak tersedia"}
                                </div>
+                                <div className="flex justify-end mt-3 pt-2 border-t border-dashed">
+                                   <Button 
+                                      size="sm"
+                                      onClick={() => handleUpdateStatus(order.id, 'IN_PROGRESS')}
+                                      disabled={updatingId !== null}
+                                      className="font-semibold gap-1 w-full"
+                                   >
+                                      {updatingId === order.id ? (
+                                         <Loader2 className="h-3 w-3 animate-spin" />
+                                      ) : (
+                                         <Wrench className="h-3 w-3" />
+                                      )}
+                                      Mulai Pekerjaan
+                                   </Button>
+                                </div>
                             </CardContent>
                          </Card>
                       ))}
