@@ -29,6 +29,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
+import { RoleGuard } from "@/components/RoleGuard";
 
 // Database models and schema information for sidebar
 const DB_MODELS = [
@@ -414,7 +415,8 @@ export default function DatabaseConsolePublic() {
     : [];
 
   return (
-    <div className="flex-1 p-6 space-y-6 max-w-[1400px] mx-auto min-h-screen bg-background text-foreground">
+    <RoleGuard allowedRoles={["OWNER"]}>
+      <div className="flex-1 p-6 space-y-6 max-w-[1400px] mx-auto min-h-screen bg-background text-foreground">
       {/* Page Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
@@ -918,5 +920,6 @@ export default function DatabaseConsolePublic() {
 
       </div>
     </div>
+  </RoleGuard>
   );
 }

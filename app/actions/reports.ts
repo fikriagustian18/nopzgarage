@@ -2,6 +2,7 @@
 'use server';
 
 import { prisma } from '@/lib/prisma';
+import { auth } from '@/lib/auth';
 
 // ==================== Types ====================
 export type DateRange = {
@@ -54,6 +55,10 @@ export type IncomeStatementData = {
  */
 export async function getBalanceSheet(asOfDate?: Date) {
   try {
+    const session = await auth();
+    if (!session || session.user?.role !== 'OWNER') {
+      return { success: false, error: 'Akses ditolak: Hanya Owner yang dapat mengakses neraca.' };
+    }
     const date = asOfDate || new Date();
 
     // Ambil semua akun dan hitung saldonya
@@ -166,6 +171,10 @@ export async function getBalanceSheet(asOfDate?: Date) {
  */
 export async function getIncomeStatement(dateRange: DateRange) {
   try {
+    const session = await auth();
+    if (!session || session.user?.role !== 'OWNER') {
+      return { success: false, error: 'Akses ditolak: Hanya Owner yang dapat mengakses laporan laba rugi.' };
+    }
     const { startDate, endDate } = dateRange;
 
     // Ambil akun revenue dan expense
@@ -254,6 +263,10 @@ export async function getIncomeStatement(dateRange: DateRange) {
  */
 export async function getCashFlow(dateRange: DateRange) {
   try {
+    const session = await auth();
+    if (!session || session.user?.role !== 'OWNER') {
+      return { success: false, error: 'Akses ditolak: Hanya Owner yang dapat mengakses laporan arus kas.' };
+    }
     const { startDate, endDate } = dateRange;
 
     // Ambil semua journal items yang menyentuh akun Kas
@@ -343,6 +356,10 @@ export async function getCashFlow(dateRange: DateRange) {
  */
 export async function getDashboardSummary(dateRange: DateRange) {
   try {
+    const session = await auth();
+    if (!session || session.user?.role !== 'OWNER') {
+      return { success: false, error: 'Akses ditolak: Hanya Owner yang dapat mengakses ringkasan laporan.' };
+    }
     const { startDate, endDate } = dateRange;
 
     // Total Pendapatan

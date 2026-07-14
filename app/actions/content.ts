@@ -1,6 +1,7 @@
 "use server";
 
 import { prisma } from "@/lib/prisma";
+import { auth } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
 
 /*
@@ -45,6 +46,10 @@ export async function getContent(sectionKey: string) {
  */
 export async function updateContent(sectionKey: string, data: any) {
   try {
+    const session = await auth();
+    if (!session || session.user?.role !== 'OWNER') {
+      return { success: false, error: 'Akses ditolak: Hanya Owner yang dapat mengupdate konten website.' };
+    }
     await prisma.contentSection.upsert({
       where: { sectionKey },
       update: {

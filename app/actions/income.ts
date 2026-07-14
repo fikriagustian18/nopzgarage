@@ -1,6 +1,7 @@
 'use server';
 
 import { prisma } from '@/lib/prisma';
+import { auth } from '@/lib/auth';
 import { revalidatePath } from 'next/cache';
 import { createLog } from './logs';
 
@@ -21,6 +22,10 @@ export type CreateIncomeInput = {
  */
 export async function getIncomeCategories() {
   try {
+    const session = await auth();
+    if (!session || session.user?.role !== 'OWNER') {
+      return { success: false, error: 'Akses ditolak: Hanya Owner yang dapat mengambil kategori pemasukan.' };
+    }
     // Ambil akun yang relevan untuk pemasukan Kas:
     // 1. REVENUE (4xx) - Pendapatan Lain-lain (selain servis/part utama jika dipisah)
     // 2. EQUITY (3xx) - Tambah Modal
@@ -62,6 +67,10 @@ export async function getIncomeCategories() {
  */
 export async function createIncome(data: CreateIncomeInput) {
   try {
+    const session = await auth();
+    if (!session || session.user?.role !== 'OWNER') {
+      return { success: false, error: 'Akses ditolak: Hanya Owner yang dapat mencatat pemasukan.' };
+    }
     const { description, amount, accountId, date, reference } = data;
 
     // 1. Cari akun Kas (Debit)
@@ -137,6 +146,10 @@ export async function createIncome(data: CreateIncomeInput) {
  */
 export async function getIncomeList() {
     try {
+      const session = await auth();
+      if (!session || session.user?.role !== 'OWNER') {
+        return { success: false, error: 'Akses ditolak: Hanya Owner yang dapat mengambil daftar pemasukan.' };
+      }
         // Ambil Jurnal yang men-DEBIT KAS (101)
         // Tapi exclude pembayaran order (biasanya deskripsi "Pembayaran Order #...")
         // User minta page khusus "Pemasukan Lain-lain". Jika mau semua, filter ini bisa dilonggarkan.
@@ -192,6 +205,10 @@ export async function getIncomeList() {
  */
 export async function deleteIncome(journalId: string) {
     try {
+      const session = await auth();
+      if (!session || session.user?.role !== 'OWNER') {
+        return { success: false, error: 'Akses ditolak: Hanya Owner yang dapat menghapus pemasukan.' };
+      }
         await prisma.journalEntry.delete({
             where: { id: journalId }
         });

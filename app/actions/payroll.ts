@@ -2,7 +2,8 @@
 'use server';
 
 import { prisma } from '@/lib/prisma';
-import { SalaryType } from '@prisma/client';
+import { auth } from '@/lib/auth';
+import { PaymentStatus } from '@prisma/client';
 import { revalidatePath } from 'next/cache';
 
 // ==================== Types ====================
@@ -121,6 +122,10 @@ function serializePayroll(payroll: any) {
  */
 export async function generatePayroll(data: GeneratePayrollInput) {
   try {
+    const session = await auth();
+    if (!session || session.user?.role !== 'OWNER') {
+      return { success: false, error: 'Akses ditolak: Hanya Owner yang dapat men-generate payroll.' };
+    }
     // 1. Ambil data employee
     const employee = await prisma.employee.findUnique({
       where: { id: data.employeeId },
@@ -231,11 +236,15 @@ function calculateWorkDays(startDate: Date, endDate: Date): number {
  */
 export async function getPayrolls(filters?: {
   employeeId?: string;
-  status?: 'UNPAID' | 'PARTIAL' | 'PAID';
+  status?: PaymentStatus;
   dateFrom?: Date;
   dateTo?: Date;
 }) {
   try {
+    const session = await auth();
+    if (!session || session.user?.role !== 'OWNER') {
+      return { success: false, error: 'Akses ditolak: Hanya Owner yang dapat mengakses daftar payroll.' };
+    }
     const payrolls = await prisma.payroll.findMany({
       where: {
         ...(filters?.employeeId && { employeeId: filters.employeeId }),
@@ -283,6 +292,10 @@ export async function getPayrolls(filters?: {
  */
 export async function getPayrollDetail(payrollId: string) {
   try {
+    const session = await auth();
+    if (!session || session.user?.role !== 'OWNER') {
+      return { success: false, error: 'Akses ditolak: Hanya Owner yang dapat melihat detail payroll.' };
+    }
     const payroll = await prisma.payroll.findUnique({
       where: { id: payrollId },
       include: {
@@ -345,6 +358,10 @@ export async function updatePayroll(
   }
 ) {
   try {
+    const session = await auth();
+    if (!session || session.user?.role !== 'OWNER') {
+      return { success: false, error: 'Akses ditolak: Hanya Owner yang dapat mengupdate payroll.' };
+    }
     const payroll = await prisma.payroll.findUnique({
       where: { id: payrollId },
     });
@@ -399,6 +416,10 @@ export async function updatePayroll(
  */
 export async function deletePayroll(payrollId: string) {
   try {
+    const session = await auth();
+    if (!session || session.user?.role !== 'OWNER') {
+      return { success: false, error: 'Akses ditolak: Hanya Owner yang dapat menghapus payroll.' };
+    }
     // Cek apakah sudah ada pembayaran
     const payroll = await prisma.payroll.findUnique({
       where: { id: payrollId },
@@ -442,6 +463,10 @@ export async function deletePayroll(payrollId: string) {
  */
 export async function getEmployeeSummary(employeeId: string) {
   try {
+    const session = await auth();
+    if (!session || session.user?.role !== 'OWNER') {
+      return { success: false, error: 'Akses ditolak: Hanya Owner yang dapat mengakses summary karyawan.' };
+    }
     const employee = await prisma.employee.findUnique({
       where: { id: employeeId },
       include: {
@@ -520,6 +545,10 @@ export async function bulkGeneratePayroll(
   endDate: Date
 ) {
   try {
+    const session = await auth();
+    if (!session || session.user?.role !== 'OWNER') {
+      return { success: false, error: 'Akses ditolak: Hanya Owner yang dapat melakukan bulk generate payroll.' };
+    }
     const employees = await prisma.employee.findMany({
       where: {
         isActive: true,

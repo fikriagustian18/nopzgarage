@@ -86,7 +86,7 @@ export async function createMediaItem(data: {
   displayOrder?: number;
 }) {
   const session = await auth();
-  if (!session || !["ADMIN", "OWNER"].includes(session.user.role)) {
+  if (!session || session.user.role !== "OWNER") {
     throw new Error("Unauthorized");
   }
 
@@ -134,7 +134,7 @@ export async function updateMediaItem(
   }
 ) {
   const session = await auth();
-  if (!session || !["ADMIN", "OWNER"].includes(session.user.role)) {
+  if (!session || session.user.role !== "OWNER") {
     throw new Error("Unauthorized");
   }
 
@@ -163,7 +163,7 @@ export async function updateMediaItem(
  */
 export async function deleteMediaItem(id: string) {
   const session = await auth();
-  if (!session || !["ADMIN", "OWNER"].includes(session.user.role)) {
+  if (!session || session.user.role !== "OWNER") {
     throw new Error("Unauthorized");
   }
 
@@ -191,7 +191,7 @@ export async function deleteMediaItem(id: string) {
  */
 export async function reorderMediaItems(items: { id: string; displayOrder: number }[]) {
   const session = await auth();
-  if (!session || !["ADMIN", "OWNER"].includes(session.user.role)) {
+  if (!session || session.user.role !== "OWNER") {
     throw new Error("Unauthorized");
   }
 

@@ -1,6 +1,7 @@
 'use server';
 
 import { prisma } from '@/lib/prisma';
+import { auth } from '@/lib/auth';
 
 const toNumber = (val: any) => {
   if (!val) return 0;
@@ -24,6 +25,10 @@ const toNumber = (val: any) => {
  */
 export async function getFinancialReports() {
   try {
+    const session = await auth();
+    if (!session || session.user?.role !== 'OWNER') {
+      return { success: false, error: 'Akses ditolak: Hanya Owner yang dapat melihat laporan keuangan.' };
+    }
     // Ambil semua akun beserta transaksi jurnalnya
     const accounts = await prisma.account.findMany({
       include: {
@@ -120,6 +125,10 @@ export async function getFinancialReports() {
  */
 export async function getGeneralLedger() {
   try {
+    const session = await auth();
+    if (!session || session.user?.role !== 'OWNER') {
+      return { success: false, error: 'Akses ditolak: Hanya Owner yang dapat mengakses jurnal umum.' };
+    }
     const journals = await prisma.journalEntry.findMany({
       include: {
         items: {

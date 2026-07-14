@@ -41,15 +41,14 @@ function serializeResult(obj: any): any {
 }
 
 /**
- * Asserts that the current user has ADMIN or OWNER privileges.
+ * Asserts that the current user has OWNER privileges.
  */
-async function assertAdmin() {
-  // const session = await auth();
-  // if (!session || !["ADMIN", "OWNER"].includes(session.user?.role || "")) {
-  //   throw new Error("Unauthorized: Akses ditolak.");
-  // }
-  // return session;
-  return null;
+async function assertOwner() {
+  const session = await auth();
+  if (!session || session.user?.role !== "OWNER") {
+    throw new Error("Unauthorized: Akses ditolak. Hanya Owner yang diizinkan mengakses konsol database.");
+  }
+  return session;
 }
 
 /**
@@ -57,7 +56,7 @@ async function assertAdmin() {
  */
 export async function executePrismaQuery(modelName: string, operation: string, argsString: string) {
   try {
-    await assertAdmin();
+    await assertOwner();
 
     const model = (prisma as any)[modelName];
     if (!model) {
@@ -102,7 +101,7 @@ export async function executePrismaQuery(modelName: string, operation: string, a
  */
 export async function executeRawSql(sql: string) {
   try {
-    await assertAdmin();
+    await assertOwner();
 
     if (!sql.trim()) {
       return { success: false, error: "Kueri SQL tidak boleh kosong." };
@@ -132,7 +131,7 @@ export async function executeRawSql(sql: string) {
  */
 export async function executePrismaCode(code: string) {
   try {
-    await assertAdmin();
+    await assertOwner();
 
     if (!code.trim()) {
       return { success: false, error: "Kode Javascript tidak boleh kosong." };

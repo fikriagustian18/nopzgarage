@@ -13,7 +13,7 @@ import {
   Calendar,
   LogOut,
   ChevronRight,
-  ClipboardList
+  ClipboardList, Loader2
 } from "lucide-react";
 import { 
   Card, 
@@ -51,7 +51,7 @@ export function EmployeeDashboardClient({ employee, user }: EmployeeDashboardCli
       } else {
         toast.error("Gagal memperbarui status: " + res.error);
       }
-    } catch (err) {
+    } catch (err: any) {
       toast.error("Terjadi kesalahan: " + err.message);
     } finally {
       setUpdatingId(null);

@@ -2,6 +2,7 @@
 'use server';
 
 import { prisma } from '@/lib/prisma';
+import { auth } from '@/lib/auth';
 import bcrypt from 'bcryptjs';
 import { revalidatePath } from 'next/cache';
 import { createLog } from './logs';
@@ -35,6 +36,10 @@ export type UpdateUserInput = {
  */
 export async function getUsers() {
   try {
+    const session = await auth();
+    if (!session || session.user?.role !== 'OWNER') {
+      return { success: false, error: 'Akses ditolak: Hanya Owner yang dapat mengakses data user.' };
+    }
     const users = await prisma.user.findMany({
       include: {
         employee: {
@@ -80,6 +85,10 @@ export async function getUsers() {
  */
 export async function createUser(data: CreateUserInput) {
   try {
+    const session = await auth();
+    if (!session || session.user?.role !== 'OWNER') {
+      return { success: false, error: 'Akses ditolak: Hanya Owner yang dapat membuat user.' };
+    }
     // Check if email already exists
     const existingUser = await prisma.user.findUnique({
       where: { email: data.email }
@@ -146,6 +155,10 @@ export async function createUser(data: CreateUserInput) {
  */
 export async function updateUser(data: UpdateUserInput) {
   try {
+    const session = await auth();
+    if (!session || session.user?.role !== 'OWNER') {
+      return { success: false, error: 'Akses ditolak: Hanya Owner yang dapat mengupdate user.' };
+    }
     const { id, password, ...updateData } = data;
     
     let finalUpdateData: any = updateData;
@@ -199,6 +212,10 @@ export async function updateUser(data: UpdateUserInput) {
  */
 export async function resetUserPassword(userId: string, newPassword: string) {
   try {
+    const session = await auth();
+    if (!session || session.user?.role !== 'OWNER') {
+      return { success: false, error: 'Akses ditolak: Hanya Owner yang dapat mereset password.' };
+    }
     const hashedPassword = await bcrypt.hash(newPassword, 10);
 
     const user = await prisma.user.update({
@@ -279,6 +296,10 @@ export async function createForgotPasswordRequest(email: string) {
  */
 export async function getForgotPasswordRequests() {
   try {
+    const session = await auth();
+    if (!session || session.user?.role !== 'OWNER') {
+      return { success: false, error: 'Akses ditolak: Hanya Owner yang dapat mengambil permintaan lupa password.' };
+    }
     const requests = await prisma.forgotPasswordRequest.findMany({
       where: { status: 'PENDING' },
       include: {
@@ -324,6 +345,10 @@ export async function resolveForgotPasswordRequest(
   resolvedBy: string
 ) {
   try {
+    const session = await auth();
+    if (!session || session.user?.role !== 'OWNER') {
+      return { success: false, error: 'Akses ditolak: Hanya Owner yang dapat menyetujui permintaan lupa password.' };
+    }
     const request = await prisma.forgotPasswordRequest.findUnique({
       where: { id: requestId },
       include: { user: true }
@@ -378,6 +403,10 @@ export async function resolveForgotPasswordRequest(
  */
 export async function deleteUser(userId: string) {
   try {
+    const session = await auth();
+    if (!session || session.user?.role !== 'OWNER') {
+      return { success: false, error: 'Akses ditolak: Hanya Owner yang dapat menghapus user.' };
+    }
     await prisma.user.delete({
       where: { id: userId }
     });

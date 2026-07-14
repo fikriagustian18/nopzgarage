@@ -1,6 +1,7 @@
 'use server';
 
 import { prisma } from '@/lib/prisma';
+import { auth } from '@/lib/auth';
 import { revalidatePath } from 'next/cache';
 import { createLog } from './logs';
 
@@ -22,6 +23,10 @@ export type CreateExpenseInput = {
  */
 export async function getExpenseCategories() {
   try {
+    const session = await auth();
+    if (!session || session.user?.role !== 'OWNER') {
+      return { success: false, error: 'Akses ditolak: Hanya Owner yang dapat mengambil kategori pengeluaran.' };
+    }
     // Ambil akun yang relevan untuk pengeluaran:
     // 1. BEBAN (EXPENSE) - Kode 5xx, 6xx
     // 2. ASET (ASSET) - Kode 1xx (Misal beli peralatan)
@@ -65,6 +70,10 @@ export async function getExpenseCategories() {
  */
 export async function createExpense(data: CreateExpenseInput) {
   try {
+    const session = await auth();
+    if (!session || session.user?.role !== 'OWNER') {
+      return { success: false, error: 'Akses ditolak: Hanya Owner yang dapat mencatat pengeluaran.' };
+    }
     const { description, amount, accountId, date, reference } = data;
 
     // 1. Cari akun Kas (Credit)
@@ -138,6 +147,10 @@ export async function createExpense(data: CreateExpenseInput) {
  */
 export async function getExpensesList() {
     try {
+      const session = await auth();
+      if (!session || session.user?.role !== 'OWNER') {
+        return { success: false, error: 'Akses ditolak: Hanya Owner yang dapat mengambil daftar pengeluaran.' };
+      }
         // Ambil Jurnal yang meng-Kredit KAS (101) tapi BUKAN dari source Payment Gaji/Order otomatis
         // Cara paling aman: Ambil semua JournalEntry, include items.
         // Filter dimana ada kredit ke Kas, dan debit ke akun Expense/Asset.
@@ -195,8 +208,11 @@ export async function getExpensesList() {
  * @returns {Object} Pesan sukses.
  */
 export async function deleteExpense(journalId: string) {
-    // Di akuntansi, delete = reverse jurnal (Audit Trail). Tapi untuk simplifikasi app ini, kita delete record.
     try {
+      const session = await auth();
+      if (!session || session.user?.role !== 'OWNER') {
+        return { success: false, error: 'Akses ditolak: Hanya Owner yang dapat menghapus pengeluaran.' };
+      }
         await prisma.journalEntry.delete({
             where: { id: journalId }
         });

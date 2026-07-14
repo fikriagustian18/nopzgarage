@@ -1,6 +1,7 @@
 'use server';
 
 import { prisma } from '@/lib/prisma';
+import { auth } from '@/lib/auth';
 import { revalidatePath } from 'next/cache';
 import { createLog } from './logs';
 
@@ -95,6 +96,10 @@ export async function getSetting<T>(key: string, defaultValue: T): Promise<T> {
  */
 export async function updateSetting(key: string, value: any) {
   try {
+    const session = await auth();
+    if (!session || session.user?.role !== 'OWNER') {
+      return { success: false, error: 'Akses ditolak: Hanya Owner yang dapat mengupdate pengaturan.' };
+    }
     const stringValue = JSON.stringify(value);
     console.log(`[SETTINGS] Updating ${key}:`, stringValue);
     

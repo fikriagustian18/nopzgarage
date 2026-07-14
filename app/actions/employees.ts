@@ -2,6 +2,7 @@
 'use server';
 
 import { prisma } from '@/lib/prisma';
+import { auth } from '@/lib/auth';
 import { revalidatePath } from 'next/cache';
 import { createLog } from './logs';
 
@@ -322,6 +323,10 @@ function serializeEmployee(employee: any) {
  */
 export async function getEmployees(activeOnly: boolean = false) {
   try {
+    const session = await auth();
+    if (!session || !['OWNER', 'ADMIN'].includes(session.user?.role || '')) {
+      return { success: false, error: 'Akses ditolak: Hanya Owner dan Admin yang memiliki wewenang ini.' };
+    }
     const employees = await prisma.employee.findMany({
       where: activeOnly ? { isActive: true } : undefined,
       orderBy: { createdAt: 'desc' },
@@ -368,6 +373,10 @@ export async function getEmployees(activeOnly: boolean = false) {
  */
 export async function getMechanics() {
   try {
+    const session = await auth();
+    if (!session || !['OWNER', 'ADMIN'].includes(session.user?.role || '')) {
+      return { success: false, error: 'Akses ditolak: Hanya Owner dan Admin yang memiliki wewenang ini.' };
+    }
     const mechanics = await prisma.employee.findMany({
       where: { 
         isActive: true,
@@ -402,6 +411,10 @@ export async function getMechanics() {
  */
 export async function getEmployeeStats() {
     try {
+      const session = await auth();
+      if (!session || session.user?.role !== 'OWNER') {
+        return { success: false, error: 'Akses ditolak: Hanya Owner yang memiliki wewenang ini.' };
+      }
         const [fees, activeOrders, totalMechanics] = await Promise.all([
             prisma.orderFee.aggregate({
                 where: { isPaid: false },
@@ -452,6 +465,16 @@ export async function getEmployeeStats() {
  */
 export async function getEmployeeDetail(id: string) {
   try {
+    const session = await auth();
+    if (!session) {
+      return { success: false, error: 'Sesi tidak valid.' };
+    }
+    const isOwner = session.user?.role === 'OWNER';
+    const isAdmin = session.user?.role === 'ADMIN';
+    const isSelf = session.user?.employeeId === id;
+    if (!isOwner && !isAdmin && !isSelf) {
+      return { success: false, error: 'Akses ditolak: Anda tidak memiliki wewenang untuk melihat data karyawan ini.' };
+    }
     // 1. Fetch Basic Info & History in parallel with Stats
     const [employee, stats, unpaidStats] = await Promise.all([
         prisma.employee.findUnique({
@@ -593,6 +616,10 @@ export async function getEmployeeDetail(id: string) {
  */
 export async function createEmployee(data: CreateEmployeeInput) {
   try {
+    const session = await auth();
+    if (!session || session.user?.role !== 'OWNER') {
+      return { success: false, error: 'Akses ditolak: Hanya Owner yang dapat menambah karyawan.' };
+    }
     const employee = await prisma.employee.create({
       data: {
         name: data.name,
@@ -632,6 +659,10 @@ export async function createEmployee(data: CreateEmployeeInput) {
  */
 export async function updateEmployee(data: UpdateEmployeeInput) {
   try {
+    const session = await auth();
+    if (!session || session.user?.role !== 'OWNER') {
+      return { success: false, error: 'Akses ditolak: Hanya Owner yang dapat mengupdate data karyawan.' };
+    }
     const { id, ...updateData } = data;
     
     const employee = await prisma.employee.update({
@@ -667,6 +698,10 @@ export async function updateEmployee(data: UpdateEmployeeInput) {
  */
 export async function deactivateEmployee(id: string) {
   try {
+    const session = await auth();
+    if (!session || session.user?.role !== 'OWNER') {
+      return { success: false, error: 'Akses ditolak: Hanya Owner yang dapat menonaktifkan karyawan.' };
+    }
     const employee = await prisma.employee.update({
       where: { id },
       data: { isActive: false },
@@ -699,6 +734,10 @@ export async function deactivateEmployee(id: string) {
  */
 export async function reactivateEmployee(id: string) {
   try {
+    const session = await auth();
+    if (!session || session.user?.role !== 'OWNER') {
+      return { success: false, error: 'Akses ditolak: Hanya Owner yang dapat mengaktifkan kembali karyawan.' };
+    }
     const employee = await prisma.employee.update({
       where: { id },
       data: { isActive: true },

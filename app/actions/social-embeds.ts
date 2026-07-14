@@ -158,7 +158,7 @@ export async function createSocialEmbed(data: {
   displayOrder?: number;
 }) {
   const session = await auth();
-  if (!session || !["ADMIN", "OWNER"].includes(session.user.role)) {
+  if (!session || session.user.role !== "OWNER") {
     console.error("[CREATE_EMBED] Unauthorized access attempt:", session?.user?.role);
     return { success: false, error: "Unauthorized: Anda tidak memiliki akses" };
   }
@@ -217,7 +217,7 @@ export async function updateSocialEmbed(
   }
 ) {
   const session = await auth();
-  if (!session || !["ADMIN", "OWNER"].includes(session.user.role)) {
+  if (!session || session.user.role !== "OWNER") {
     console.error("[UPDATE_EMBED] Unauthorized access attempt:", session?.user?.role);
     return { success: false, error: "Unauthorized: Anda tidak memiliki akses" };
   }
@@ -249,17 +249,9 @@ export async function updateSocialEmbed(
   }
 }
 
-// Delete social embed
-// Delete social embed
-/**
- * Menghapus social embed (Hard Delete).
- * 
- * @param {string} id - ID Embed.
- * @returns {Object} Status sukses.
- */
 export async function deleteSocialEmbed(id: string) {
   const session = await auth();
-  if (!session || !["ADMIN", "OWNER"].includes(session.user.role)) {
+  if (!session || session.user.role !== "OWNER") {
     throw new Error("Unauthorized");
   }
 
@@ -288,7 +280,7 @@ export async function deleteSocialEmbed(id: string) {
  */
 export async function reorderSocialEmbeds(items: { id: string; displayOrder: number }[]) {
   const session = await auth();
-  if (!session || !["ADMIN", "OWNER"].includes(session.user.role)) {
+  if (!session || session.user.role !== "OWNER") {
     throw new Error("Unauthorized");
   }
 

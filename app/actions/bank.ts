@@ -1,6 +1,7 @@
 "use server";
 
 import { prisma } from "@/lib/prisma";
+import { auth } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
 
 // === BANK ACTIONS ===
@@ -23,6 +24,10 @@ export interface BankAccountData {
  */
 export async function getBankAccounts() {
   try {
+    const session = await auth();
+    if (!session || !['OWNER', 'ADMIN'].includes(session.user?.role || '')) {
+      return { success: false, error: 'Akses ditolak: Hanya Owner dan Admin yang dapat mengambil rekening bank.' };
+    }
     const banks = await prisma.bankAccount.findMany({
       where: { isActive: true },
       orderBy: { createdAt: "asc" },
@@ -55,6 +60,10 @@ export async function getBankAccounts() {
  */
 export async function createBankAccount(data: BankAccountData) {
   try {
+    const session = await auth();
+    if (!session || session.user?.role !== 'OWNER') {
+      return { success: false, error: 'Akses ditolak: Hanya Owner yang dapat menambah rekening bank.' };
+    }
     return await prisma.$transaction(async (tx) => {
       // 1. Create Bank Account (System Record)
       const bank = await tx.bankAccount.create({
@@ -210,6 +219,10 @@ export async function updateBankAccount(id: string, data: Partial<BankAccountDat
  */
 export async function updateBankBalance(id: string, amount: number, operation: 'add' | 'subtract') {
   try {
+    const session = await auth();
+    if (!session || session.user?.role !== 'OWNER') {
+      return { success: false, error: 'Akses ditolak: Hanya Owner yang dapat merubah saldo bank.' };
+    }
     const current = await prisma.bankAccount.findUnique({ where: { id } });
     if (!current) {
       return { success: false, error: 'Akun bank tidak ditemukan' };
@@ -251,6 +264,10 @@ export async function updateBankBalance(id: string, amount: number, operation: '
  */
 export async function deleteBankAccount(id: string) {
   try {
+    const session = await auth();
+    if (!session || session.user?.role !== 'OWNER') {
+      return { success: false, error: 'Akses ditolak: Hanya Owner yang dapat menghapus rekening bank.' };
+    }
     // Soft delete
     await prisma.bankAccount.update({
       where: { id },
@@ -273,6 +290,10 @@ export async function deleteBankAccount(id: string) {
  */
 export async function toggleBankAccount(id: string, isActive: boolean) {
     try {
+      const session = await auth();
+      if (!session || session.user?.role !== 'OWNER') {
+        return { success: false, error: 'Akses ditolak: Hanya Owner yang dapat merubah status aktif rekening bank.' };
+      }
         await prisma.bankAccount.update({
             where: { id },
             data: { isActive }

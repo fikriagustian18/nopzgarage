@@ -120,7 +120,7 @@ export default function AdminDashboard() {
   ];
 
   return (
-    <RoleGuard allowedRoles={["OWNER"]}>
+    <RoleGuard allowedRoles={["OWNER", "ADMIN"]}>
       <div className="min-h-screen bg-background text-foreground">
         <div className="p-2 md:p-8 space-y-4 md:space-y-8">
         
@@ -139,7 +139,8 @@ export default function AdminDashboard() {
             </div>
 
             {/* FINANCIAL ACCOUNTS SCROLL */}
-            <div className="flex gap-3 overflow-x-auto pb-4 -mx-2 px-2 md:mx-0 md:px-0 hide-scrollbar">
+            {userRole !== "ADMIN" && (
+<div className="flex gap-3 overflow-x-auto pb-4 -mx-2 px-2 md:mx-0 md:px-0 hide-scrollbar">
                 {/* 1. KAS TUNAI CARD */}
                 <Card className="bg-primary text-primary-foreground border-none shadow-lg min-w-[180px] md:min-w-[220px] relative overflow-hidden transition-transform hover:scale-[1.02]">
                     <div className="absolute top-0 right-0 p-3 opacity-10">
@@ -203,10 +204,102 @@ export default function AdminDashboard() {
                     </div>
                 </Link>
             </div>
+)}
         </div>
 
         {/* KEY METRICS - Compact Cards with Vibrant Charts */}
         <div className="grid gap-2 md:gap-3 grid-cols-2 lg:grid-cols-4">
+{userRole === "ADMIN" ? (
+<>
+
+            {/* Active Orders Card */}
+            <Card className="border-l-4 border-l-[#DE73FF] shadow-sm">
+                <CardHeader className="pb-1 p-3">
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <CardTitle className="text-xs font-medium text-muted-foreground">Order Aktif</CardTitle>
+                            <CardDescription className="text-[10px]">Sedang Proses</CardDescription>
+                        </div>
+                        <div className="p-1.5 bg-[#DE73FF]/10 rounded-md">
+                            <Activity className="h-3 w-3 text-[#DE73FF]" />
+                        </div>
+                    </div>
+                </CardHeader>
+                <CardContent className="p-3 pt-0">
+                    <div className="text-lg md:text-xl font-bold text-[#DE73FF]">{stats.operational.activeOrders}</div>
+                    <p className="text-[10px] text-muted-foreground mt-1">
+                        Kendaraan sedang dikerjakan
+                    </p>
+                </CardContent>
+            </Card>
+
+            {/* Total Orders Card */}
+            <Card className="border-l-4 border-l-blue-500 shadow-sm">
+                <CardHeader className="pb-1 p-3">
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <CardTitle className="text-xs font-medium text-muted-foreground">Total Order</CardTitle>
+                            <CardDescription className="text-[10px]">Bulan Ini</CardDescription>
+                        </div>
+                        <div className="p-1.5 bg-blue-500/10 rounded-md">
+                            <ClipboardList className="h-3 w-3 text-blue-500" />
+                        </div>
+                    </div>
+                </CardHeader>
+                <CardContent className="p-3 pt-0">
+                    <div className="text-lg md:text-xl font-bold text-blue-500">{stats.operational.totalOrdersMonth}</div>
+                    <p className="text-[10px] text-muted-foreground mt-1">
+                        Total order masuk bulan ini
+                    </p>
+                </CardContent>
+            </Card>
+
+            {/* Completed Orders Card */}
+            <Card className="border-l-4 border-l-green-500 shadow-sm">
+                <CardHeader className="pb-1 p-3">
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <CardTitle className="text-xs font-medium text-muted-foreground">Order Selesai</CardTitle>
+                            <CardDescription className="text-[10px]">Bulan Ini</CardDescription>
+                        </div>
+                        <div className="p-1.5 bg-green-500/10 rounded-md">
+                            <CheckCircle2 className="h-3 w-3 text-green-500" />
+                        </div>
+                    </div>
+                </CardHeader>
+                <CardContent className="p-3 pt-0">
+                    <div className="text-lg md:text-xl font-bold text-green-500">{stats.operational.completedOrdersMonth}</div>
+                    <p className="text-[10px] text-muted-foreground mt-1">
+                        Order selesai diservis bulan ini
+                    </p>
+                </CardContent>
+            </Card>
+
+            {/* Low Stock Card */}
+            <Card className="border-l-4 border-l-yellow-600 shadow-sm">
+                <CardHeader className="pb-1 p-3">
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <CardTitle className="text-xs font-medium text-muted-foreground">Stok Menipis</CardTitle>
+                            <CardDescription className="text-[10px]">Perlu Restok</CardDescription>
+                        </div>
+                        <div className="p-1.5 bg-yellow-600/10 rounded-md">
+                            <AlertTriangle className="h-3 w-3 text-yellow-600" />
+                        </div>
+                    </div>
+                </CardHeader>
+                <CardContent className="p-3 pt-0">
+                    <div className="text-lg md:text-xl font-bold text-yellow-600">{stats.inventory.lowStockCount}</div>
+                    <p className="text-[10px] text-muted-foreground mt-1">
+                        Suku cadang di bawah stok minimum
+                    </p>
+                </CardContent>
+            </Card>
+
+</>
+) : (
+<>
+
             {/* Revenue Card */}
             <Card className="border-l-4 border-l-[#DE73FF] shadow-sm">
                 <CardHeader className="pb-1 p-3">
@@ -390,10 +483,13 @@ export default function AdminDashboard() {
                     </p>
                 </CardContent>
             </Card>
-        </div>
+        
+</>
+)}</div>
 
         {/* CHARTS ROW */}
-        <div className="grid gap-3 md:gap-4 md:grid-cols-7">
+        {userRole !== "ADMIN" && (
+<div className="grid gap-3 md:gap-4 md:grid-cols-7">
             {/* Revenue Trend Chart */}
             <Card className="col-span-full md:col-span-4 bg-card border-border shadow-md">
                 <CardHeader className="p-3 md:p-4">
@@ -495,12 +591,15 @@ export default function AdminDashboard() {
                 </CardContent>
             </Card>
         </div>
+)}
 
         {/* DATA PREVIEWS - Enhanced Tables */}
-        <div className="grid gap-3 md:gap-4 md:grid-cols-2 lg:grid-cols-3">
+        <div className={`grid gap-3 md:gap-4 grid-cols-1 ${userRole === "ADMIN" ? "md:grid-cols-2" : "md:grid-cols-2 lg:grid-cols-3"}`}>
+
             
             {/* Karyawan - Table Style */}
-            <Card className="bg-card border-border overflow-hidden">
+            {userRole !== "ADMIN" && (
+<Card className="bg-card border-border overflow-hidden">
                 <CardHeader className="p-3 md:p-6 bg-gradient-to-br from-primary/5 to-transparent border-b border-border">
                     <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
@@ -553,6 +652,7 @@ export default function AdminDashboard() {
                     </div>
                 </CardContent>
             </Card>
+)}
 
             {/* Orders - Table Style */}
             <Card className="bg-card border-border overflow-hidden">
@@ -686,7 +786,8 @@ export default function AdminDashboard() {
             </Card>
 
             {/* Quick Links - Keuangan */}
-            <Card className="bg-card border-border">
+            {userRole !== "ADMIN" && (
+<Card className="bg-card border-border">
                 <CardHeader className="p-3 md:p-6">
                     <div className="flex items-center gap-2">
                         <Wallet className="h-4 w-4 md:h-5 md:w-5 text-primary" />
@@ -721,9 +822,11 @@ export default function AdminDashboard() {
                     </Link>
                 </CardContent>
             </Card>
+)}
 
             {/* Quick Links - Laporan */}
-            <Card className="bg-card border-border">
+            {userRole !== "ADMIN" && (
+<Card className="bg-card border-border">
                 <CardHeader className="p-3 md:p-6">
                     <div className="flex items-center gap-2">
                         <FileText className="h-4 w-4 md:h-5 md:w-5 text-primary" />
@@ -743,9 +846,11 @@ export default function AdminDashboard() {
                     </p>
                 </CardContent>
             </Card>
+)}
 
             {/* Quick Links - Sistem */}
-            <Card className="bg-card border-border">
+            {userRole !== "ADMIN" && (
+<Card className="bg-card border-border">
                 <CardHeader className="p-3 md:p-6">
                     <div className="flex items-center gap-2">
                         <Settings className="h-4 w-4 md:h-5 md:w-5 text-primary" />
@@ -768,6 +873,7 @@ export default function AdminDashboard() {
                     </Link>
                 </CardContent>
             </Card>
+)}
         </div>
 
         {/* Activity Log */}

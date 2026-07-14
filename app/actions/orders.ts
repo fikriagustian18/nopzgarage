@@ -1,6 +1,7 @@
 'use server';
 
 import { prisma } from '@/lib/prisma';
+import { auth } from '@/lib/auth';
 import { OrderStatus, ServiceType, PaymentStatus } from '@prisma/client';
 import { revalidatePath } from 'next/cache';
 import { createLog } from './logs';
@@ -89,6 +90,10 @@ export async function processOrder(data: ProcessOrderInput): Promise<
   | { success: false; error: string }
 > {
   try {
+    const session = await auth();
+    if (!session || !['OWNER', 'ADMIN'].includes(session.user?.role || '')) {
+      return { success: false, error: 'Akses ditolak: Hanya Owner dan Admin yang dapat memproses order.' };
+    }
     const { orderId, items, mechanicId, fees } = data;
 
     // 1. Hitung total harga (Hanya service & part untuk customer)
@@ -271,6 +276,10 @@ export async function processOrder(data: ProcessOrderInput): Promise<
  */
 export async function finishOrder(orderId: string) {
   try {
+    const session = await auth();
+    if (!session || !['OWNER', 'ADMIN'].includes(session.user?.role || '')) {
+      return { success: false, error: 'Akses ditolak: Hanya Owner dan Admin yang dapat menandai order selesai.' };
+    }
     const order = await prisma.order.update({
       where: { id: orderId },
       data: {
@@ -311,6 +320,10 @@ export async function finishOrder(orderId: string) {
  */
 export async function closeOrder(orderId: string) {
   try {
+    const session = await auth();
+    if (!session || !['OWNER', 'ADMIN'].includes(session.user?.role || '')) {
+      return { success: false, error: 'Akses ditolak: Hanya Owner dan Admin yang dapat menutup order.' };
+    }
     const order = await prisma.order.update({
       where: { id: orderId },
       data: {
@@ -395,6 +408,10 @@ export async function createBooking(data: CreateOrderInput) {
  */
 export async function confirmOrder(orderId: string) {
   try {
+    const session = await auth();
+    if (!session || !['OWNER', 'ADMIN'].includes(session.user?.role || '')) {
+      return { success: false, error: 'Akses ditolak: Hanya Owner dan Admin yang dapat mengonfirmasi order.' };
+    }
     const order = await prisma.order.update({
       where: { id: orderId },
       data: { status: 'CONFIRMED' },
@@ -435,6 +452,10 @@ export async function updateOrderStatus(
   mechanicId?: string
 ) {
   try {
+    const session = await auth();
+    if (!session || !['OWNER', 'ADMIN', 'EMPLOYEE'].includes(session.user?.role || '')) {
+      return { success: false, error: 'Akses ditolak: Anda tidak memiliki wewenang untuk memperbarui status order.' };
+    }
     const order = await prisma.order.update({
       where: { id: orderId },
       data: {
@@ -484,6 +505,10 @@ export async function getAdminOrders(filters?: {
   limit?: number;
 }) {
   try {
+    const session = await auth();
+    if (!session || !['OWNER', 'ADMIN'].includes(session.user?.role || '')) {
+      return { success: false, error: 'Akses ditolak: Hanya Owner dan Admin yang dapat mengakses daftar order.' };
+    }
     const whereClause: any = {
         ...(filters?.status && { status: filters.status }),
         ...(filters?.serviceType && { serviceType: filters.serviceType }),
@@ -531,6 +556,10 @@ export async function getAdminOrders(filters?: {
  */
 export async function getOrderDetail(orderId: string) {
   try {
+    const session = await auth();
+    if (!session || !['OWNER', 'ADMIN'].includes(session.user?.role || '')) {
+      return { success: false, error: 'Akses ditolak: Hanya Owner dan Admin yang dapat melihat detail order.' };
+    }
     const order = await prisma.order.findUnique({
       where: { id: orderId },
       include: {
@@ -622,6 +651,10 @@ export async function getPublicKanbanOrders() {
  */
 export async function createOrder(data: CreateOrderInput) {
   try {
+    const session = await auth();
+    if (!session || !['OWNER', 'ADMIN'].includes(session.user?.role || '')) {
+      return { success: false, error: 'Akses ditolak: Hanya Owner dan Admin yang dapat membuat order.' };
+    }
     const order = await prisma.order.create({
       data: {
         custName: data.custName,
@@ -665,6 +698,10 @@ export async function createOrder(data: CreateOrderInput) {
  */
 export async function updateOrder(orderId: string, data: Partial<CreateOrderInput>) {
   try {
+    const session = await auth();
+    if (!session || !['OWNER', 'ADMIN'].includes(session.user?.role || '')) {
+      return { success: false, error: 'Akses ditolak: Hanya Owner dan Admin yang dapat mengupdate order.' };
+    }
     const order = await prisma.order.update({
       where: { id: orderId },
       data: {
@@ -707,6 +744,10 @@ export async function updateOrder(orderId: string, data: Partial<CreateOrderInpu
  */
 export async function deleteOrder(orderId: string) {
   try {
+    const session = await auth();
+    if (!session || !['OWNER', 'ADMIN'].includes(session.user?.role || '')) {
+      return { success: false, error: 'Akses ditolak: Hanya Owner dan Admin yang dapat menghapus order.' };
+    }
     await prisma.order.delete({
       where: { id: orderId },
     });
