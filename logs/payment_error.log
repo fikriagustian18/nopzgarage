@@ -1,0 +1,31 @@
+[2025-12-23T13:22:21.344Z] Payment Error: Jurnal tidak balance! Debit harus sama dengan Kredit
+Stack: Error: Jurnal tidak balance! Debit harus sama dengan Kredit
+    at createJournalEntry (/Users/mpik/Ranop/nopzgarage/.next/dev/server/chunks/ssr/[root-of-the-server]__50e2f20b._.js:977:19)
+    at handleOrderPayment (/Users/mpik/Ranop/nopzgarage/.next/dev/server/chunks/ssr/[root-of-the-server]__50e2f20b._.js:863:15)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async /Users/mpik/Ranop/nopzgarage/.next/dev/server/chunks/ssr/[root-of-the-server]__50e2f20b._.js:787:24
+    at async Proxy._transactionWithCallback (/Users/mpik/Ranop/nopzgarage/node_modules/@prisma/client/runtime/library.js:130:8120)
+    at async createPayment (/Users/mpik/Ranop/nopzgarage/.next/dev/server/chunks/ssr/[root-of-the-server]__50e2f20b._.js:775:24)
+    at async executeActionAndPrepareForRender (/Users/mpik/Ranop/nopzgarage/node_modules/next/dist/compiled/next-server/app-page-turbo.runtime.dev.js:36:3803)
+    at async /Users/mpik/Ranop/nopzgarage/node_modules/next/dist/compiled/next-server/app-page-turbo.runtime.dev.js:36:1109
+    at async handleAction (/Users/mpik/Ranop/nopzgarage/node_modules/next/dist/compiled/next-server/app-page-turbo.runtime.dev.js:34:23598)
+    at async renderToHTMLOrFlightImpl (/Users/mpik/Ranop/nopzgarage/node_modules/next/dist/compiled/next-server/app-page-turbo.runtime.dev.js:41:42106)
+    at async doRender (/Users/mpik/Ranop/nopzgarage/.next/dev/server/chunks/ssr/node_modules_next_dist_da92eb3b._.js:2942:28)
+    at async AppPageRouteModule.handleResponse (/Users/mpik/Ranop/nopzgarage/node_modules/next/dist/compiled/next-server/app-page-turbo.runtime.dev.js:43:64241)
+    at async handleResponse (/Users/mpik/Ranop/nopzgarage/.next/dev/server/chunks/ssr/node_modules_next_dist_da92eb3b._.js:3148:32)
+    at async Module.handler (/Users/mpik/Ranop/nopzgarage/.next/dev/server/chunks/ssr/node_modules_next_dist_da92eb3b._.js:3519:20)
+    at async DevServer.renderToResponseWithComponentsImpl (/Users/mpik/Ranop/nopzgarage/node_modules/next/dist/server/base-server.js:1422:9)
+    at async DevServer.renderPageComponent (/Users/mpik/Ranop/nopzgarage/node_modules/next/dist/server/base-server.js:1474:24)
+    at async DevServer.renderToResponseImpl (/Users/mpik/Ranop/nopzgarage/node_modules/next/dist/server/base-server.js:1524:32)
+    at async DevServer.pipeImpl (/Users/mpik/Ranop/nopzgarage/node_modules/next/dist/server/base-server.js:1018:25)
+    at async NextNodeServer.handleCatchallRenderRequest (/Users/mpik/Ranop/nopzgarage/node_modules/next/dist/server/next-server.js:395:17)
+    at async DevServer.handleRequestImpl (/Users/mpik/Ranop/nopzgarage/node_modules/next/dist/server/base-server.js:909:17)
+    at async /Users/mpik/Ranop/nopzgarage/node_modules/next/dist/server/dev/next-dev-server.js:387:20
+    at async Span.traceAsyncFn (/Users/mpik/Ranop/nopzgarage/node_modules/next/dist/trace/trace.js:157:20)
+    at async DevServer.handleRequest (/Users/mpik/Ranop/nopzgarage/node_modules/next/dist/server/dev/next-dev-server.js:383:24)
+    at async invokeRender (/Users/mpik/Ranop/nopzgarage/node_modules/next/dist/server/lib/router-server.js:248:21)
+    at async handleRequest (/Users/mpik/Ranop/nopzgarage/node_modules/next/dist/server/lib/router-server.js:447:24)
+    at async requestHandlerImpl (/Users/mpik/Ranop/nopzgarage/node_modules/next/dist/server/lib/router-server.js:496:13)
+    at async Server.requestListener (/Users/mpik/Ranop/nopzgarage/node_modules/next/dist/server/lib/start-server.js:226:13)
+Data: {"amount":1000000,"note":"transfer\n","orderId":"cmjiliwm3000umied749z975o"}
+

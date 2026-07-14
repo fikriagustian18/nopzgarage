@@ -1,0 +1,23 @@
+# Dependencies
+node_modules
+
+# Environment
+.env
+.env*.local
+
+# Build
+.next
+
+# Test files
+test-db-connection.ts
+
+# Logs
+*.log
+logs/
+
+# IDE
+.vscode
+.idea
+
+# OS
+.DS_Store
