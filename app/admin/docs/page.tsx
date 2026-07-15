@@ -258,204 +258,263 @@ export default function TechnicalDocsPage() {
     System -->|"Slip Gaji"| Mechanic`,
 
     dfd1: `flowchart TB
-    Customer["CUSTOMER"]
-    Owner["OWNER"]
-    Admin["ADMIN"]
-    Mechanic["MECHANIC"]
-    
-    P1(["1<br/>Otentikasi"])
-    P2(["2<br/>Manajemen Order"])
-    P3(["3<br/>HR & Penggajian"])
-    P4(["4<br/>Keuangan"])
-    P5(["5<br/>Akuntansi"])
-    P6(["6<br/>Inventaris"])
-    P7(["7<br/>Sistem"])
-    P8(["8<br/>Portal Publik"])
-    
-    DS1[("D1 USER")]
-    DS2[("D2 ORDER")]
-    DS3[("D3 EMPLOYEE")]
-    DS4[("D4 PAYMENT")]
-    DS5[("D5 ACCOUNT")]
-    DS6[("D6 SPARE_PART")]
-    DS7[("D7 SETTING")]
-    DS9[("D9 BANK")]
-    DS10[("D10 CONTENT")]
+    Pelanggan["PELANGGAN (Tidak Login)"]
+    Admin["ADMIN (Staff Admin)"]
+    Mekanik["MEKANIK (Mekanik)"]
+    Owner["OWNER (Pemilik Bengkel)"]
 
-    Owner --> P1
-    Admin --> P1
-    P1 <--> DS1
-    
-    Customer --> P2
-    Customer --> P4
-    Customer --> P8
-    
-    P8 <--> DS2
-    P8 <--> DS10
-    P8 --> P2
+    P1(["1.0<br/>Manajemen Pengguna"])
+    P2(["2.0<br/>Manajemen Pelayanan<br/>(Antrian & Servis)"])
+    P3(["3.0<br/>Manajemen Inventory"])
+    P4(["4.0<br/>Transaksi & Pembayaran"])
+    P5(["5.0<br/>Laporan & Keuangan"])
 
-    P2 <--> DS2
-    P2 --> P6
+    D1[("D1 Users")]
+    D2[("D2 Order Servis")]
+    D3[("D3 Inventory")]
+    D4[("D4 Transaksi")]
+    D5[("D5 Keuangan")]
+
+    P1 <-->|"Data Pengguna"| D1
+    P1 --> P2
+
+    Pelanggan -->|"Data Booking Servis<br/>Data Kendaraan<br/>Keluhan Kendaraan"| P2
+    P2 -->|"Nomor Antrian<br/>Estimasi Biaya<br/>Status Servis<br/>Bukti Pembayaran"| Pelanggan
+    Admin -->|"Input Order / Servis"| P2
+    P2 -->|"Kelola Pengguna<br/>& Hak Akses"| Admin
+    P2 <-->|"Data Order Servis"| D2
     P2 --> P3
 
-    P3 <--> DS3
+    Admin -->|"Daftar Order<br/>Dashboard & Notifikasi"| P3
+    Mekanik -->|"Update Progress/Order"| P3
+    P3 -->|"Daftar Pekerjaan / Order"| Mekanik
+    P3 <-->|"Data Inventory"| D3
     P3 --> P4
-    
-    P4 <--> DS4
-    P4 <--> DS9
+
+    P4 -->|"Slip Gaji"| Mekanik
+    Owner -->|"Konfigurasi Sistem"| P4
+    P4 <-->|"Data Transaksi"| D4
     P4 --> P5
 
-    P5 <--> DS5
-    
-    P6 <--> DS6
-    P6 --> Owner
+    Owner -->|"Approval Gaji"| P5
+    P5 -->|"Laporan & Dashboard"| Owner
+    P5 <-->|"Data Keuangan"| D5`,
 
-    P7 <--> DS7
-    Owner --> P7`,
+    dfd2user: `flowchart TB
+    Admin["ADMIN (Staff Admin)"]
+    Mekanik["MEKANIK (Mekanik)"]
+    Owner["OWNER (Pemilik Bengkel)"]
 
-    dfd2finance: `flowchart TB
-    Customer["CUSTOMER"]
-    Admin["ADMIN"]
-    Owner["OWNER"]
-    
-    P41(["4.1<br/>Terima Pembayaran"])
-    P42(["4.2<br/>Bayar Gaji"])
-    P43(["4.3<br/>Lacak Piutang"])
-    P44(["4.4<br/>Rekonsiliasi"])
-    P45(["4.5<br/>Faktur/Invoice"])
-    
-    DS2[("D2 ORDER")]
-    DS3[("D3 PAYROLL")]
-    DS4[("D4 PAYMENT")]
-    DS9[("D9 BANK_ACCOUNT")]
-    
-    P5(["5 Akuntansi"])
-    
-    Customer --> P41
-    Admin --> P41
-    P41 <--> DS2
-    P41 <--> DS9
-    P41 --> DS4
-    P41 --> P5
-    
-    Admin --> P42
-    P42 <--> DS3
-    P42 <--> DS9
-    P42 --> DS4
-    P42 --> P5
+    P11(["1.1<br/>Login<br/>(Autentikasi Pengguna)"])
+    P12(["1.2<br/>Kelola Pengguna<br/>(Tambah, Ubah, Hapus)"])
+    P13(["1.3<br/>Kelola Hak Akses<br/>(Assign Role / Hak Akses)"])
+    P14(["1.4<br/>Lihat Data Pengguna<br/>dan Hak Akses<br/>(Monitoring)"])
 
-    P43 <--> DS2
-    P43 --> Admin
+    D1[("D1 Users<br/>- id_user (PK)<br/>- nama<br/>- username<br/>- password<br/>- role_id (FK)<br/>- status")]
+    D2[("D2 Hak Akses<br/>- id_role (PK)<br/>- nama_role<br/>- deskripsi<br/>- hak_akses")]
 
-    P44 <--> DS4
-    P44 <--> DS9
-    P44 --> Owner
+    Admin -->|"Data Login<br/>(username, password)"| P11
+    Mekanik -->|"Data Login<br/>(username, password)"| P11
+    P11 -->|"Status Login<br/>(berhasil / gagal)"| Admin
+    P11 -->|"Status Login<br/>(berhasil / gagal)"| Mekanik
+    P11 <-->|"Data Pengguna"| D1
+    P11 -->|"Validasi Login"| P12
 
-    Admin --> P45
-    P45 <--> DS2
-    P45 --> Customer`,
+    Mekanik -->|"Kelola Pengguna<br/>(tambah, ubah, hapus)"| P12
+    P12 -->|"Informasi Pengguna<br/>(berhasil disimpan / diubah / dihapus)"| Mekanik
+    P12 <-->|"Data Pengguna"| D1
+    P12 --> P13
 
-    dfd2portal: `flowchart TB
-    Customer["CUSTOMER"]
-    
-    P81(["8.1<br/>Halaman Utama"])
-    P82(["8.2<br/>Pemesanan"])
-    P83(["8.3<br/>Pelacakan"])
-    P84(["8.4<br/>Kanban"])
-    
-    DS2[("D2 ORDER")]
-    DS10[("D10 CONTENT")]
-    DS7[("D7 SETTING")]
-    
-    P2(["2 Manajemen Order"])
-    
-    Customer --> P81
-    P81 <--> DS10
-    P81 <--> DS7
-    
-    Customer --> P82
-    P82 --> P2
-    
-    Customer --> P83
-    P83 <--> DS2
-    
-    Customer --> P84
-    P84 <--> DS2`,
+    Owner -->|"Kelola Hak Akses<br/>(ubah role / hak akses)"| P13
+    P13 -->|"Informasi Hak Akses<br/>(berhasil disimpan / diubah)"| Owner
+    P13 <-->|"Data Hak Akses"| D2
+    P13 --> P14
 
-    dfd2system: `flowchart TB
-    Owner["OWNER"]
-    Admin["ADMIN"]
-    
-    P71(["7.1<br/>Manajemen User"])
-    P72(["7.2<br/>Konfigurasi"])
-    P73(["7.3<br/>Manajemen Konten"])
-    P74(["7.4<br/>Manajemen Bank"])
-    P75(["7.5<br/>Pencatatan Log"])
-    
-    DS1[("D1 USER")]
-    DS7[("D7 SETTING")]
-    DS8[("D8 LOG")]
-    DS9[("D9 BANK")]
-    DS10[("D10 CONTENT")]
-    
-    Owner --> P71
-    P71 <--> DS1
-    
-    Owner --> P72
-    P72 <--> DS7
-    
-    Owner --> P73
-    P73 <--> DS10
-    
-    Owner --> P74
-    P74 <--> DS9
-    
-    P71 --> P75
-    P72 --> P75
-    P73 --> P75
-    P74 --> P75
-    P75 --> DS8`,
+    Owner -->|"Permintaan Data Pengguna<br/>dan Hak Akses"| P14
+    P14 -->|"Informasi Data Pengguna<br/>dan Hak Akses"| Owner
+    P14 <-->|"Data Pengguna"| D1
+    P14 <-->|"Data Hak Akses"| D2`,
 
-    dfd3price: `flowchart TB
-    Admin["<b>ADMIN</b>"]
-    Customer["<b>CUSTOMER</b>"]
-    
-    P221(["<b>2.2.1</b><br/><b>Analisis Keluhan</b>"])
-    P222(["<b>2.2.2</b><br/><b>Identifikasi Sparepart</b>"])
-    P223(["<b>2.2.3</b><br/><b>Hitung Jasa</b>"])
-    P224(["<b>2.2.4</b><br/><b>Agregasi Total</b>"])
-    P225(["<b>2.2.5</b><br/><b>Review & Approval</b>"])
-    P226(["<b>2.2.6</b><br/><b>Kirim Estimasi</b>"])
-    
-    DS2[("D2 ORDER")]
-    DS2A[("D2a ORDER_ITEM")]
-    DS6[("D6 SPARE_PART")]
-    DS7[("D7 SETTING")]
-    
-    P221 <--> DS2
-    P221 --> P222
-    P221 --> P223
-    
-    Admin --> P222
-    P222 <--> DS6
-    P222 --> DS2A
-    P222 --> P224
-    
-    Admin --> P223
-    P223 <--> DS7
-    P223 --> DS2A
-    P223 --> P224
-    
-    P224 <--> DS2A
-    P224 --> DS2
-    P224 --> P225
-    
-    Admin --> P225
-    P225 <--> DS2
-    P225 --> P226
-    
-    P226 --> DS2
-    P226 --> Customer`,
+    dfd2service: `flowchart TB
+    Pelanggan["PELANGGAN (Tidak Login)"]
+    Admin["ADMIN (Staff Admin)"]
+    Mekanik["MEKANIK (Mekanik)"]
+
+    P21(["2.1<br/>Kelola Booking Servis<br/>(Pembuatan Booking)"])
+    P22(["2.2<br/>Kelola Antrian Servis<br/>(Pengelolaan Antrian)"])
+    P23(["2.3<br/>Kelola Order Servis<br/>(Pencatatan Order Servis)"])
+    P24(["2.4<br/>Kelola Progres Servis<br/>(Update Pekerjaan)"])
+    P25(["2.5<br/>Kelola Selesai Servis<br/>(Selesai & Serah Terima)"])
+
+    D1[("D1 Users<br/>- id_user (PK)<br/>- nama")]
+    D6[("D6 Booking Servis<br/>- id_booking (PK)<br/>- id_user (FK)<br/>- tgl_booking<br/>- layanan<br/>- kendaraan<br/>- keluhan<br/>- status_booking")]
+    D2[("D2 Order Servis<br/>- id_order (PK)<br/>- id_booking (FK)<br/>- tgl_order<br/>- status_order")]
+    D7[("D7 Detail Servis<br/>- id_detail (PK)<br/>- id_order (FK)<br/>- pekerjaan<br/>- status_pekerjaan<br/>- keterangan")]
+
+    Pelanggan -->|"Data Booking Servis<br/>(data diri, kendaraan, layanan, keluhan)"| P21
+    P21 -->|"Informasi Booking<br/>(berhasil / gagal)"| Pelanggan
+    P21 <-->|"Data Pengguna"| D1
+    P21 <-->|"Data Booking Servis"| D6
+    P21 --> P22
+
+    Admin -->|"Lihat & Kelola Antrian<br/>(atur antrian)"| P22
+    P22 -->|"Informasi Antrian<br/>(daftar antrian)"| Admin
+    P22 <-->|"Data Booking Servis"| D6
+    P22 --> P23
+
+    Mekanik -->|"Input Order Servis<br/>(dari booking / walk-in)"| P23
+    P23 -->|"Informasi Order<br/>(berhasil disimpan)"| Mekanik
+    P23 <-->|"Data Booking Servis"| D6
+    P23 <-->|"Data Order Servis"| D2
+    P23 --> P24
+
+    Mekanik -->|"Update Progres / Pekerjaan<br/>(pekerjaan servis)"| P24
+    P24 -->|"Informasi Progres<br/>(berhasil diperbarui)"| Mekanik
+    P24 <-->|"Data Order Servis"| D2
+    P24 <-->|"Data Detail Servis (progres)"| D7
+    P24 --> P25
+
+    Mekanik -->|"Konfirmasi Selesai Servis<br/>(selesai & serah terima)"| P25
+    P25 -->|"Informasi Selesai Servis<br/>(selesai / tidak selesai)"| Mekanik
+    P25 <-->|"Data Order Servis (selesai)"| D2
+    P25 <-->|"Data Detail Servis (selesai)"| D7`,
+
+    dfd2inventory: `flowchart TB
+    Admin["ADMIN (Staff Admin)"]
+    Mekanik["MEKANIK (Mekanik)"]
+
+    P31(["3.1<br/>Kelola Kategori Barang<br/>(Master Kategori)"])
+    P32(["3.2<br/>Kelola Barang<br/>(Master Barang)"])
+    P33(["3.3<br/>Kelola Stok Masuk<br/>(Penerimaan Barang)"])
+    P34(["3.4<br/>Kelola Stok Keluar<br/>(Pemakaian / Penyesuaian)"])
+    P35(["3.5<br/>Laporan Inventory<br/>(Stok Barang)"])
+
+    D8[("D8 Kategori Barang<br/>- id_kategori (PK)<br/>- nama_kategori")]
+    D3[("D3 Barang<br/>- id_barang (PK)<br/>- id_kategori (FK)<br/>- nama_barang<br/>- satuan<br/>- stok_minimum<br/>- harga_beli<br/>- harga_jual<br/>- status")]
+    D9[("D9 Stok Masuk<br/>- id_stok_masuk (PK)<br/>- tgl_masuk<br/>- id_supplier (FK)<br/>- total<br/>- keterangan")]
+    D10[("D10 Stok Masuk Detail<br/>- id_detail_masuk (PK)<br/>- id_stok_masuk (FK)<br/>- id_barang (FK)<br/>- qty<br/>- harga_beli")]
+    D11[("D11 Stok Keluar<br/>- id_stok_keluar (PK)<br/>- tgl_keluar<br/>- jenis_keluar<br/>- keterangan")]
+    D12[("D12 Stok Keluar Detail<br/>- id_detail_keluar (PK)<br/>- id_stok_keluar (FK)<br/>- id_barang (FK)<br/>- qty")]
+
+    Admin -->|"Data Kategori Barang<br/>(tambah, ubah, hapus)"| P31
+    P31 -->|"Informasi Kategori Barang<br/>(berhasil disimpan / diubah / dihapus)"| Admin
+    P31 <-->|"Data Kategori Barang"| D8
+    P31 --> P32
+
+    Admin -->|"Data Barang<br/>(tambah, ubah, hapus)"| P32
+    P32 -->|"Informasi Barang<br/>(berhasil disimpan / diubah / dihapus)"| Admin
+    P32 <-->|"Data Barang"| D3
+    P32 --> P33
+
+    Admin -->|"Data Stok Masuk<br/>(pembelian / penerimaan)"| P33
+    P33 -->|"Informasi Stok Masuk<br/>(berhasil disimpan)"| Admin
+    P33 <-->|"Data Stok Masuk"| D9
+    P33 <-->|"Data Stok Masuk Detail"| D10
+    P33 --> P34
+
+    Admin -->|"Data Stok Keluar<br/>(pemakaian / penyesuaian)"| P34
+    P34 -->|"Informasi Stok Keluar<br/>(berhasil disimpan)"| Admin
+    P34 <-->|"Data Stok Keluar"| D11
+    P34 <-->|"Data Stok Keluar Detail"| D12
+    P34 --> P35
+
+    Admin -->|"Permintaan Laporan Inventory"| P35
+    P35 -->|"Laporan Inventory<br/>(stok barang)"| Admin
+    Mekanik -->|"Permintaan Barang<br/>(barang servis)"| P35
+    P35 -->|"Informasi Ketersediaan Barang<br/>(tersedia / tidak tersedia)"| Mekanik
+    P35 <-->|"Data Inventory"| D12`,
+
+    dfd2transaction: `flowchart TB
+    Pelanggan["PELANGGAN (Tidak Login)"]
+    Admin["ADMIN (Staff Admin)"]
+    Owner["OWNER (Pemilik Bengkel)"]
+
+    P41(["4.1<br/>Kelola Transaksi<br/>(Pencatatan Transaksi)"])
+    P42(["4.2<br/>Proses Pembayaran<br/>(Validasi & Konfirmasi)"])
+    P43(["4.3<br/>Cetak Bukti Pembayaran<br/>(Pembuatan Bukti)"])
+    P44(["4.4<br/>Rekonsiliasi Pembayaran<br/>(Pencocokan & Validasi)"])
+    P45(["4.5<br/>Laporan Transaksi & Pembayaran<br/>(Penyusunan Laporan)"])
+
+    D4[("D4 Transaksi<br/>- id_transaksi (PK)<br/>- id_order (FK)<br/>- tgl_transaksi<br/>- total<br/>- metode_bayar<br/>- status_bayar")]
+    D13[("D13 Detail Pembayaran<br/>- id_bayar (PK)<br/>- id_transaksi (FK)<br/>- tgl_bayar<br/>- nominal<br/>- metode_bayar<br/>- referensi<br/>- status")]
+    D2[("D2 Order Servis<br/>- id_order (PK)<br/>- id_booking (FK)<br/>- tgl_order<br/>- status_order")]
+
+    Pelanggan -->|"Pembayaran<br/>(tunai / non-tunai)"| P41
+    P41 -->|"Informasi Pembayaran<br/>(berhasil / gagal)"| Pelanggan
+    P41 <-->|"Data Transaksi"| D4
+    P41 --> P42
+
+    Admin -->|"Input / Verifikasi Pembayaran<br/>(data pembayaran)"| P42
+    P42 -->|"Informasi Status Pembayaran<br/>(berhasil / gagal)"| Admin
+    P42 <-->|"Data Transaksi"| D4
+    P42 <-->|"Data Detail Pembayaran"| D13
+    P42 --> P43
+
+    Admin -->|"Permintaan Cetak Bukti<br/>(id_transaksi)"| P43
+    P43 -->|"Bukti Pembayaran<br/>(cetak / digital)"| Admin
+    P43 <-->|"Data Transaksi"| D4
+    P43 <-->|"Data Detail Pembayaran"| D13
+    P43 --> P44
+
+    Admin -->|"Rekonsiliasi Pembayaran<br/>(periode)"| P44
+    P44 -->|"Informasi Hasil Rekonsiliasi<br/>(cocok / tidak cocok)"| Admin
+    P44 <-->|"Data Transaksi"| D4
+    P44 <-->|"Data Detail Pembayaran"| D13
+    P44 --> P45
+
+    Admin -->|"Permintaan Laporan Transaksi<br/>dan Pembayaran (periode)"| P45
+    P45 -->|"Laporan Transaksi & Pembayaran<br/>(ringkasan)"| Admin
+    Owner -->|"Laporan Keuangan<br/>(transaksi & pembayaran)"| P45
+    P45 -->|"Laporan Keuangan<br/>(transaksi & pembayaran)"| Owner
+    P45 <-->|"Data Transaksi"| D4
+    P45 <-->|"Data Detail Pembayaran"| D13
+    P45 <-->|"Data Order Servis"| D2`,
+
+    dfd2report: `flowchart TB
+    Owner["OWNER (Pemilik Bengkel)"]
+    Admin["ADMIN (Staff Admin)"]
+
+    P51(["5.1<br/>Kelola Laporan Penjualan<br/>(Laporan Pendapatan)"])
+    P52(["5.2<br/>Kelola Laporan Inventory<br/>(Laporan Persediaan)"])
+    P53(["5.3<br/>Kelola Laporan Servis<br/>(Laporan Pekerjaan Servis)"])
+    P54(["5.4<br/>Kelola Laporan Keuangan<br/>(Laporan Keuangan)"])
+    P55(["5.5<br/>Dashboard & Ringkasan<br/>(Rekapitulasi & Analisis)"])
+
+    D4[("D4 Transaksi<br/>- id_transaksi (PK)<br/>- id_order (FK)<br/>- tgl_transaksi<br/>- total<br/>- metode_bayar<br/>- status_bayar")]
+    D3[("D3 Inventory<br/>- id_barang (PK)<br/>- id_kategori (FK)<br/>- nama_barang<br/>- stok_minimum<br/>- harga_beli<br/>- harga_jual")]
+    D2[("D2 Order Servis<br/>- id_order (PK)<br/>- id_booking (FK)<br/>- tgl_order<br/>- status_order")]
+    D7[("D7 Detail Servis<br/>- id_detail (PK)<br/>- id_order (FK)<br/>- pekerjaan<br/>- status_pekerjaan<br/>- keterangan")]
+    D13[("D13 Detail Pembayaran<br/>- id_bayar (PK)<br/>- id_transaksi (FK)<br/>- tgl_bayar<br/>- nominal<br/>- metode_bayar<br/>- status")]
+
+    Owner -->|"Permintaan Laporan Penjualan<br/>(periode)"| P51
+    P51 -->|"Laporan Penjualan<br/>(pendapatan)"| Owner
+    P51 <-->|"Data Transaksi"| D4
+    P51 --> P52
+
+    Admin -->|"Permintaan Laporan Inventory<br/>(periode)"| P52
+    P52 -->|"Laporan Inventory<br/>(stok & nilai persediaan)"| Admin
+    P52 <-->|"Data Inventory"| D3
+    P52 --> P53
+
+    Admin -->|"Permintaan Laporan Servis<br/>(periode / mekanik / jenis servis)"| P53
+    P53 -->|"Laporan Servis<br/>(pekerjaan servis)"| Admin
+    Admin -->|"Permintaan Laporan Pekerjaan<br/>(pribadi / periode)"| P53
+    P53 -->|"Laporan Pekerjaan<br/>(pekerjaan terselesaikan)"| Admin
+    P53 <-->|"Data Order Servis"| D2
+    P53 <-->|"Data Detail Servis"| D7
+    P53 --> P54
+
+    Admin -->|"Permintaan Laporan Keuangan<br/>(periode)"| P54
+    P54 -->|"Laporan Keuangan<br/>(laba rugi, arus kas, dll)"| Admin
+    P54 <-->|"Data Transaksi"| D4
+    P54 --> P55
+
+    Admin -->|"Permintaan Dashboard & Ringkasan<br/>(periode)"| P55
+    P55 -->|"Dashboard & Ringkasan<br/>(grafik & ringkasan)"| Admin
+    P55 <-->|"Data Pembayaran"| D13
+    P55 <-->|"Data Transaksi"| D4
+    P55 <-->|"Data Order Servis"| D2
+    P55 <-->|"Data Inventory"| D3`,
 
      flowOrder: `flowchart TD
     Start([Mulai: Customer Datang])
@@ -1737,47 +1796,58 @@ export default function TechnicalDocsPage() {
                   </AccordionContent>
                 </AccordionItem>
 
-                 {/* DFD Level 2 Finance */}
-                 <AccordionItem value="dfd2finance">
+                 {/* DFD Level 2 User Management */}
+                 <AccordionItem value="dfd2user">
                   <AccordionTrigger className="text-lg font-semibold flex items-center gap-2">
-                    <DollarSign className="h-5 w-5 text-emerald-500" />
-                    DFD Level 2 - Finance Management
+                    <Users className="h-5 w-5 text-indigo-500" />
+                    DFD Level 2 - 1.0 Manajemen Pengguna
                   </AccordionTrigger>
                   <AccordionContent>
-                    <MermaidDiagram chart={diagrams.dfd2finance} />
+                    <MermaidDiagram chart={diagrams.dfd2user} />
                   </AccordionContent>
                 </AccordionItem>
 
-                 {/* DFD Level 2 Public Portal */}
-                 <AccordionItem value="dfd2portal">
+                 {/* DFD Level 2 Service Management */}
+                 <AccordionItem value="dfd2service">
                   <AccordionTrigger className="text-lg font-semibold flex items-center gap-2">
-                    <LayoutTemplate className="h-5 w-5 text-sky-500" />
-                    DFD Level 2 - Public Portal
+                    <Wrench className="h-5 w-5 text-sky-500" />
+                    DFD Level 2 - 2.0 Manajemen Pelayanan (Antrian & Servis)
                   </AccordionTrigger>
                   <AccordionContent>
-                    <MermaidDiagram chart={diagrams.dfd2portal} />
+                    <MermaidDiagram chart={diagrams.dfd2service} />
                   </AccordionContent>
                 </AccordionItem>
 
-                 {/* DFD Level 2 System Settings */}
-                 <AccordionItem value="dfd2system">
+                 {/* DFD Level 2 Inventory Management */}
+                 <AccordionItem value="dfd2inventory">
                   <AccordionTrigger className="text-lg font-semibold flex items-center gap-2">
-                    <Settings className="h-5 w-5 text-gray-500" />
-                    DFD Level 2 - System Settings
+                    <Package className="h-5 w-5 text-amber-500" />
+                    DFD Level 2 - 3.0 Manajemen Inventory (Stok Barang)
                   </AccordionTrigger>
                   <AccordionContent>
-                    <MermaidDiagram chart={diagrams.dfd2system} />
+                    <MermaidDiagram chart={diagrams.dfd2inventory} />
                   </AccordionContent>
                 </AccordionItem>
 
-                {/* DFD Level 3 Price Estimation */}
-                <AccordionItem value="dfd3price">
+                {/* DFD Level 2 Transaction & Payment */}
+                <AccordionItem value="dfd2transaction">
                   <AccordionTrigger className="text-lg font-semibold flex items-center gap-2">
-                    <Calculator className="h-5 w-5 text-amber-500" />
-                    DFD Level 3 - Price Estimation Detail
+                    <CreditCard className="h-5 w-5 text-emerald-500" />
+                    DFD Level 2 - 4.0 Transaksi & Pembayaran
                   </AccordionTrigger>
                   <AccordionContent>
-                    <MermaidDiagram chart={diagrams.dfd3price} />
+                    <MermaidDiagram chart={diagrams.dfd2transaction} />
+                  </AccordionContent>
+                </AccordionItem>
+
+                {/* DFD Level 2 Report & Finance */}
+                <AccordionItem value="dfd2report">
+                  <AccordionTrigger className="text-lg font-semibold flex items-center gap-2">
+                    <BarChart3 className="h-5 w-5 text-indigo-600" />
+                    DFD Level 2 - 5.0 Laporan & Keuangan
+                  </AccordionTrigger>
+                  <AccordionContent>
+                    <MermaidDiagram chart={diagrams.dfd2report} />
                   </AccordionContent>
                 </AccordionItem>
                 
