@@ -46,12 +46,20 @@ export function PaymentDialog({
   const [note, setNote] = useState("");
   
   // Payment Method State
-  const [method, setMethod] = useState<"CASH" | "TRANSFER">("CASH");
+  const [method, setMethod] = useState<"CASH" | "TRANSFER" | "QRIS" | "CARD">("CASH");
   const [bankList, setBankList] = useState<any[]>([]);
   const [selectedBankId, setSelectedBankId] = useState("");
   
+  // Cash Payment States
+  const [cashReceived, setCashReceived] = useState<number>(remaining > 0 ? remaining : 0);
+  
   // Pay Commission State
   const [payCommission, setPayCommission] = useState(false);
+
+  // Sync cashReceived with amount changes
+  useEffect(() => {
+    setCashReceived(amount);
+  }, [amount]);
 
   // Load Bank Accounts only when dialog opens
   useEffect(() => {
@@ -87,11 +95,21 @@ export function PaymentDialog({
         return;
       }
 
-      if (method === "TRANSFER" && !selectedBankId) {
+      if (["TRANSFER", "QRIS", "CARD"].includes(method) && !selectedBankId && bankList.length > 0) {
           toast({
               variant: "destructive",
-              title: "Pilih Bank",
-              description: "Harap pilih rekening bank tujuan transfer.",
+              title: "Pilih Rekening Bank",
+              description: "Harap pilih rekening bank tujuan untuk mencatat transaksi.",
+          });
+          setLoading(false);
+          return;
+      }
+
+      if (method === "CASH" && cashReceived < amount) {
+          toast({
+              variant: "destructive",
+              title: "Uang Diterima Kurang",
+              description: "Jumlah uang tunai yang diterima kurang dari nominal tagihan.",
           });
           setLoading(false);
           return;
@@ -178,58 +196,128 @@ export function PaymentDialog({
               />
             </div>
           </div>
+          <div className="space-y-4">
+            {/* Payment Method Selector */}
+            <div className="space-y-2">
+                <Label className="text-foreground">Metode Bayar</Label>
+                <div className="grid grid-cols-4 bg-muted rounded-md p-1 gap-1">
+                    <button
+                        type="button"
+                        onClick={() => setMethod("CASH")}
+                        className={`text-xs font-semibold py-2 rounded-sm transition-all ${
+                            method === "CASH" ? "bg-background shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"
+                        }`}
+                    >
+                        Tunai
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => setMethod("TRANSFER")}
+                        className={`text-xs font-semibold py-2 rounded-sm transition-all ${
+                            method === "TRANSFER" ? "bg-background shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"
+                        }`}
+                    >
+                        Transfer
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => setMethod("QRIS")}
+                        className={`text-xs font-semibold py-2 rounded-sm transition-all ${
+                            method === "QRIS" ? "bg-background shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"
+                        }`}
+                    >
+                        QRIS
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => setMethod("CARD")}
+                        className={`text-xs font-semibold py-2 rounded-sm transition-all ${
+                            method === "CARD" ? "bg-background shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"
+                        }`}
+                    >
+                        Kartu
+                    </button>
+                </div>
+            </div>
 
-          <div className="grid grid-cols-2 gap-4">
-               {/* Payment Method */}
-               <div className="space-y-2">
-                   <Label>Metode Bayar</Label>
-                   <div className="flex bg-muted rounded-md p-1">
-                       <button
-                           type="button"
-                           onClick={() => setMethod("CASH")}
-                           className={`flex-1 text-sm font-medium py-1.5 rounded-sm transition-all ${
-                               method === "CASH" ? "bg-background shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"
-                           }`}
-                       >
-                           Tunai (Cash)
-                       </button>
-                       <button
-                           type="button"
-                           onClick={() => setMethod("TRANSFER")}
-                           className={`flex-1 text-sm font-medium py-1.5 rounded-sm transition-all ${
-                               method === "TRANSFER" ? "bg-background shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"
-                           }`}
-                       >
-                           Transfer
-                       </button>
-                   </div>
-               </div>
+            {/* Conditional Input Fields */}
+            {method === "CASH" && (
+              <div className="grid grid-cols-2 gap-4 border border-border p-3 rounded-lg bg-muted/20">
+                <div className="space-y-2">
+                  <Label htmlFor="cash-received">Uang Diterima</Label>
+                  <div className="relative">
+                    <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">Rp</span>
+                    <Input 
+                      id="cash-received"
+                      type="number"
+                      min={amount}
+                      value={cashReceived}
+                      onChange={(e) => setCashReceived(parseFloat(e.target.value) || 0)}
+                      className="pl-8 text-sm font-semibold"
+                    />
+                  </div>
+                </div>
+                <div className="space-y-2 flex flex-col justify-end">
+                  <span className="text-xs text-muted-foreground">Kembalian:</span>
+                  <span className="text-lg font-bold text-green-600 dark:text-green-400">
+                    Rp {Math.max(0, cashReceived - amount).toLocaleString("id-ID")}
+                  </span>
+                </div>
+              </div>
+            )}
 
-               {/* Bank List (Only if Transfer) */}
-               {method === "TRANSFER" && (
-                   <div className="space-y-2">
-                       <Label>Bank Tujuan</Label>
-                       <select 
-                           className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-                           value={selectedBankId}
-                           onChange={(e) => setSelectedBankId(e.target.value)}
-                       >
-                           <option value="">Pilih Bank...</option>
-                           {bankList.map((bank) => (
-                               <option key={bank.id} value={bank.id}>
-                                   {bank.bankName} - {bank.accountNumber}
-                               </option>
-                           ))}
-                       </select>
-                   </div>
-               )}
+            {["TRANSFER", "QRIS", "CARD"].includes(method) && (
+              <div className="space-y-3 border border-border p-3 rounded-lg bg-muted/20">
+                {bankList.length > 0 && (
+                  <div className="space-y-2">
+                    <Label>Rekening Bank Tujuan (EDC/QRIS/Transfer)</Label>
+                    <select 
+                        className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                        value={selectedBankId}
+                        onChange={(e) => setSelectedBankId(e.target.value)}
+                    >
+                        <option value="">Pilih Bank...</option>
+                        {bankList.map((bank) => (
+                            <option key={bank.id} value={bank.id}>
+                                {bank.bankName} - {bank.accountNumber}
+                            </option>
+                        ))}
+                    </select>
+                  </div>
+                )}
+
+                {method === "QRIS" && (
+                  <div className="flex flex-col items-center justify-center p-4 border border-dashed border-border rounded bg-background/50">
+                    {/* Simulated QRIS Code SVG */}
+                    <div className="w-32 h-32 bg-foreground/10 border-4 border-foreground/20 rounded flex items-center justify-center p-2 mb-2 relative">
+                      <div className="grid grid-cols-4 gap-1 w-full h-full opacity-80">
+                        {Array.from({ length: 16 }).map((_, i) => (
+                          <div key={i} className={`rounded-sm ${(i * 3 + 7) % 5 === 0 || i === 0 || i === 3 || i === 12 || i === 15 ? 'bg-foreground' : 'bg-transparent'}`} />
+                        ))}
+                      </div>
+                      <span className="absolute text-[8px] bg-background px-1 py-0.5 rounded font-black border border-border">QRIS MOCK</span>
+                    </div>
+                    <p className="text-[10px] text-muted-foreground text-center font-medium">Scan QR Code di atas menggunakan dompet digital atau aplikasi mobile banking pelanggan.</p>
+                  </div>
+                )}
+
+                {method === "CARD" && (
+                  <div className="p-3 bg-background/50 border border-border rounded flex items-center gap-3">
+                    <div className="w-8 h-8 rounded bg-primary/10 flex items-center justify-center font-bold text-xs text-primary border border-primary/20">EDC</div>
+                    <div className="text-[10px] text-muted-foreground leading-relaxed">
+                      Silakan swipe / insert kartu debit atau kredit pelanggan pada mesin EDC tujuan. Klik <b>Bayar & Selesaikan</b> untuk mengonfirmasi struk EDC berhasil keluar.
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
           <div className="space-y-2">
             <Label htmlFor="note">Catatan (Opsional)</Label>
             <Textarea
               id="note"
-              placeholder={method === "TRANSFER" ? "Nama Pengirim / No. Ref Transfer" : "Catatan tambahan..."}
+              placeholder={method === "TRANSFER" ? "Nama Pengirim / No. Ref Transfer" : method === "QRIS" ? "ID Transaksi QRIS" : method === "CARD" ? "No. Struk EDC" : "Catatan tambahan..."}
               value={note}
               onChange={(e) => setNote(e.target.value)}
             />

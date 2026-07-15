@@ -30,7 +30,7 @@ import {
   DialogTitle,
   DialogFooter
 } from "@/components/ui/dialog";
-import { getAdminOrders, finishOrder, closeOrder } from "@/app/actions/orders";
+import { getAdminOrders, finishOrder, closeOrder, confirmOrder } from "@/app/actions/orders";
 import { OrderStatus as PrismaOrderStatus, ServiceType } from "@prisma/client";
 import { OrderDialog } from "@/components/OrderDialog";
 import { DeleteConfirmDialog } from "@/components/DeleteConfirmDialog";
@@ -92,6 +92,41 @@ export default function OrdersPage() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [orderToDelete, setOrderToDelete] = useState<{ id: string; custName: string; vehicle: string } | null>(null);
 
+  // Confirm dialog states
+  const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
+  const [orderToConfirm, setOrderToConfirm] = useState<Order | null>(null);
+  const [confirmLoading, setConfirmLoading] = useState(false);
+
+  async function handleConfirmOrder() {
+    if (!orderToConfirm) return;
+    setConfirmLoading(true);
+    try {
+      const result = await confirmOrder(orderToConfirm.id);
+      if (result.success) {
+        toast({
+          title: "✅ Berhasil!",
+          description: "Booking berhasil dikonfirmasi ke status Menunggu Servis",
+        });
+        setConfirmDialogOpen(false);
+        fetchOrders();
+      } else {
+        toast({
+          variant: "destructive",
+          title: "❌ Gagal",
+          description: result.error || "Gagal mengonfirmasi booking",
+        });
+      }
+    } catch (err) {
+      toast({
+        variant: "destructive",
+        title: "❌ Error",
+        description: "Terjadi kesalahan sistem",
+      });
+    } finally {
+      setConfirmLoading(false);
+    }
+  }
+
   // Fetch orders when search or filter changes
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -136,7 +171,7 @@ export default function OrdersPage() {
         icon: FileText,
       },
       CONFIRMED: {
-        label: "Dikonfirmasi",
+        label: "Menunggu Servis",
         className: "bg-indigo-100 text-indigo-800 border-indigo-300 dark:bg-indigo-900/30 dark:text-indigo-400 dark:border-indigo-700",
         icon: CheckCircle,
       },
@@ -385,17 +420,30 @@ export default function OrdersPage() {
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex gap-2">
                         {order.status === "PENDING" && (
-                          <Button 
-                            variant="default" 
-                            size="sm"
-                            className="bg-blue-600 hover:bg-blue-700 text-white"
-                            onClick={() => {
-                              setSelectedOrder(order);
-                              setProcessDialogOpen(true);
-                            }}
-                          >
-                            <Wrench className="h-4 w-4 mr-1" /> Proses
-                          </Button>
+                          <div className="flex gap-2">
+                            <Button 
+                              variant="default" 
+                              size="sm"
+                              className="bg-indigo-600 hover:bg-indigo-700 text-white"
+                              onClick={() => {
+                                setOrderToConfirm(order);
+                                setConfirmDialogOpen(true);
+                              }}
+                            >
+                              <CheckCircle className="h-4 w-4 mr-1" /> Konfirmasi
+                            </Button>
+                            <Button 
+                              variant="outline" 
+                              size="sm"
+                              className="border-blue-200 text-blue-700 hover:bg-blue-50"
+                              onClick={() => {
+                                setSelectedOrder(order);
+                                setProcessDialogOpen(true);
+                              }}
+                            >
+                              <Wrench className="h-4 w-4 mr-1" /> Proses
+                            </Button>
+                          </div>
                         )}
                         {order.status === "IN_PROGRESS" && (
                           <Button 
@@ -739,6 +787,64 @@ export default function OrdersPage() {
               >
                 {closeLoading && <Clock className="h-4 w-4 animate-spin" />}
                 Ya, Serahkan Unit
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
+      
+      {/* Confirm Booking Dialog */}
+      {orderToConfirm && (
+        <Dialog open={confirmDialogOpen} onOpenChange={setConfirmDialogOpen}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <CheckCircle className="h-5 w-5 text-indigo-600" />
+                Konfirmasi Booking Pelayanan
+              </DialogTitle>
+              <DialogDescription>
+                Apakah Anda yakin ingin menyetujui booking ini dan mengubah statusnya menjadi <strong>Menunggu Servis</strong>?
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="py-4 space-y-4">
+              <div className="p-3 bg-muted/50 rounded-lg space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Pelanggan</span>
+                  <span className="font-bold">{orderToConfirm.custName}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Kendaraan</span>
+                  <span className="font-medium">{orderToConfirm.vehicle}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Jenis Layanan</span>
+                  <span className="font-medium capitalize">{orderToConfirm.serviceType.replace('_', ' ')}</span>
+                </div>
+                {orderToConfirm.plateNumber && (
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Plat Nomor</span>
+                    <span className="font-medium font-mono">{orderToConfirm.plateNumber}</span>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <DialogFooter>
+              <Button 
+                variant="outline" 
+                onClick={() => setConfirmDialogOpen(false)}
+                disabled={confirmLoading}
+              >
+                Batal
+              </Button>
+              <Button 
+                onClick={handleConfirmOrder}
+                disabled={confirmLoading}
+                className="gap-2 bg-indigo-600 hover:bg-indigo-700 text-white"
+              >
+                {confirmLoading && <Clock className="h-4 w-4 animate-spin" />}
+                Konfirmasi Booking
               </Button>
             </DialogFooter>
           </DialogContent>

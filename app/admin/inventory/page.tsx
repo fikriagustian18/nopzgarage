@@ -13,17 +13,28 @@ import {
   AlertTriangle,
   TrendingDown,
   Box,
+  Loader2,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { getSpareParts, deleteSparePart } from "@/app/actions/inventory"; 
+import { getSpareParts, deleteSparePart, addStock, reduceStock } from "@/app/actions/inventory"; 
 import { SparepartDialog } from "@/components/SparepartDialog"; 
 import { Toaster } from "@/components/ui/toaster";
 import { ExportButton } from "@/components/export/ExportButton";
 import { exportInventory } from "@/lib/export/reports/inventory-export";
 import type { InventoryItemExport } from "@/lib/export/types";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { toast } from "@/hooks/use-toast";
 
 type SparePart = {
   id: string;
@@ -49,6 +60,115 @@ export default function InventoryPage() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [dialogMode, setDialogMode] = useState<"create" | "edit">("create");
   const [selectedPart, setSelectedPart] = useState<SparePart | undefined>();
+
+  // Stock dialog states
+  const [stockInOpen, setStockInOpen] = useState(false);
+  const [stockOutOpen, setStockOutOpen] = useState(false);
+  const [stockLoading, setStockLoading] = useState(false);
+
+  const [stockInForm, setStockInForm] = useState({
+    qty: 1,
+    supplier: "",
+    buyPrice: 0,
+    date: new Date().toISOString().split("T")[0]
+  });
+
+  const [stockOutForm, setStockOutForm] = useState({
+    qty: 1,
+    description: "",
+    date: new Date().toISOString().split("T")[0]
+  });
+
+  useEffect(() => {
+    if (selectedPart) {
+      setStockInForm({
+        qty: 1,
+        supplier: "",
+        buyPrice: Number(selectedPart.buyPrice),
+        date: new Date().toISOString().split("T")[0]
+      });
+      setStockOutForm({
+        qty: 1,
+        description: "",
+        date: new Date().toISOString().split("T")[0]
+      });
+    }
+  }, [selectedPart]);
+
+  const handleStockInSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedPart) return;
+    setStockLoading(true);
+    try {
+      const res = await addStock(
+        selectedPart.id,
+        stockInForm.qty,
+        stockInForm.supplier,
+        stockInForm.buyPrice,
+        stockInForm.date
+      );
+
+      if (res.success) {
+        toast({
+          title: "✅ Berhasil!",
+          description: `Berhasil menambahkan stok masuk sebanyak ${stockInForm.qty} unit.`,
+        });
+        setStockInOpen(false);
+        fetchSpareParts();
+      } else {
+        toast({
+          variant: "destructive",
+          title: "❌ Gagal",
+          description: res.error || "Gagal memproses stok masuk",
+        });
+      }
+    } catch (err) {
+      toast({
+        variant: "destructive",
+        title: "❌ Error",
+        description: "Terjadi kesalahan sistem",
+      });
+    } finally {
+      setStockLoading(false);
+    }
+  };
+
+  const handleStockOutSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedPart) return;
+    setStockLoading(true);
+    try {
+      const res = await reduceStock(
+        selectedPart.id,
+        stockOutForm.qty,
+        stockOutForm.description,
+        stockOutForm.date
+      );
+
+      if (res.success) {
+        toast({
+          title: "✅ Berhasil!",
+          description: `Berhasil mencatat stok keluar sebanyak ${stockOutForm.qty} unit.`,
+        });
+        setStockOutOpen(false);
+        fetchSpareParts();
+      } else {
+        toast({
+          variant: "destructive",
+          title: "❌ Gagal",
+          description: res.error || "Gagal memproses stok keluar",
+        });
+      }
+    } catch (err) {
+      toast({
+        variant: "destructive",
+        title: "❌ Error",
+        description: "Terjadi kesalahan sistem",
+      });
+    } finally {
+      setStockLoading(false);
+    }
+  };
 
   // Fetch dari database
   useEffect(() => {
@@ -317,8 +437,31 @@ export default function InventoryPage() {
                         <td className="px-6 py-4 whitespace-nowrap">
                           <div className="flex gap-2">
                             <Button 
+                              variant="outline" 
+                              size="sm"
+                              className="text-green-600 border-green-200 hover:bg-green-50 dark:hover:bg-green-950/20 text-xs py-1 h-8"
+                              onClick={() => {
+                                setSelectedPart(part);
+                                setStockInOpen(true);
+                              }}
+                            >
+                              + Masuk
+                            </Button>
+                            <Button 
+                              variant="outline" 
+                              size="sm"
+                              className="text-orange-600 border-orange-200 hover:bg-orange-50 dark:hover:bg-orange-950/20 text-xs py-1 h-8"
+                              onClick={() => {
+                                setSelectedPart(part);
+                                setStockOutOpen(true);
+                              }}
+                            >
+                              - Keluar
+                            </Button>
+                            <Button 
                               variant="ghost" 
                               size="sm"
+                              className="h-8 w-8 p-0"
                               onClick={() => {
                                 setSelectedPart(part);
                                 setDialogMode("edit");
@@ -330,9 +473,10 @@ export default function InventoryPage() {
                             <Button 
                               variant="ghost" 
                               size="sm"
+                              className="h-8 w-8 p-0 text-red-500 hover:text-red-600"
                               onClick={() => handleDelete(part.id)}
                             >
-                              <Trash2 className="h-4 w-4 text-red-500" />
+                              <Trash2 className="h-4 w-4" />
                             </Button>
                           </div>
                         </td>
@@ -353,6 +497,192 @@ export default function InventoryPage() {
         sparepart={selectedPart}
         onSuccess={fetchSpareParts}
       />
+      {/* Stok Masuk Dialog */}
+      {selectedPart && (
+        <Dialog open={stockInOpen} onOpenChange={setStockInOpen}>
+          <DialogContent className="max-w-md bg-card border border-border">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2 text-foreground font-black">
+                <Box className="h-5 w-5 text-green-600" />
+                Kelola Stok Masuk (Restock)
+              </DialogTitle>
+              <DialogDescription className="text-muted-foreground">
+                Catat penambahan stok fisik barang yang masuk ke inventori.
+              </DialogDescription>
+            </DialogHeader>
+
+            <form onSubmit={handleStockInSubmit} className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label className="text-foreground">Nama Barang</Label>
+                <Input value={selectedPart.name} disabled className="bg-muted text-foreground" />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="in-qty" className="text-foreground">Jumlah Masuk</Label>
+                  <Input 
+                    id="in-qty" 
+                    type="number" 
+                    min={1} 
+                    required 
+                    value={stockInForm.qty}
+                    onChange={(e) => setStockInForm({ ...stockInForm, qty: parseInt(e.target.value) || 0 })}
+                    className="text-foreground bg-background"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-foreground">Satuan</Label>
+                  <Input value={selectedPart.unit} disabled className="bg-muted text-foreground" />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="in-supplier" className="text-foreground">Supplier / Penyuplai</Label>
+                <Input 
+                  id="in-supplier" 
+                  type="text" 
+                  placeholder="Nama Vendor / Supplier" 
+                  required
+                  value={stockInForm.supplier}
+                  onChange={(e) => setStockInForm({ ...stockInForm, supplier: e.target.value })}
+                  className="text-foreground bg-background"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="in-price" className="text-foreground">Harga Beli Baru (Rp)</Label>
+                  <Input 
+                    id="in-price" 
+                    type="number" 
+                    min={0}
+                    required
+                    value={stockInForm.buyPrice}
+                    onChange={(e) => setStockInForm({ ...stockInForm, buyPrice: parseInt(e.target.value) || 0 })}
+                    className="text-foreground bg-background"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="in-date" className="text-foreground">Tanggal Masuk</Label>
+                  <Input 
+                    id="in-date" 
+                    type="date" 
+                    required
+                    value={stockInForm.date}
+                    onChange={(e) => setStockInForm({ ...stockInForm, date: e.target.value })}
+                    className="text-foreground bg-background"
+                  />
+                </div>
+              </div>
+
+              <DialogFooter className="pt-4">
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  onClick={() => setStockInOpen(false)}
+                  disabled={stockLoading}
+                  className="text-foreground"
+                >
+                  Batal
+                </Button>
+                <Button 
+                  type="submit" 
+                  disabled={stockLoading}
+                  className="bg-green-600 hover:bg-green-700 text-white gap-2"
+                >
+                  {stockLoading && <Loader2 className="h-4 w-4 animate-spin" />}
+                  Simpan Stok Masuk
+                </Button>
+              </DialogFooter>
+            </form>
+          </DialogContent>
+        </Dialog>
+      )}
+
+      {/* Stok Keluar Dialog */}
+      {selectedPart && (
+        <Dialog open={stockOutOpen} onOpenChange={setStockOutOpen}>
+          <DialogContent className="max-w-md bg-card border border-border">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2 text-foreground font-black">
+                <Box className="h-5 w-5 text-orange-600" />
+                Kelola Stok Keluar (Penyesuaian)
+              </DialogTitle>
+              <DialogDescription className="text-muted-foreground">
+                Catat pengurangan stok fisik barang untuk keperluan internal atau penyesuaian.
+              </DialogDescription>
+            </DialogHeader>
+
+            <form onSubmit={handleStockOutSubmit} className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label className="text-foreground">Nama Barang</Label>
+                <Input value={selectedPart.name} disabled className="bg-muted text-foreground" />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="out-qty" className="text-foreground">Jumlah Keluar</Label>
+                  <Input 
+                    id="out-qty" 
+                    type="number" 
+                    min={1} 
+                    max={selectedPart.stock}
+                    required 
+                    value={stockOutForm.qty}
+                    onChange={(e) => setStockOutForm({ ...stockOutForm, qty: parseInt(e.target.value) || 0 })}
+                    className="text-foreground bg-background"
+                  />
+                  <p className="text-[10px] text-muted-foreground mt-0.5">Sisa stok: {selectedPart.stock} {selectedPart.unit}</p>
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-foreground">Satuan</Label>
+                  <Input value={selectedPart.unit} disabled className="bg-muted text-foreground" />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="out-desc" className="text-foreground">Keperluan / Pelanggan</Label>
+                <Input 
+                  id="out-desc" 
+                  type="text" 
+                  placeholder="Contoh: Dipakai servis motor budi, Stok pecah/rusak" 
+                  required
+                  value={stockOutForm.description}
+                  onChange={(e) => setStockOutForm({ ...stockOutForm, description: e.target.value })}
+                  className="text-foreground bg-background"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="out-date" className="text-foreground">Tanggal Keluar</Label>
+                <Input 
+                  id="out-date" 
+                  type="date" 
+                  required
+                  value={stockOutForm.date}
+                  onChange={(e) => setStockOutForm({ ...stockOutForm, date: e.target.value })}
+                  className="text-foreground bg-background"
+                />
+              </div>
+
+              <DialogFooter className="pt-4">
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  onClick={() => setStockOutOpen(false)}
+                  disabled={stockLoading}
+                  className="text-foreground"
+                >
+                  Batal
+                </Button>
+                <Button 
+                  type="submit" 
+                  disabled={stockLoading}
+                  className="bg-orange-600 hover:bg-orange-700 text-white gap-2"
+                >
+                  {stockLoading && <Loader2 className="h-4 w-4 animate-spin" />}
+                  Simpan Stok Keluar
+                </Button>
+              </DialogFooter>
+            </form>
+          </DialogContent>
+        </Dialog>
+      )}
+
       <Toaster />
       </div>
     </RoleGuard>

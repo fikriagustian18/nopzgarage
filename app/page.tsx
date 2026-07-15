@@ -479,7 +479,7 @@ export default async function Home() {
                       </div>
                       <h3 className="text-2xl font-black text-foreground">Form Booking</h3>
                    </div>
-                   <BookingForm serviceOptions={serviceItems} />
+                    <BookingForm serviceOptions={serviceItems} garagePhone={general?.phone} />
                </div>
            </div>
         </div>

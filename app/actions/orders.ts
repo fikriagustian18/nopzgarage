@@ -22,6 +22,7 @@ export type CreateOrderInput = {
   plateNumber?: string;
   complaint: string;
   serviceType: ServiceType;
+  scheduledAt?: string | Date;
 };
 
 export type UpdateEstimateInput = {
@@ -373,6 +374,7 @@ export async function createBooking(data: CreateOrderInput) {
         complaint: data.complaint,
         serviceType: data.serviceType,
         status: 'PENDING',
+        scheduledAt: data.scheduledAt ? new Date(data.scheduledAt) : null,
       },
       include: {
         mechanic: true,
@@ -380,19 +382,34 @@ export async function createBooking(data: CreateOrderInput) {
       },
     });
 
+    // Calculate queue number based on today's count
+    const today = new Date();
+    const start = new Date(today.setHours(0, 0, 0, 0));
+    const end = new Date(today.setHours(23, 59, 59, 999));
+    const todayBookingsCount = await prisma.order.count({
+      where: {
+        createdAt: {
+          gte: start,
+          lte: end
+        }
+      }
+    });
+    const queueNumber = `Q-${String(todayBookingsCount).padStart(2, '0')}`;
+
     revalidatePath('/');
     revalidatePath('/kanban');
     
     await createLog({
         action: "CREATE_BOOKING",
         title: "New Booking",
-        details: `Booking received from ${data.custName} (${data.vehicle})`,
-        metadata: { orderId: order.id },
+        details: `Booking received from ${data.custName} (${data.vehicle}) with Queue: ${queueNumber}`,
+        metadata: { orderId: order.id, queueNumber },
         userName: "Customer",
         role: "GUEST"
       });
     
-    return { success: true, order: serializeOrder(order) };
+    const serialized = serializeOrder(order);
+    return { success: true, order: { ...serialized, queueNumber } };
   } catch (error) {
     console.error('Create booking error:', error);
     return { success: false, error: 'Gagal membuat booking' };

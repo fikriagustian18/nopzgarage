@@ -37,6 +37,7 @@ type UserType = {
     id: string;
     name: string;
     role: string;
+    phone?: string | null;
   } | null;
   createdAt: Date;
 };
@@ -51,6 +52,7 @@ export function UserManagementTab() {
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [resetPasswordDialogOpen, setResetPasswordDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [statusDialogOpen, setStatusDialogOpen] = useState(false);
   
   const [selectedUser, setSelectedUser] = useState<UserType | null>(null);
   
@@ -60,6 +62,9 @@ export function UserManagementTab() {
     password: "",
     role: "EMPLOYEE" as "OWNER" | "ADMIN" | "EMPLOYEE",
     employeeId: "",
+    name: "",
+    phone: "",
+    isActive: true,
   });
   
   const [newPassword, setNewPassword] = useState("");
@@ -98,7 +103,7 @@ export function UserManagementTab() {
     if (result.success) {
       toast.success("User berhasil dibuat");
       setCreateDialogOpen(false);
-      setFormData({ email: "", password: "", role: "EMPLOYEE", employeeId: "" });
+      setFormData({ email: "", password: "", role: "EMPLOYEE", employeeId: "", name: "", phone: "", isActive: true });
       loadData();
     } else {
       toast.error(result.error || "Gagal membuat user");
@@ -112,6 +117,8 @@ export function UserManagementTab() {
       id: selectedUser.id,
       email: formData.email,
       role: formData.role,
+      name: formData.name,
+      phone: formData.phone,
     });
 
     if (result.success) {
@@ -120,6 +127,23 @@ export function UserManagementTab() {
       loadData();
     } else {
       toast.error(result.error || "Gagal update user");
+    }
+  };
+
+  const handleToggleStatus = async () => {
+    if (!selectedUser) return;
+
+    const result = await updateUser({
+      id: selectedUser.id,
+      isActive: !selectedUser.isActive,
+    });
+
+    if (result.success) {
+      toast.success(`Status user berhasil ${!selectedUser.isActive ? "diaktifkan" : "dinonaktifkan"}`);
+      setStatusDialogOpen(false);
+      loadData();
+    } else {
+      toast.error(result.error || "Gagal mengubah status user");
     }
   };
 
@@ -169,6 +193,9 @@ export function UserManagementTab() {
       password: "",
       role: user.role as any,
       employeeId: user.employeeId || "",
+      name: user.employee?.name || "",
+      phone: user.employee?.phone || "",
+      isActive: user.isActive,
     });
     setEditDialogOpen(true);
   };
@@ -183,6 +210,11 @@ export function UserManagementTab() {
   const openDeleteDialog = (user: UserType) => {
     setSelectedUser(user);
     setDeleteDialogOpen(true);
+  };
+
+  const openStatusToggleDialog = (user: UserType) => {
+    setSelectedUser(user);
+    setStatusDialogOpen(true);
   };
 
   const getRoleBadgeColor = (role: string) => {
@@ -248,13 +280,22 @@ export function UserManagementTab() {
                       )}
                     </div>
                     {user.employee && (
-                      <p className="text-sm text-muted-foreground">
-                        {user.employee.name} - {user.employee.role}
-                      </p>
+                      <div className="text-sm text-muted-foreground mt-0.5">
+                        <p className="font-medium text-foreground/80">{user.employee.name} - {user.employee.role}</p>
+                        {user.employee.phone && <p className="text-xs font-mono text-muted-foreground">WA: {user.employee.phone}</p>}
+                      </div>
                     )}
                   </div>
                 </div>
                 <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className={user.isActive ? "text-amber-600 hover:text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-950/20" : "text-emerald-600 hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/20"}
+                    onClick={() => openStatusToggleDialog(user)}
+                  >
+                    {user.isActive ? "Nonaktifkan" : "Aktifkan"}
+                  </Button>
                   <Button
                     variant="outline"
                     size="sm"
@@ -304,7 +345,7 @@ export function UserManagementTab() {
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="email">Email (Username)</Label>
               <Input
                 id="email"
                 type="email"
@@ -349,12 +390,51 @@ export function UserManagementTab() {
                   <SelectValue placeholder="Pilih karyawan..." />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="none">Tidak ada</SelectItem>
+                  <SelectItem value="none">Tidak ada (Buat Profil Karyawan Baru)</SelectItem>
                   {employees.map((emp) => (
                     <SelectItem key={emp.id} value={emp.id}>
                       {emp.name} - {emp.role}
                     </SelectItem>
                   ))}
+                </SelectContent>
+              </Select>
+            </div>
+            
+            {!formData.employeeId && (
+              <>
+                <div className="space-y-2">
+                  <Label htmlFor="name">Nama Lengkap</Label>
+                  <Input
+                    id="name"
+                    placeholder="Nama Pengguna Baru"
+                    value={formData.name}
+                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="phone">No. WhatsApp/HP</Label>
+                  <Input
+                    id="phone"
+                    placeholder="08xxxxxxxxxx"
+                    value={formData.phone}
+                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                  />
+                </div>
+              </>
+            )}
+
+            <div className="space-y-2">
+              <Label htmlFor="status">Status Awal</Label>
+              <Select
+                value={formData.isActive ? "active" : "inactive"}
+                onValueChange={(value) => setFormData({ ...formData, isActive: value === "active" })}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="active">Aktif</SelectItem>
+                  <SelectItem value="inactive">Nonaktif</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -379,7 +459,7 @@ export function UserManagementTab() {
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <Label htmlFor="edit-email">Email</Label>
+              <Label htmlFor="edit-email">Email (Username)</Label>
               <Input
                 id="edit-email"
                 type="email"
@@ -388,7 +468,25 @@ export function UserManagementTab() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="edit-role">Role</Label>
+              <Label htmlFor="edit-name">Nama Lengkap</Label>
+              <Input
+                id="edit-name"
+                placeholder="Nama Pengguna"
+                value={formData.name}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-phone">No. WhatsApp/HP</Label>
+              <Input
+                id="edit-phone"
+                placeholder="08xxxxxxxxxx"
+                value={formData.phone}
+                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-role">Role / Hak Akses</Label>
               <Select
                 value={formData.role}
                 onValueChange={(value: any) => setFormData({ ...formData, role: value })}
@@ -469,6 +567,29 @@ export function UserManagementTab() {
             </Button>
             <Button variant="destructive" onClick={handleDeleteUser}>
               Hapus User
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Toggle Status User Dialog */}
+      <Dialog open={statusDialogOpen} onOpenChange={setStatusDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Konfirmasi Perubahan Status</DialogTitle>
+            <DialogDescription>
+              Apakah Anda yakin ingin <strong>{selectedUser?.isActive ? "menonaktifkan" : "mengaktifkan"}</strong> user <strong>{selectedUser?.email}</strong>?
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setStatusDialogOpen(false)}>
+              Batal
+            </Button>
+            <Button 
+              variant={selectedUser?.isActive ? "destructive" : "default"} 
+              onClick={handleToggleStatus}
+            >
+              Ya, {selectedUser?.isActive ? "Ubah Status" : "Ubah Status"}
             </Button>
           </DialogFooter>
         </DialogContent>

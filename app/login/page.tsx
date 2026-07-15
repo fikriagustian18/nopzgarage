@@ -51,8 +51,16 @@ export default function LoginPage() {
         return;
       }
 
-      // Redirect based on role (will be handled by middleware)
-      router.push("/admin");
+      // Fetch session to get user role
+      const sessionRes = await fetch("/api/auth/session");
+      const session = await sessionRes.json();
+      
+      // Redirect based on role sesuai flowchart
+      if (session?.user?.role === "EMPLOYEE") {
+        router.push("/employee");
+      } else {
+        router.push("/admin");
+      }
       router.refresh();
     } catch (err) {
       setError("Terjadi kesalahan. Silakan coba lagi.");

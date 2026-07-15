@@ -106,7 +106,7 @@ export function getStatusLabel(status: string): string {
   const labels: Record<string, string> = {
     PENDING: 'Menunggu Estimasi',
     ESTIMATED: 'Sudah Diestimasi',
-    CONFIRMED: 'Dikonfirmasi',
+    CONFIRMED: 'Menunggu Servis',
     QUEUE: 'Dalam Antrian',
     IN_PROGRESS: 'Sedang Dikerjakan',
     READY: 'Siap Diambil',

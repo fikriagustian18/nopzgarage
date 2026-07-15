@@ -339,3 +339,128 @@ export async function getSparePartDetail(id: string) {
       return { success: false, error: 'Gagal load detail produk' };
     }
   }
+
+/**
+ * Menambahkan stok barang (Stok Masuk).
+ * 
+ * @param {string} sparePartId - ID sparepart.
+ * @param {number} quantity - Jumlah stok masuk.
+ * @param {string} supplier - Nama penyuplai.
+ * @param {number} buyPrice - Harga beli per unit.
+ * @param {string|Date} date - Tanggal masuk.
+ */
+export async function addStock(
+  sparePartId: string,
+  quantity: number,
+  supplier: string,
+  buyPrice: number,
+  date: string | Date
+) {
+  try {
+    const sparePart = await prisma.sparePart.findUnique({ where: { id: sparePartId } });
+    if (!sparePart) {
+      return { success: false, error: 'Barang tidak ditemukan' };
+    }
+
+    const updated = await prisma.sparePart.update({
+      where: { id: sparePartId },
+      data: {
+        stock: { increment: quantity },
+        buyPrice: buyPrice
+      }
+    });
+
+    // Create journal entry for purchase value
+    const purchaseValue = quantity * buyPrice;
+    const inventoryAccount = await prisma.account.upsert({
+      where: { code: '111' },
+      create: { code: '111', name: 'Persediaan Sparepart', type: 'ASSET', category: 'CURRENT_ASSET' },
+      update: {}
+    });
+    
+    const cashAccount = await prisma.account.upsert({
+      where: { code: '101' },
+      create: { code: '101', name: 'Kas Tunai', type: 'ASSET', category: 'CURRENT_ASSET' },
+      update: {}
+    });
+
+    await prisma.journalEntry.create({
+      data: {
+        date: new Date(date),
+        description: `Stok Masuk - ${sparePart.name} (+${quantity} ${sparePart.unit}) dari ${supplier}`,
+        reference: sparePart.id,
+        items: {
+          create: [
+            { accountId: inventoryAccount.id, debit: purchaseValue, credit: 0 },
+            { accountId: cashAccount.id, debit: 0, credit: purchaseValue }
+          ]
+        }
+      }
+    });
+
+    revalidatePath('/admin/products');
+
+    await createLog({
+      action: "STOCK_IN",
+      title: "Stok Masuk",
+      details: `Stok masuk: +${quantity} ${sparePart.unit} untuk ${sparePart.name} dari ${supplier}. Harga beli: Rp ${buyPrice.toLocaleString('id-ID')}.`,
+      metadata: { sparePartId, quantity, supplier, buyPrice, date: new Date(date).toISOString() },
+      userName: "Admin",
+      role: "ADMIN"
+    });
+
+    return { success: true, sparePart: updated };
+  } catch (error: any) {
+    console.error('Add stock error:', error);
+    return { success: false, error: error.message || 'Gagal menambahkan stok' };
+  }
+}
+
+/**
+ * Mengurangi stok barang (Stok Keluar).
+ * 
+ * @param {string} sparePartId - ID sparepart.
+ * @param {number} quantity - Jumlah stok keluar.
+ * @param {string} description - Keterangan/Keperluan stok keluar.
+ * @param {string|Date} date - Tanggal keluar.
+ */
+export async function reduceStock(
+  sparePartId: string,
+  quantity: number,
+  description: string,
+  date: string | Date
+) {
+  try {
+    const sparePart = await prisma.sparePart.findUnique({ where: { id: sparePartId } });
+    if (!sparePart) {
+      return { success: false, error: 'Barang tidak ditemukan' };
+    }
+
+    if (sparePart.stock < quantity) {
+      return { success: false, error: `Stok tidak cukup. Sisa stok saat ini: ${sparePart.stock}` };
+    }
+
+    const updated = await prisma.sparePart.update({
+      where: { id: sparePartId },
+      data: {
+        stock: { decrement: quantity }
+      }
+    });
+
+    revalidatePath('/admin/products');
+
+    await createLog({
+      action: "STOCK_OUT",
+      title: "Stok Keluar",
+      details: `Stok keluar: -${quantity} ${sparePart.unit} untuk ${sparePart.name}. Keperluan/Pelanggan: ${description}.`,
+      metadata: { sparePartId, quantity, description, date: new Date(date).toISOString() },
+      userName: "Admin",
+      role: "ADMIN"
+    });
+
+    return { success: true, sparePart: updated };
+  } catch (error: any) {
+    console.error('Reduce stock error:', error);
+    return { success: false, error: error.message || 'Gagal mengurangi stok' };
+  }
+}

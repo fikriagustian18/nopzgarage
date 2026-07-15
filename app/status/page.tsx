@@ -43,7 +43,7 @@ export default function StatusPage() {
     const statusMap: any = {
       'PENDING': { label: 'Menunggu Konfirmasi', color: 'bg-gray-100 text-gray-800', icon: Clock },
       'ESTIMATED': { label: 'Sudah Diestimasi', color: 'bg-blue-100 text-blue-800', icon: Clock },
-      'CONFIRMED': { label: 'Dikonfirmasi', color: 'bg-indigo-100 text-indigo-800', icon: CheckCircle },
+      'CONFIRMED': { label: 'Menunggu Servis', color: 'bg-indigo-100 text-indigo-800', icon: CheckCircle },
       'QUEUE': { label: 'Dalam Antrian', color: 'bg-yellow-100 text-yellow-800', icon: Clock },
       'IN_PROGRESS': { label: 'Sedang Dikerjakan', color: 'bg-blue-100 text-blue-800', icon: Wrench },
       'READY': { label: 'Siap Diambil', color: 'bg-green-100 text-green-800', icon: CheckCircle },

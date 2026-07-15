@@ -17,7 +17,7 @@ export type CreatePaymentInput = {
   note?: string;
   orderId?: string;
   payrollId?: string;
-  paymentMethod?: "CASH" | "TRANSFER";
+  paymentMethod?: "CASH" | "TRANSFER" | "QRIS" | "CARD";
   bankAccountId?: string;
   payCommissionNow?: boolean; // New Option: Pay employee commission immediately
 };
@@ -253,8 +253,8 @@ async function handleOrderPayment(tx: TransactionClient, orderId: string, paymen
   const newTotalPaid = Number(order.totalPaid) + amount;
   const totalPrice = Number(order.totalPrice);
 
-  // Update saldo bank jika pembayaran via transfer
-  if (payment.paymentMethod === "TRANSFER" && payment.bankAccountId) {
+  // Update saldo bank jika pembayaran via transfer/qris/card
+  if (["TRANSFER", "QRIS", "CARD"].includes(payment.paymentMethod) && payment.bankAccountId) {
     // Get bank account info using raw query
     const bankAccounts = await tx.$queryRaw<Array<{
       id: string;
@@ -310,7 +310,7 @@ async function handleOrderPayment(tx: TransactionClient, orderId: string, paymen
   // Tentukan akun kas/bank yang akan digunakan
   let cashAccountCode = "101"; // Default: Kas Tunai
   
-  if (payment.paymentMethod === "TRANSFER" && payment.bankAccountId) {
+  if (["TRANSFER", "QRIS", "CARD"].includes(payment.paymentMethod) && payment.bankAccountId) {
     // Gunakan akun bank spesifik jika ada
     const bankAccount = await tx.bankAccount.findUnique({
       where: { id: payment.bankAccountId }
@@ -321,6 +321,8 @@ async function handleOrderPayment(tx: TransactionClient, orderId: string, paymen
     } else {
       cashAccountCode = "102"; // Fallback ke akun Bank umum
     }
+  } else if (["TRANSFER", "QRIS", "CARD"].includes(payment.paymentMethod)) {
+    cashAccountCode = "102"; // Fallback ke akun Bank umum
   }
 
   if (isFirstPayment && !isFullPayment) {

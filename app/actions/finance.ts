@@ -159,3 +159,117 @@ export async function getGeneralLedger() {
     return { success: false, error: 'Gagal memuat jurnal umum' };
   }
 }
+
+/**
+ * Mengambil Laporan Operasional lengkap untuk Owner (Pesanan, Pengeluaran, Spareparts, Log Stok).
+ * 
+ * @returns {Object} Data pesanan, pengeluaran, spareparts, dan riwayat stok.
+ */
+export async function getOperationalReports() {
+  try {
+    const session = await auth();
+    if (!session || session.user?.role !== 'OWNER') {
+      return { success: false, error: 'Akses ditolak: Hanya Owner yang dapat mengakses laporan operasional.' };
+    }
+
+    const orders = await prisma.order.findMany({
+      include: {
+        orderItems: {
+          include: {
+            sparePart: true
+          }
+        },
+        mechanic: {
+          select: {
+            name: true
+          }
+        }
+      },
+      orderBy: { createdAt: 'desc' }
+    });
+
+    const journals = await prisma.journalEntry.findMany({
+      orderBy: { date: 'desc' },
+      include: {
+        items: {
+          include: { account: true }
+        }
+      }
+    });
+
+    const expenses = journals.map(j => {
+      const debitItem = j.items.find(i => toNumber(i.debit) > 0);
+      const creditItem = j.items.find(i => toNumber(i.credit) > 0);
+      
+      return {
+        id: j.id,
+        date: j.date,
+        description: j.description,
+        reference: j.reference,
+        amount: toNumber(debitItem?.debit),
+        category: debitItem?.account.name || 'Unknown',
+        categoryCode: debitItem?.account.code || '',
+        source: creditItem?.account.name || 'Unknown'
+      };
+    }).filter(e => e.source.toLowerCase().includes('kas'));
+
+    const spareParts = await prisma.sparePart.findMany({
+      orderBy: { name: 'asc' }
+    });
+
+    const stockLogs = await prisma.activityLog.findMany({
+      where: {
+        action: { in: ["STOCK_IN", "STOCK_OUT", "CREATE_SPAREPART"] }
+      },
+      orderBy: { createdAt: 'desc' }
+    });
+
+    const serializedOrders = orders.map((o: any) => ({
+      ...o,
+      totalPrice: toNumber(o.totalPrice),
+      totalPaid: toNumber(o.totalPaid),
+      createdAt: o.createdAt instanceof Date ? o.createdAt.toISOString() : o.createdAt,
+      updatedAt: o.updatedAt instanceof Date ? o.updatedAt.toISOString() : o.updatedAt,
+      scheduledAt: o.scheduledAt instanceof Date ? o.scheduledAt.toISOString() : o.scheduledAt,
+      orderItems: o.orderItems.map((item: any) => ({
+        ...item,
+        unitPrice: toNumber(item.unitPrice),
+        totalPrice: toNumber(item.totalPrice),
+        createdAt: item.createdAt instanceof Date ? item.createdAt.toISOString() : item.createdAt,
+      }))
+    }));
+
+    const serializedExpenses = expenses.map((e: any) => ({
+      ...e,
+      amount: toNumber(e.amount),
+      date: e.date instanceof Date ? e.date.toISOString() : e.date,
+      createdAt: e.createdAt instanceof Date ? e.createdAt.toISOString() : e.createdAt,
+    }));
+
+    const serializedSpareParts = spareParts.map((sp: any) => ({
+      ...sp,
+      buyPrice: toNumber(sp.buyPrice),
+      sellPrice: toNumber(sp.sellPrice),
+      createdAt: sp.createdAt instanceof Date ? sp.createdAt.toISOString() : sp.createdAt,
+      updatedAt: sp.updatedAt instanceof Date ? sp.updatedAt.toISOString() : sp.updatedAt,
+    }));
+
+    const serializedStockLogs = stockLogs.map((log: any) => ({
+      ...log,
+      createdAt: log.createdAt instanceof Date ? log.createdAt.toISOString() : log.createdAt,
+    }));
+
+    return {
+      success: true,
+      data: {
+        orders: serializedOrders,
+        expenses: serializedExpenses,
+        spareParts: serializedSpareParts,
+        stockLogs: serializedStockLogs,
+      }
+    };
+  } catch (error: any) {
+    console.error('Get operational reports error:', error);
+    return { success: false, error: error.message || 'Gagal memuat laporan operasional.' };
+  }
+}

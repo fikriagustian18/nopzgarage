@@ -27,6 +27,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { CheckCircle2, Loader2, User, Phone, Bike, PenTool, Wrench, CalendarCheck, Zap } from "lucide-react";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
+import { formatWhatsAppNumber } from "@/lib/utils";
 
 // ==================== Validation Schema ====================
 const bookingSchema = z.object({
@@ -39,17 +40,19 @@ const bookingSchema = z.object({
   plateNumber: z.string().optional(),
   serviceType: z.enum(["LIGHT_SERVICE", "MODIFICATION"]),
   complaint: z.string().min(10, "Keluhan minimal 10 karakter"),
+  scheduledAt: z.string().min(1, "Tanggal & Jam Booking harus diisi"),
 });
 
 type BookingFormData = z.infer<typeof bookingSchema>;
 
 interface BookingFormProps {
     serviceOptions?: any[]; // [{ title, description, serviceType, icon }]
+    garagePhone?: string;
 }
 
-export function BookingForm({ serviceOptions = [] }: BookingFormProps) {
+export function BookingForm({ serviceOptions = [], garagePhone }: BookingFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [successValues, setSuccessValues] = useState<BookingFormData | null>(null);
+  const [successValues, setSuccessValues] = useState<any | null>(null);
 
   // Calculate default options if none provided
   const services = serviceOptions.length > 0 ? serviceOptions : [
@@ -66,6 +69,7 @@ export function BookingForm({ serviceOptions = [] }: BookingFormProps) {
       plateNumber: "",
       serviceType: "LIGHT_SERVICE",
       complaint: "",
+      scheduledAt: "",
     },
   });
 
@@ -76,10 +80,10 @@ export function BookingForm({ serviceOptions = [] }: BookingFormProps) {
       const result = await createBooking(data);
 
       if (result.success) {
-        setSuccessValues(data);
+        setSuccessValues(result.order);
         form.reset();
         toast.success("Booking Berhasil!", {
-            description: "Tim kami akan segera menghubungi Anda."
+            description: "Silakan simpan nomor antrian Anda."
         });
       } else {
         toast.error("Gagal", {
@@ -94,26 +98,100 @@ export function BookingForm({ serviceOptions = [] }: BookingFormProps) {
   };
 
   if (successValues) {
+    const formattedDate = successValues.scheduledAt
+      ? new Date(successValues.scheduledAt).toLocaleString("id-ID", {
+          dateStyle: "medium",
+          timeStyle: "short",
+        })
+      : "-";
+
+    const cleanPhone = formatWhatsAppNumber(garagePhone || "0812-3456-7890");
+
+    // Generate WhatsApp text
+    const waText = encodeURIComponent(
+      `Halo NopzGarage, saya ingin mengonfirmasi booking service:\n\n` +
+      `*No. Antrian:* ${successValues.queueNumber || "-"}\n` +
+      `*Nama:* ${successValues.custName}\n` +
+      `*Motor:* ${successValues.vehicle}\n` +
+      `*Plat Nomor:* ${successValues.plateNumber || "-"}\n` +
+      `*Jadwal:* ${formattedDate}\n` +
+      `*Layanan:* ${successValues.serviceType === "LIGHT_SERVICE" ? "Servis Ringan" : "Modifikasi"}\n` +
+      `*Keluhan:* ${successValues.complaint}\n\n` +
+      `Mohon konfirmasinya. Terima kasih!`
+    );
+
     return (
         <motion.div 
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
-            className="bg-card border border-green-200 dark:border-green-900 rounded-2xl p-8 text-center shadow-lg relative overflow-hidden"
+            className="bg-card border border-green-200 dark:border-green-900 rounded-2xl p-8 text-left shadow-lg relative overflow-hidden"
         >
             <div className="absolute top-0 left-0 w-full h-2 bg-green-500" />
-            <div className="mx-auto w-20 h-20 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center mb-6">
-                <CheckCircle2 className="h-10 w-10 text-green-600 dark:text-green-400" />
+            
+            <div className="text-center mb-6">
+                <div className="mx-auto w-16 h-16 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center mb-4">
+                    <CheckCircle2 className="h-8 w-8 text-green-600 dark:text-green-400" />
+                </div>
+                <h3 className="text-2xl font-bold text-foreground">Booking Diterima!</h3>
+                <p className="text-muted-foreground text-sm">
+                    Silakan simpan nomor antrian Anda sebagai identitas booking.
+                </p>
             </div>
-            <h3 className="text-2xl font-bold text-foreground mb-2">Booking Diterima!</h3>
-            <p className="text-muted-foreground mb-6">
-                Terima kasih <b>{successValues.custName}</b>. Kami menunggu kedatangan motor <b>{successValues.vehicle}</b> Anda.
-            </p>
-            <div className="bg-muted/50 p-4 rounded-xl text-sm mb-6 max-w-sm mx-auto">
-                <p>Silakan datang ke bengkel kami atau tunggu konfirmasi WhatsApp dari admin.</p>
+
+            {/* Receipt Details */}
+            <div className="border border-border/85 rounded-xl p-5 bg-muted/30 space-y-4 mb-6 relative font-mono text-xs">
+                {/* Decorative border cutouts */}
+                <div className="absolute -left-2 top-1/2 -translate-y-1/2 w-4 h-4 rounded-full bg-background border-r border-border" />
+                <div className="absolute -right-2 top-1/2 -translate-y-1/2 w-4 h-4 rounded-full bg-background border-l border-border" />
+
+                <div className="flex justify-between items-center border-b border-dashed border-border pb-3">
+                    <span className="text-muted-foreground">NOMOR ANTRIAN</span>
+                    <span className="text-lg font-black text-primary tracking-wider">{successValues.queueNumber || "Q-XX"}</span>
+                </div>
+
+                <div className="space-y-2.5">
+                    <div className="flex justify-between">
+                        <span className="text-muted-foreground">Pelanggan:</span>
+                        <span className="font-bold text-right">{successValues.custName}</span>
+                    </div>
+                    <div className="flex justify-between">
+                        <span className="text-muted-foreground">Kendaraan:</span>
+                        <span className="font-bold text-right">{successValues.vehicle} {successValues.plateNumber ? `(${successValues.plateNumber})` : ""}</span>
+                    </div>
+                    <div className="flex justify-between">
+                        <span className="text-muted-foreground">Jenis Layanan:</span>
+                        <span className="font-bold text-right">{successValues.serviceType === "LIGHT_SERVICE" ? "Servis Ringan" : "Modifikasi"}</span>
+                    </div>
+                    <div className="flex justify-between">
+                        <span className="text-muted-foreground">Jadwal Kedatangan:</span>
+                        <span className="font-bold text-right">{formattedDate}</span>
+                    </div>
+                    <div className="border-t border-dashed border-border pt-2">
+                        <span className="text-muted-foreground block mb-1">Catatan/Keluhan:</span>
+                        <p className="font-medium text-foreground bg-background/50 p-2 rounded border border-border/50 break-words leading-relaxed whitespace-pre-wrap">{successValues.complaint}</p>
+                    </div>
+                </div>
             </div>
-            <Button onClick={() => setSuccessValues(null)} variant="outline">
-                Buat Booking Baru
-            </Button>
+
+            {/* Action Buttons */}
+            <div className="flex flex-col gap-3">
+                <Button 
+                    onClick={() => window.open(`https://wa.me/${cleanPhone}?text=${waText}`, "_blank")} 
+                    className="w-full h-12 bg-[#25D366] hover:bg-[#20BA56] text-white font-bold gap-2"
+                >
+                    <Zap className="h-4 w-4 fill-white" />
+                    Kirim Konfirmasi WhatsApp
+                </Button>
+                
+                <div className="grid grid-cols-2 gap-3">
+                    <Button onClick={() => window.location.href = "/status"} variant="outline" className="h-11 text-xs font-bold">
+                        Cek Status Antrian
+                    </Button>
+                    <Button onClick={() => setSuccessValues(null)} variant="ghost" className="h-11 text-xs font-bold border border-border">
+                        Booking Baru
+                    </Button>
+                </div>
+            </div>
         </motion.div>
     );
   }
@@ -216,60 +294,83 @@ export function BookingForm({ serviceOptions = [] }: BookingFormProps) {
                 <Wrench className="w-4 h-4 text-primary" /> Detail Servis
             </h4>
             
-            <FormField
-            control={form.control}
-            name="serviceType"
-            render={({ field }) => (
-                <FormItem>
-                <FormLabel className="text-xs font-bold uppercase tracking-wide">Jenis Layanan</FormLabel>
-                <Select 
-                    onValueChange={(val) => {
-                         const idx = parseInt(val);
-                         const selected = services[idx];
-                         if (selected) {
-                             field.onChange(selected.serviceType || "LIGHT_SERVICE");
-                             const currentComplaint = form.getValues("complaint") || "";
-                             const serviceTag = `[${selected.title}]`;
-                             if (!currentComplaint.includes(selected.title)) {
-                                 form.setValue("complaint", `${serviceTag} ${currentComplaint}`);
+            <div className="grid md:grid-cols-2 gap-5">
+                <FormField
+                control={form.control}
+                name="serviceType"
+                render={({ field }) => (
+                    <FormItem>
+                    <FormLabel className="text-xs font-bold uppercase tracking-wide">Jenis Layanan</FormLabel>
+                    <Select 
+                        onValueChange={(val) => {
+                             const idx = parseInt(val);
+                             const selected = services[idx];
+                             if (selected) {
+                                 field.onChange(selected.serviceType || "LIGHT_SERVICE");
+                                 const currentComplaint = form.getValues("complaint") || "";
+                                 const serviceTag = `[${selected.title}]`;
+                                 if (!currentComplaint.includes(selected.title)) {
+                                     form.setValue("complaint", `${serviceTag} ${currentComplaint}`);
+                                 }
                              }
-                         }
-                    }} 
-                >
-                    <FormControl>
-                    <SelectTrigger className="h-12 bg-background/50 border-input hover:border-primary/50 transition-colors">
-                        <SelectValue placeholder="Pilih Layanan Disini" />
-                    </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                        {services.map((svc: any, idx: number) => {
-                            const svcType = (svc.serviceType === "LIGHT_SERVICE" || svc.serviceType === "MODIFICATION") 
-                                ? svc.serviceType 
-                                : "LIGHT_SERVICE";
+                        }} 
+                    >
+                        <FormControl>
+                        <SelectTrigger className="h-12 bg-background/50 border-input hover:border-primary/50 transition-colors">
+                            <SelectValue placeholder="Pilih Layanan Disini" />
+                        </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                            {services.map((svc: any, idx: number) => {
+                                const svcType = (svc.serviceType === "LIGHT_SERVICE" || svc.serviceType === "MODIFICATION") 
+                                    ? svc.serviceType 
+                                    : "LIGHT_SERVICE";
+                                    
+                                const isLight = svcType === "LIGHT_SERVICE";
+                                const badgeColor = isLight ? "bg-blue-500/10 text-blue-600" : "bg-primary/10 text-primary";
                                 
-                            const isLight = svcType === "LIGHT_SERVICE";
-                            const badgeColor = isLight ? "bg-blue-500/10 text-blue-600" : "bg-primary/10 text-primary";
-                            
-                            return (
-                                <SelectItem key={idx} value={String(idx)}>
-                                    <div className="flex items-center gap-3 py-1">
-                                        <div className={`p-1.5 rounded-md ${badgeColor} w-8 h-8 flex items-center justify-center text-sm font-bold border border-current/20`}>
-                                            {isLight ? <Zap className="h-4 w-4" /> : <Wrench className="h-4 w-4" />}
+                                return (
+                                    <SelectItem key={idx} value={String(idx)}>
+                                        <div className="flex items-center gap-3 py-1">
+                                            <div className={`p-1.5 rounded-md ${badgeColor} w-8 h-8 flex items-center justify-center text-sm font-bold border border-current/20`}>
+                                                {isLight ? <Zap className="h-4 w-4" /> : <Wrench className="h-4 w-4" />}
+                                            </div>
+                                            <div>
+                                                <div className="font-bold text-sm">{svc.title}</div>
+                                                <div className="text-[10px] text-muted-foreground uppercase tracking-wide opacity-80">{svc.desc || svc.description?.substring(0, 40)}...</div>
+                                            </div>
                                         </div>
-                                        <div>
-                                            <div className="font-bold text-sm">{svc.title}</div>
-                                            <div className="text-[10px] text-muted-foreground uppercase tracking-wide opacity-80">{svc.desc || svc.description?.substring(0, 40)}...</div>
-                                        </div>
-                                    </div>
-                                </SelectItem>
-                            );
-                        })}
-                    </SelectContent>
-                </Select>
-                <FormMessage />
-                </FormItem>
-            )}
-            />
+                                    </SelectItem>
+                                );
+                            })}
+                        </SelectContent>
+                    </Select>
+                    <FormMessage />
+                    </FormItem>
+                )}
+                />
+
+                <FormField
+                control={form.control}
+                name="scheduledAt"
+                render={({ field }) => (
+                    <FormItem>
+                    <FormLabel className="text-xs font-bold uppercase tracking-wide">Tanggal & Jam Booking</FormLabel>
+                    <FormControl>
+                        <div className="relative group">
+                            <CalendarCheck className="absolute left-4 top-3.5 h-4 w-4 text-muted-foreground group-focus-within:text-primary transition-colors z-10" />
+                            <Input 
+                                type="datetime-local" 
+                                className="pl-11 h-12 bg-background/50 border-input group-hover:border-primary/50 transition-colors block w-full text-foreground" 
+                                {...field} 
+                            />
+                        </div>
+                    </FormControl>
+                    <FormMessage />
+                    </FormItem>
+                )}
+                />
+            </div>
 
             <FormField
             control={form.control}

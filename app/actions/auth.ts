@@ -13,6 +13,9 @@ export type CreateUserInput = {
   password: string;
   role: 'OWNER' | 'ADMIN' | 'EMPLOYEE';
   employeeId?: string | null;
+  name?: string;
+  phone?: string;
+  isActive?: boolean;
 };
 
 export type UpdateUserInput = {
@@ -21,6 +24,8 @@ export type UpdateUserInput = {
   password?: string;
   role?: string;
   isActive?: boolean;
+  name?: string;
+  phone?: string;
 };
 
 // ==================== Get All Users ====================
@@ -101,13 +106,28 @@ export async function createUser(data: CreateUserInput) {
     // Hash password
     const hashedPassword = await bcrypt.hash(data.password, 10);
 
+    // Link/create employee if name is provided
+    let employeeId = data.employeeId || null;
+    if (data.name && !employeeId) {
+      const emp = await prisma.employee.create({
+        data: {
+          name: data.name,
+          role: data.role === 'OWNER' ? 'Owner' : data.role === 'ADMIN' ? 'Administrator' : 'Karyawan',
+          phone: data.phone || null,
+          isActive: data.isActive !== undefined ? data.isActive : true,
+        }
+      });
+      employeeId = emp.id;
+    }
+
     // Create user
     const user = await prisma.user.create({
       data: {
         email: data.email,
         password: hashedPassword,
         role: data.role,
-        employeeId: data.employeeId || null,
+        employeeId,
+        isActive: data.isActive !== undefined ? data.isActive : true,
       },
       include: {
         employee: true
@@ -159,13 +179,42 @@ export async function updateUser(data: UpdateUserInput) {
     if (!session || session.user?.role !== 'OWNER') {
       return { success: false, error: 'Akses ditolak: Hanya Owner yang dapat mengupdate user.' };
     }
-    const { id, password, ...updateData } = data;
+    const { id, password, name, phone, ...updateData } = data;
     
-    let finalUpdateData: any = updateData;
+    let finalUpdateData: any = { ...updateData };
 
     // If password is being updated, hash it
     if (password) {
       finalUpdateData.password = await bcrypt.hash(password, 10);
+    }
+
+    // Find the user first to see if they have a linked employee
+    const currentUser = await prisma.user.findUnique({
+      where: { id },
+      include: { employee: true }
+    });
+
+    if (currentUser) {
+      if (currentUser.employeeId) {
+        // Update existing employee name and phone if passed
+        await prisma.employee.update({
+          where: { id: currentUser.employeeId },
+          data: {
+            ...(name && { name }),
+            ...(phone !== undefined && { phone }),
+          }
+        });
+      } else if (name) {
+        // Create new employee if user didn't have one and name is provided
+        const emp = await prisma.employee.create({
+          data: {
+            name,
+            role: currentUser.role === 'OWNER' ? 'Owner' : currentUser.role === 'ADMIN' ? 'Administrator' : 'Karyawan',
+            phone: phone || null,
+          }
+        });
+        finalUpdateData.employeeId = emp.id;
+      }
     }
 
     const user = await prisma.user.update({
