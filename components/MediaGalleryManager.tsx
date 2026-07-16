@@ -299,6 +299,7 @@ export function MediaGalleryManager() {
                       src={formData.imageUrl}
                       alt="Preview"
                       fill
+                      sizes="(max-width: 768px) 100vw, 384px"
                       className="object-cover"
                     />
                   </div>
@@ -431,6 +432,7 @@ export function MediaGalleryManager() {
                   src={item.imageUrl}
                   alt={item.title}
                   fill
+                  sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
                   className="object-cover"
                 />
                 

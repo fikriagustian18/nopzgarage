@@ -96,6 +96,7 @@ export default function LoginPage() {
             alt="Background Skull" 
             width={1200} 
             height={1200}
+            style={{ height: 'auto' }}
             className="object-contain"
             priority
          />
@@ -116,6 +117,7 @@ export default function LoginPage() {
                   src="/logo.svg" 
                   alt="NopzGarage Logo" 
                   fill
+                  sizes="(max-width: 768px) 100vw, 256px"
                   className="object-contain"
                   priority
                 />

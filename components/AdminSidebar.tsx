@@ -142,6 +142,7 @@ export function AdminSidebar() {
               alt="NopzGarage" 
               width={150} 
               height={35} 
+              style={{ height: 'auto' }}
               className="relative z-10 transition-transform group-hover:scale-105"
               priority
             />

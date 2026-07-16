@@ -39,7 +39,7 @@ export function EmployeeHeader() {
       <div className="container flex h-16 items-center justify-between">
         <div className="flex items-center gap-2">
             <div className="relative h-8 w-8">
-                <Image src="/logo.svg" alt="NopzGarage" fill className="object-contain" />
+                <Image src="/logo.svg" alt="NopzGarage" fill sizes="32px" className="object-contain" />
             </div>
             <span className="font-bold text-lg hidden md:block">NopzGarage</span>
         </div>

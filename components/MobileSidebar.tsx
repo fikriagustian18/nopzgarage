@@ -125,6 +125,7 @@ export function MobileSidebar() {
                 alt="NopzGarage" 
                 width={150} 
                 height={35} 
+                style={{ height: 'auto' }}
                 className="relative z-10"
                 priority
               />

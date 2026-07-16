@@ -127,6 +127,7 @@ export default async function Home() {
                   alt="NopzGarage" 
                   width={180} 
                   height={45} 
+                  style={{ height: "auto" }}
                   className="relative z-10 transition-opacity duration-300 group-hover:opacity-90"
                   priority
                 />
@@ -644,6 +645,7 @@ export default async function Home() {
                     alt="NopzGarage" 
                     width={200} 
                     height={50} 
+                    style={{ height: "auto" }}
                     className="h-12 w-auto"
                   />
                   <p className="text-sm text-muted-foreground leading-relaxed font-medium mt-2">
