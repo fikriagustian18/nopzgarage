@@ -242,12 +242,17 @@ export async function getPayrolls(filters?: {
 }) {
   try {
     const session = await auth();
-    if (!session || session.user?.role !== 'OWNER') {
-      return { success: false, error: 'Akses ditolak: Hanya Owner yang dapat mengakses daftar payroll.' };
+    if (!session || !['OWNER', 'ADMIN'].includes(session.user?.role || '')) {
+      return { success: false, error: 'Akses ditolak: Hanya Owner dan Admin yang dapat mengakses daftar payroll.' };
+    }
+    const isOwner = session.user?.role === 'OWNER';
+    const finalEmployeeId = isOwner ? filters?.employeeId : session.user?.employeeId;
+    if (!isOwner && !finalEmployeeId) {
+      return { success: true, payrolls: [] };
     }
     const payrolls = await prisma.payroll.findMany({
       where: {
-        ...(filters?.employeeId && { employeeId: filters.employeeId }),
+        ...(finalEmployeeId && { employeeId: finalEmployeeId }),
         ...(filters?.status && { status: filters.status }),
         ...(filters?.dateFrom && {
           startDate: { gte: filters.dateFrom },
@@ -293,8 +298,8 @@ export async function getPayrolls(filters?: {
 export async function getPayrollDetail(payrollId: string) {
   try {
     const session = await auth();
-    if (!session || session.user?.role !== 'OWNER') {
-      return { success: false, error: 'Akses ditolak: Hanya Owner yang dapat melihat detail payroll.' };
+    if (!session || !['OWNER', 'ADMIN'].includes(session.user?.role || '')) {
+      return { success: false, error: 'Akses ditolak: Hanya Owner dan Admin yang dapat melihat detail payroll.' };
     }
     const payroll = await prisma.payroll.findUnique({
       where: { id: payrollId },
@@ -321,6 +326,10 @@ export async function getPayrollDetail(payrollId: string) {
 
     if (!payroll) {
       return { success: false, error: 'Payroll tidak ditemukan' };
+    }
+    const isOwner = session.user?.role === 'OWNER';
+    if (!isOwner && payroll.employeeId !== session.user?.employeeId) {
+      return { success: false, error: 'Akses ditolak: Anda hanya dapat melihat detail payroll Anda sendiri.' };
     }
 
     // Parse details

@@ -3,6 +3,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
 import { RoleGuard } from "@/components/RoleGuard";
 import {
   getPayrolls,
@@ -88,6 +89,9 @@ type Payroll = {
 };
 
 export default function PayrollPage() {
+  const { data: session } = useSession();
+  const userRole = session?.user?.role;
+  const isOwner = userRole === "OWNER";
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [payrolls, setPayrolls] = useState<Payroll[]>([]);
@@ -121,7 +125,7 @@ export default function PayrollPage() {
 
   useEffect(() => {
     fetchData();
-  }, []);
+  }, [session]);
 
   async function fetchData() {
     setLoading(true);
@@ -370,7 +374,7 @@ export default function PayrollPage() {
   const pendingCount = payrolls.filter((p) => p.status !== "PAID").length;
 
   return (
-    <RoleGuard allowedRoles={["OWNER"]}>
+    <RoleGuard allowedRoles={["OWNER", "ADMIN"]}>
       <div className="min-h-screen bg-background text-foreground p-8 space-y-6">
         {/* Header */}
         <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
@@ -384,14 +388,16 @@ export default function PayrollPage() {
             <Button variant="outline" size="default" onClick={fetchData} className="gap-2">
               <RefreshCw className="h-4 w-4" /> Refresh Data
             </Button>
-            <Button size="default" onClick={() => setGenerateOpen(true)} className="gap-2 bg-primary hover:bg-primary/95 text-white">
-              <Plus className="h-4 w-4" /> Generate Gaji
-            </Button>
+            {isOwner && (
+              <Button size="default" onClick={() => setGenerateOpen(true)} className="gap-2 bg-primary hover:bg-primary/95 text-white">
+                <Plus className="h-4 w-4" /> Generate Gaji
+              </Button>
+            )}
           </div>
         </div>
 
         {/* Financial Recap Widgets */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+        <div className={`grid grid-cols-1 ${isOwner ? "md:grid-cols-4" : "md:grid-cols-3"} gap-6`}>
           <Card className="border-border bg-card border-t-4 border-t-destructive">
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground">Gaji Terhutang (Liability)</CardTitle>
@@ -399,7 +405,9 @@ export default function PayrollPage() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-destructive">{formatMoney(totalUnpaid)}</div>
-              <p className="text-xs text-muted-foreground mt-1">Total gaji belum dicairkan</p>
+              <p className="text-xs text-muted-foreground mt-1">
+                {isOwner ? "Total gaji belum dicairkan" : "Gaji Anda yang belum dicairkan"}
+              </p>
             </CardContent>
           </Card>
 
@@ -410,7 +418,9 @@ export default function PayrollPage() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-green-500">{formatMoney(totalPaid)}</div>
-              <p className="text-xs text-muted-foreground mt-1">Akumulasi gaji keluar</p>
+              <p className="text-xs text-muted-foreground mt-1">
+                {isOwner ? "Akumulasi gaji keluar" : "Total gaji yang sudah diterima"}
+              </p>
             </CardContent>
           </Card>
 
@@ -421,20 +431,24 @@ export default function PayrollPage() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-foreground">{formatMoney(totalEarned)}</div>
-              <p className="text-xs text-muted-foreground mt-1">Pokok + bonus + komisi</p>
+              <p className="text-xs text-muted-foreground mt-1">
+                {isOwner ? "Pokok + bonus + komisi" : "Total pendapatan kotor Anda"}
+              </p>
             </CardContent>
           </Card>
 
-          <Card className="border-border bg-card border-t-4 border-t-orange-500">
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Menunggu Pembayaran</CardTitle>
-              <Users className="h-4 w-4 text-orange-500" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-foreground">{pendingCount} Karyawan</div>
-              <p className="text-xs text-muted-foreground mt-1">Belum lunas / parsial</p>
-            </CardContent>
-          </Card>
+          {isOwner && (
+            <Card className="border-border bg-card border-t-4 border-t-orange-500">
+              <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground">Menunggu Pembayaran</CardTitle>
+                <Users className="h-4 w-4 text-orange-500" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-foreground">{pendingCount} Karyawan</div>
+                <p className="text-xs text-muted-foreground mt-1">Belum lunas / parsial</p>
+              </CardContent>
+            </Card>
+          )}
         </div>
 
         {/* Filter and Actions Bar */}
@@ -596,7 +610,7 @@ export default function PayrollPage() {
                                 <Eye className="h-4 w-4" />
                               </Button>
 
-                              {p.status !== "PAID" && (
+                              {isOwner && p.status !== "PAID" && (
                                 <Button
                                   size="sm"
                                   variant="default"
@@ -607,17 +621,19 @@ export default function PayrollPage() {
                                 </Button>
                               )}
 
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                className="h-8 w-8 p-0"
-                                title="Edit Bonus"
-                                onClick={() => openEdit(p)}
-                              >
-                                <Edit className="h-4 w-4" />
-                              </Button>
+                              {isOwner && (
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className="h-8 w-8 p-0"
+                                  title="Edit Bonus"
+                                  onClick={() => openEdit(p)}
+                                >
+                                  <Edit className="h-4 w-4" />
+                                </Button>
+                              )}
 
-                              {p.totalPaid === 0 && (
+                              {isOwner && p.totalPaid === 0 && (
                                 <Button
                                   size="sm"
                                   variant="ghost"

@@ -119,7 +119,7 @@ export function AdminSidebar() {
   const userRole = session?.user?.role;
   const filteredMenuItems = menuItems.filter((item) => {
     if (userRole === "ADMIN") {
-      return item.href === "/admin/orders" || item.href === "/admin/inventory" || item.href === "/admin";
+      return item.href === "/admin/orders" || item.href === "/admin/inventory" || item.href === "/admin" || item.href === "/admin/payroll";
     }
     if (userRole === "OWNER") {
       return item.href !== "/admin/orders";
