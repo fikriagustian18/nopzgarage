@@ -37,7 +37,7 @@ export function AdminHeader() {
     if (pathname.startsWith("/admin/orders")) return "Kelola Order";
     if (pathname.startsWith("/admin/employees")) return "Karyawan";
     if (pathname.startsWith("/admin/payroll")) return "Gaji & Payroll";
-    if (pathname.startsWith("/admin/inventory")) return "Katalog Produk";
+    if (pathname.startsWith("/admin/inventory")) return "Inventory";
     if (pathname.startsWith("/admin/expenses")) return "Pengeluaran";
     if (pathname.startsWith("/admin/income")) return "Pemasukan Lain";
     if (pathname.startsWith("/admin/journal")) return "Jurnal Umum";

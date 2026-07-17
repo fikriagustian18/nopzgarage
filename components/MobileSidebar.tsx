@@ -60,7 +60,7 @@ export function MobileSidebar() {
     },
     {
       href: "/admin/inventory",
-      label: "Katalog Produk",
+      label: "Inventory",
       icon: Package,
     },
     {

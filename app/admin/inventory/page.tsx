@@ -215,7 +215,7 @@ export default function InventoryPage() {
         <div className="p-8 space-y-6">
         <div className="mb-8">
           <h2 className="text-3xl font-black text-foreground mb-2">
-            Katalog Produk & Inventori
+            Inventory
           </h2>
           <p className="text-muted-foreground">
             Kelola stok sparepart, harga, dan produk bengkel
