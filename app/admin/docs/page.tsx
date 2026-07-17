@@ -56,8 +56,8 @@ export default function TechnicalDocsPage() {
   const [activeTab, setActiveTab] = useState("overview");
 
   const stats = {
-    totalTables: 15,
-    totalRelationships: 20,
+    totalTables: 26,
+    totalRelationships: 34,
     totalEnums: 4,
     totalComponents: 50,
     totalPages: 16,
@@ -65,21 +65,34 @@ export default function TechnicalDocsPage() {
   };
 
   const tables = [
-    { name: "Order", columns: 14, purpose: "Transaksi servis kendaraan" },
-    { name: "OrderItem", columns: 8, purpose: "Detail item order (jasa & sparepart)" },
-    { name: "OrderFee", columns: 7, purpose: "Komisi karyawan per order" },
-    { name: "Employee", columns: 11, purpose: "Data karyawan bengkel" },
-    { name: "User", columns: 10, purpose: "Akun login sistem" },
-    { name: "SparePart", columns: 10, purpose: "Master data sparepart & stok" },
-    { name: "Payment", columns: 9, purpose: "Pembayaran order & payroll" },
-    { name: "Payroll", columns: 10, purpose: "Penggajian karyawan" },
-    { name: "BankAccount", columns: 9, purpose: "Master rekening bank" },
-    { name: "Account", columns: 6, purpose: "Chart of Accounts (COA)" },
-    { name: "JournalEntry", columns: 6, purpose: "Header jurnal akuntansi" },
-    { name: "JournalItem", columns: 5, purpose: "Detail jurnal (debit/kredit)" },
-    { name: "ActivityLog", columns: 9, purpose: "Audit trail sistem" },
-    { name: "SystemSetting", columns: 4, purpose: "Konfigurasi sistem" },
-    { name: "ContentSection", columns: 8, purpose: "Konten website dinamis" },
+    // ERD v2.2.0 Tables
+    { name: "USERS", columns: 9, purpose: "Akun login & data pengguna (Owner/Admin/Mekanik)" },
+    { name: "KENDARAAN", columns: 8, purpose: "Master data kendaraan pelanggan" },
+    { name: "BOOKING_SERVIS", columns: 10, purpose: "Transaksi booking servis pelanggan" },
+    { name: "LAYANAN_SERVIS", columns: 6, purpose: "Master data layanan & harga jasa servis" },
+    { name: "ORDER_SERVIS", columns: 8, purpose: "Pengelolaan order servis kendaraan" },
+    { name: "DETAIL_SERVIS", columns: 5, purpose: "Detail penggunaan layanan jasa per order" },
+    { name: "DETAIL_ORDER_SUKUCADANG", columns: 6, purpose: "Detail pemakaian suku cadang per order" },
+    { name: "INVENTORY (BARANG)", columns: 10, purpose: "Master data barang/sparepart & inventory" },
+    { name: "TRANSAKSI", columns: 10, purpose: "Pencatatan transaksi pembayaran order" },
+    { name: "DETAIL_TRANSAKSI", columns: 8, purpose: "Detail item transaksi (jasa/sukucadang)" },
+    { name: "RIWAYAT_PEMBAYARAN", columns: 5, purpose: "Histori pembayaran transaksi" },
+    { name: "RIWAYAT_ORDER", columns: 5, purpose: "Histori perubahan status order servis" },
+    { name: "STOK_MASUK", columns: 8, purpose: "Pencatatan penerimaan stok barang (inventory)" },
+    { name: "STOK_KELUAR", columns: 6, purpose: "Pencatatan pengeluaran stok barang (inventory)" },
+    // Core Engine Backing Tables
+    { name: "Order", columns: 14, purpose: "Core Engine: Transaksi servis kendaraan (Legacy/RSC compatibility)" },
+    { name: "OrderItem", columns: 8, purpose: "Core Engine: Detail item order (jasa & sparepart)" },
+    { name: "OrderFee", columns: 7, purpose: "Core Engine: Komisi karyawan per order" },
+    { name: "Employee", columns: 11, purpose: "Core Engine: Data karyawan bengkel" },
+    { name: "User", columns: 10, purpose: "Core Engine: Akun login sistem" },
+    { name: "SparePart", columns: 10, purpose: "Core Engine: Master data sparepart & stok" },
+    { name: "Payment", columns: 9, purpose: "Core Engine: Pembayaran order & payroll" },
+    { name: "Payroll", columns: 10, purpose: "Core Engine: Penggajian karyawan" },
+    { name: "BankAccount", columns: 9, purpose: "Core Engine: Master rekening bank" },
+    { name: "Account", columns: 6, purpose: "Core Engine: Chart of Accounts (COA)" },
+    { name: "JournalEntry", columns: 6, purpose: "Core Engine: Header jurnal akuntansi" },
+    { name: "JournalItem", columns: 5, purpose: "Core Engine: Detail jurnal (debit/kredit)" },
   ];
 
   const accounts = [
@@ -119,118 +132,153 @@ export default function TechnicalDocsPage() {
   // Mermaid Definitions based on user's reference files
   const diagrams = {
     erd: `erDiagram
-    USER {
-        string id PK
-        string email UK
+    USERS {
+        string id_user PK
+        string nama
+        string username UK
+        string password
         string role
-        string employeeId FK
-        boolean isActive
-    }   
-    EMPLOYEE {
-        string id PK
-        string name
-        string role
-        string salaryType
-        decimal dailyRate
-        decimal commissionRate
-        boolean isActive
+        string no_telp
+        string alamat
+        boolean status
+        datetime created_at
     }
-    ORDER {
-        string id PK
-        string custName
-        string vehicle
-        string status
-        decimal totalPrice
-        decimal totalPaid
-        string paymentStatus
-        string mechanicId FK
+    KENDARAAN {
+        string id_kendaraan PK
+        string no_polisi
+        string merek
+        string tipe
+        int tahun
+        string warna
+        string no_rangka
+        string no_mesin
     }
-    ORDER_ITEM {
-        string id PK
-        string orderId FK
-        string itemType
-        string itemName
-        int quantity
-        decimal unitPrice
-        decimal totalPrice
+    BOOKING_SERVIS {
+        string id_booking PK
+        string nama_pelanggan
+        string no_telp
+        string alamat
+        string id_kendaraan FK
+        string id_layanan FK
+        string keluhan
+        datetime tanggal_booking
+        string jam_booking
+        string status_booking
     }
-    ORDER_FEE {
-        string id PK
-        string orderId FK
-        string employeeId FK
-        decimal amount
-        boolean isPaid
+    LAYANAN_SERVIS {
+        string id_layanan PK
+        string nama_layanan
+        string kategori
+        string deskripsi
+        decimal harga_jasa
+        boolean status
     }
-    PAYMENT {
-        string id PK
-        datetime date
-        decimal amount
-        string orderId FK
-        string payrollId FK
-        string bankAccountId FK
-        string paymentMethod
+    ORDER_SERVIS {
+        string id_order PK
+        string id_booking FK
+        string id_user FK
+        string no_order UK
+        datetime tanggal_order
+        string status_order
+        datetime estimasi_selesai
+        string catatan
     }
-    BANK_ACCOUNT {
-        string id PK
-        string bankName
-        string accountNumber
-        string accountName
-        boolean isActive
+    DETAIL_SERVIS {
+        string id_detail_servis PK
+        string id_order FK
+        string id_layanan FK
+        string keterangan
+        decimal biaya_jasa
     }
-    JOURNAL_ENTRY {
-        string id PK
-        datetime date
-        string description
-        string reference
-        string paymentId FK
+    DETAIL_ORDER_SUKUCADANG {
+        string id_detail_sc PK
+        string id_order FK
+        string id_barang FK
+        int jumlah
+        decimal harga_satuan
+        decimal subtotal
     }
-    JOURNAL_ITEM {
-        string id PK
-        string journalEntryId FK
-        string accountId FK
-        decimal debit
-        decimal credit
+    INVENTORY {
+        string id_barang PK
+        string kode_barang UK
+        string nama_barang
+        string kategori
+        string satuan
+        decimal harga_beli
+        decimal harga_jual
+        int stok_akhir
+        string lokasi
+        boolean status
     }
-    ACCOUNT {
-        string id PK
-        string code UK
-        string name
-        string type
+    TRANSAKSI {
+        string id_transaksi PK
+        string id_order FK
+        datetime tanggal_transaksi
+        decimal total_tagihan
+        decimal diskon
+        decimal total_bayar
+        string metode_bayar
+        decimal jumlah_bayar
+        decimal kembalian
+        string status_pembayaran
     }
-    PAYROLL {
-        string id PK
-        string employeeId FK
-        decimal totalEarned
-        string status
+    DETAIL_TRANSAKSI {
+        string id_detail_transaksi PK
+        string id_transaksi FK
+        string tipe_item
+        string id_referensi
+        string nama_item
+        int jumlah
+        decimal harga_satuan
+        decimal subtotal
     }
-    SPARE_PART {
-        string id PK
-        string code UK
-        string name
-        int stock
-        decimal buyPrice
-        decimal sellPrice
+    RIWAYAT_PEMBAYARAN {
+        string id_riwayat_bayar PK
+        string id_transaksi FK
+        datetime tanggal
+        string keterangan
+        decimal nominal
     }
-    CONTENT_SECTION {
-        string id PK
-        string sectionKey UK
-        string title
-        text content
+    RIWAYAT_ORDER {
+        string id_riwayat_order PK
+        string id_order FK
+        datetime tanggal
+        string status_order
+        string keterangan
+    }
+    STOK_MASUK {
+        string id_masuk PK
+        string id_barang FK
+        datetime tanggal
+        string supplier
+        int jumlah
+        decimal harga_beli
+        decimal total
+        string keterangan
+    }
+    STOK_KELUAR {
+        string id_keluar PK
+        string id_barang FK
+        datetime tanggal
+        string referensi
+        int jumlah
+        string keterangan
     }
 
-    USER ||--o| EMPLOYEE : "links_to"
-    EMPLOYEE ||--o{ ORDER : "handles"
-    EMPLOYEE ||--o{ PAYROLL : "receives"
-    EMPLOYEE ||--o{ ORDER_FEE : "earns"
-    ORDER ||--o{ ORDER_ITEM : "contains"
-    ORDER ||--o{ ORDER_FEE : "has"
-    ORDER ||--o{ PAYMENT : "receives"
-    SPARE_PART ||--o{ ORDER_ITEM : "used_in"
-    PAYROLL ||--o{ PAYMENT : "paid_via"
-    BANK_ACCOUNT ||--o{ PAYMENT : "transfer_to"
-    PAYMENT ||--o| JOURNAL_ENTRY : "creates"
-    JOURNAL_ENTRY ||--o{ JOURNAL_ITEM : "contains"
-    ACCOUNT ||--o{ JOURNAL_ITEM : "in"`,
+    USERS ||--o{ ORDER_SERVIS : "mengelola"
+    KENDARAAN ||--o{ BOOKING_SERVIS : "milik"
+    LAYANAN_SERVIS ||--o{ BOOKING_SERVIS : "layanan"
+    BOOKING_SERVIS ||--o{ ORDER_SERVIS : "menjadi_dasar"
+    ORDER_SERVIS ||--o{ DETAIL_SERVIS : "memiliki"
+    LAYANAN_SERVIS ||--o{ DETAIL_SERVIS : "mengacu"
+    ORDER_SERVIS ||--o{ DETAIL_ORDER_SUKUCADANG : "menggunakan"
+    INVENTORY ||--o{ DETAIL_ORDER_SUKUCADANG : "mengacu"
+    ORDER_SERVIS ||--|| TRANSAKSI : "dibayarkan"
+    TRANSAKSI ||--o{ DETAIL_TRANSAKSI : "memiliki"
+    TRANSAKSI ||--o{ RIWAYAT_PEMBAYARAN : "mencatat"
+    ORDER_SERVIS ||--o{ RIWAYAT_ORDER : "mencatat"
+    INVENTORY ||--o{ STOK_MASUK : "menambah"
+    INVENTORY ||--o{ STOK_KELUAR : "mengurangi"`,
 
     dfd0: `flowchart LR
     Customer["CUSTOMER<br/>Pemilik Motor"]
