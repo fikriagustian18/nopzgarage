@@ -1,10 +1,10 @@
-// components/UserManagementTab.tsx - User Management Component
+// components/UserManagementTab.tsx
 "use client";
 
 import { useState, useEffect } from "react";
 import { getUsers, createUser, updateUser, resetUserPassword, deleteUser } from "@/app/actions/auth";
 import { getEmployees } from "@/app/actions/employees";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -25,7 +25,22 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { toast } from "sonner";
-import { Plus, Edit, Trash2, Key, Loader2, Mail, Shield, User } from "lucide-react";
+import { 
+  Plus, 
+  Edit, 
+  Trash2, 
+  Key, 
+  Loader2, 
+  User, 
+  Search, 
+  RotateCcw, 
+  Eye, 
+  ShieldAlert, 
+  CheckCircle2, 
+  XCircle 
+} from "lucide-react";
+import { format } from "date-fns";
+import { id } from "date-fns/locale";
 
 type UserType = {
   id: string;
@@ -39,23 +54,30 @@ type UserType = {
     role: string;
     phone?: string | null;
   } | null;
-  createdAt: Date;
+  createdAt: string;
+  updatedAt: string;
 };
 
 export function UserManagementTab() {
   const [users, setUsers] = useState<UserType[]>([]);
   const [employees, setEmployees] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  
+
+  // Filter states
+  const [searchQuery, setSearchQuery] = useState("");
+  const [roleFilter, setRoleFilter] = useState("ALL");
+  const [statusFilter, setStatusFilter] = useState("ALL");
+
   // Dialog states
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [viewDialogOpen, setViewDialogOpen] = useState(false);
   const [resetPasswordDialogOpen, setResetPasswordDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [statusDialogOpen, setStatusDialogOpen] = useState(false);
-  
+
   const [selectedUser, setSelectedUser] = useState<UserType | null>(null);
-  
+
   // Form states
   const [formData, setFormData] = useState({
     email: "",
@@ -66,7 +88,7 @@ export function UserManagementTab() {
     phone: "",
     isActive: true,
   });
-  
+
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
 
@@ -80,15 +102,13 @@ export function UserManagementTab() {
       getUsers(),
       getEmployees(true)
     ]);
-    
+
     if (usersRes.success && usersRes.users) {
       setUsers(usersRes.users as any);
     }
-    
     if (employeesRes.success && employeesRes.employees) {
       setEmployees(employeesRes.employees);
     }
-    
     setLoading(false);
   };
 
@@ -97,92 +117,107 @@ export function UserManagementTab() {
       toast.error("Email dan password harus diisi");
       return;
     }
-
-    const result = await createUser(formData);
-    
-    if (result.success) {
-      toast.success("User berhasil dibuat");
-      setCreateDialogOpen(false);
-      setFormData({ email: "", password: "", role: "EMPLOYEE", employeeId: "", name: "", phone: "", isActive: true });
-      loadData();
-    } else {
-      toast.error(result.error || "Gagal membuat user");
+    try {
+      const res = await createUser(formData);
+      if (res.success) {
+        toast.success("User berhasil dibuat");
+        setCreateDialogOpen(false);
+        // Reset form
+        setFormData({
+          email: "",
+          password: "",
+          role: "EMPLOYEE",
+          employeeId: "",
+          name: "",
+          phone: "",
+          isActive: true,
+        });
+        loadData();
+      } else {
+        toast.error(res.error || "Gagal membuat user");
+      }
+    } catch (e) {
+      toast.error("Terjadi kesalahan");
     }
   };
 
   const handleUpdateUser = async () => {
     if (!selectedUser) return;
-
-    const result = await updateUser({
-      id: selectedUser.id,
-      email: formData.email,
-      role: formData.role,
-      name: formData.name,
-      phone: formData.phone,
-    });
-
-    if (result.success) {
-      toast.success("User berhasil diupdate");
-      setEditDialogOpen(false);
-      loadData();
-    } else {
-      toast.error(result.error || "Gagal update user");
-    }
-  };
-
-  const handleToggleStatus = async () => {
-    if (!selectedUser) return;
-
-    const result = await updateUser({
-      id: selectedUser.id,
-      isActive: !selectedUser.isActive,
-    });
-
-    if (result.success) {
-      toast.success(`Status user berhasil ${!selectedUser.isActive ? "diaktifkan" : "dinonaktifkan"}`);
-      setStatusDialogOpen(false);
-      loadData();
-    } else {
-      toast.error(result.error || "Gagal mengubah status user");
+    try {
+      const res = await updateUser({
+        id: selectedUser.id,
+        email: formData.email,
+        role: formData.role,
+        name: formData.name,
+        phone: formData.phone,
+      });
+      if (res.success) {
+        toast.success("User berhasil diperbarui");
+        setEditDialogOpen(false);
+        loadData();
+      } else {
+        toast.error(res.error || "Gagal memperbarui user");
+      }
+    } catch (e) {
+      toast.error("Terjadi kesalahan");
     }
   };
 
   const handleResetPassword = async () => {
     if (!selectedUser) return;
-    
-    if (newPassword !== confirmPassword) {
-      toast.error("Password tidak cocok");
-      return;
-    }
-
     if (newPassword.length < 6) {
       toast.error("Password minimal 6 karakter");
       return;
     }
-
-    const result = await resetUserPassword(selectedUser.id, newPassword);
-
-    if (result.success) {
-      toast.success("Password berhasil direset");
-      setResetPasswordDialogOpen(false);
-      setNewPassword("");
-      setConfirmPassword("");
-    } else {
-      toast.error(result.error || "Gagal reset password");
+    if (newPassword !== confirmPassword) {
+      toast.error("Konfirmasi password tidak cocok");
+      return;
+    }
+    try {
+      const res = await resetUserPassword(selectedUser.id, newPassword);
+      if (res.success) {
+        toast.success("Password berhasil di-reset");
+        setResetPasswordDialogOpen(false);
+      } else {
+        toast.error(res.error || "Gagal reset password");
+      }
+    } catch (e) {
+      toast.error("Terjadi kesalahan");
     }
   };
 
   const handleDeleteUser = async () => {
     if (!selectedUser) return;
+    try {
+      const res = await deleteUser(selectedUser.id);
+      if (res.success) {
+        toast.success("User berhasil dihapus");
+        setDeleteDialogOpen(false);
+        loadData();
+      } else {
+        toast.error(res.error || "Gagal menghapus user");
+      }
+    } catch (e) {
+      toast.error("Terjadi kesalahan");
+    }
+  };
 
-    const result = await deleteUser(selectedUser.id);
-
-    if (result.success) {
-      toast.success("User berhasil dihapus");
-      setDeleteDialogOpen(false);
-      loadData();
-    } else {
-      toast.error(result.error || "Gagal hapus user");
+  const handleToggleStatus = async () => {
+    if (!selectedUser) return;
+    try {
+      const res = await updateUser({
+        id: selectedUser.id,
+        isActive: !selectedUser.isActive
+      });
+      if (res.success) {
+        toast.success(`User berhasil ${selectedUser.isActive ? "dinonaktifkan" : "diaktifkan"}`);
+        setStatusDialogOpen(false);
+        loadData();
+      } else {
+        toast.error(res.error || "Gagal mengubah status");
+      }
+    } catch (e) {
+      toast.error("Terjadi kesalahan");
     }
   };
 
@@ -198,6 +233,11 @@ export function UserManagementTab() {
       isActive: user.isActive,
     });
     setEditDialogOpen(true);
+  };
+
+  const openViewDialog = (user: UserType) => {
+    setSelectedUser(user);
+    setViewDialogOpen(true);
   };
 
   const openResetPasswordDialog = (user: UserType) => {
@@ -217,22 +257,54 @@ export function UserManagementTab() {
     setStatusDialogOpen(true);
   };
 
-  const getRoleBadgeColor = (role: string) => {
+  const getRoleLabel = (role: string) => {
     switch (role) {
-      case "OWNER":
-        return "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200";
-      case "ADMIN":
-        return "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200";
-      case "EMPLOYEE":
-        return "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200";
-      default:
-        return "";
+      case "OWNER": return "Owner";
+      case "ADMIN": return "Administrator";
+      case "EMPLOYEE": return "Mekanik";
+      default: return role;
     }
   };
 
+  const getRoleBadgeStyle = (role: string) => {
+    switch (role) {
+      case "OWNER":
+        return "bg-purple-100 text-purple-800 dark:bg-purple-950 dark:text-purple-200 border-purple-200";
+      case "ADMIN":
+        return "bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-200 border-blue-200";
+      case "EMPLOYEE":
+        return "bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-200 border-amber-200";
+      default:
+        return "bg-muted text-muted-foreground";
+    }
+  };
+
+  const handleResetFilters = () => {
+    setSearchQuery("");
+    setRoleFilter("ALL");
+    setStatusFilter("ALL");
+  };
+
+  // Filtered logic
+  const filteredUsers = users.filter((u) => {
+    const q = searchQuery.toLowerCase().trim();
+    const nameMatch = u.employee?.name?.toLowerCase().includes(q) || false;
+    const emailMatch = u.email.toLowerCase().includes(q);
+    const usernameMatch = u.email.split("@")[0].toLowerCase().includes(q);
+    const matchesSearch = !searchQuery || nameMatch || emailMatch || usernameMatch;
+
+    const matchesRole = roleFilter === "ALL" || u.role === roleFilter;
+
+    const matchesStatus = statusFilter === "ALL" || 
+      (statusFilter === "ACTIVE" && u.isActive) ||
+      (statusFilter === "INACTIVE" && !u.isActive);
+
+    return matchesSearch && matchesRole && matchesStatus;
+  });
+
   if (loading) {
     return (
-      <div className="flex justify-center p-12">
+      <div className="flex justify-center items-center py-20">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     );
@@ -240,110 +312,249 @@ export function UserManagementTab() {
 
   return (
     <div className="space-y-6">
-      <Card>
-        <CardHeader>
-          <div className="flex justify-between items-start">
-            <div>
-              <CardTitle className="flex items-center gap-2">
-                <Shield className="h-5 w-5 text-primary" />
-                Manajemen User & Akses
-              </CardTitle>
-              <CardDescription>
-                Kelola akun user, email, password, dan role akses sistem
-              </CardDescription>
-            </div>
-            <Button onClick={() => setCreateDialogOpen(true)} className="gap-2">
-              <Plus className="h-4 w-4" />
-              Tambah User
-            </Button>
+      {/* BREADCRUMBS & TITLE */}
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <div>
+          <div className="text-xs font-semibold text-muted-foreground mb-1 tracking-wide uppercase">
+            Beranda &gt; Pengguna
           </div>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            {users.map((user) => (
-              <div
-                key={user.id}
-                className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors"
-              >
-                <div className="flex items-center gap-4">
-                  <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
-                    <User className="h-5 w-5 text-primary" />
-                  </div>
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <p className="font-medium">{user.email}</p>
-                      <Badge className={getRoleBadgeColor(user.role)}>
-                        {user.role}
-                      </Badge>
-                      {!user.isActive && (
-                        <Badge variant="secondary">Inactive</Badge>
-                      )}
-                    </div>
-                    {user.employee && (
-                      <div className="text-sm text-muted-foreground mt-0.5">
-                        <p className="font-medium text-foreground/80">{user.employee.name} - {user.employee.role}</p>
-                        {user.employee.phone && <p className="text-xs font-mono text-muted-foreground">WA: {user.employee.phone}</p>}
-                      </div>
-                    )}
-                  </div>
-                </div>
-                <div className="flex gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className={user.isActive ? "text-amber-600 hover:text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-950/20" : "text-emerald-600 hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/20"}
-                    onClick={() => openStatusToggleDialog(user)}
-                  >
-                    {user.isActive ? "Nonaktifkan" : "Aktifkan"}
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => openEditDialog(user)}
-                  >
-                    <Edit className="h-3 w-3 mr-1" />
-                    Edit
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => openResetPasswordDialog(user)}
-                  >
-                    <Key className="h-3 w-3 mr-1" />
-                    Reset Password
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="text-destructive hover:text-destructive"
-                    onClick={() => openDeleteDialog(user)}
-                  >
-                    <Trash2 className="h-3 w-3" />
-                  </Button>
-                </div>
-              </div>
-            ))}
+          <h2 className="text-2xl md:text-3xl font-black tracking-tight">Manajemen Pengguna</h2>
+          <p className="text-xs md:text-sm text-muted-foreground mt-1">
+            Kelola data pengguna yang dapat mengakses sistem sesuai dengan peran dan hak aksesnya.
+          </p>
+        </div>
+        <Button onClick={() => setCreateDialogOpen(true)} className="gap-2 font-bold h-11 px-5 rounded-xl shadow-lg shadow-primary/10">
+          <Plus className="h-4 w-4" />
+          <span>Tambah Pengguna</span>
+        </Button>
+      </div>
 
-            {users.length === 0 && (
-              <div className="text-center py-12 border-2 border-dashed rounded-lg">
-                <Shield className="h-12 w-12 mx-auto mb-3 text-muted-foreground/50" />
-                <p className="text-muted-foreground">Belum ada user terdaftar</p>
-              </div>
-            )}
+      {/* FILTER BAR */}
+      <div className="flex flex-col md:flex-row gap-3 bg-card p-4 rounded-xl border border-border shadow-sm">
+        {/* Search input */}
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-3.5 h-4 w-4 text-muted-foreground" />
+          <Input 
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Cari nama, email, atau username..."
+            className="pl-9 h-11 bg-background/50 border-input"
+          />
+        </div>
+
+        {/* Role Filter */}
+        <div className="w-full md:w-[180px]">
+          <Select value={roleFilter} onValueChange={setRoleFilter}>
+            <SelectTrigger className="h-11">
+              <SelectValue placeholder="Semua Peran" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="ALL">Semua Peran</SelectItem>
+              <SelectItem value="OWNER">Owner</SelectItem>
+              <SelectItem value="ADMIN">Administrator</SelectItem>
+              <SelectItem value="EMPLOYEE">Mekanik</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        {/* Status Filter */}
+        <div className="w-full md:w-[180px]">
+          <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <SelectTrigger className="h-11">
+              <SelectValue placeholder="Status Aktif" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="ALL">Semua Status</SelectItem>
+              <SelectItem value="ACTIVE">Status Aktif</SelectItem>
+              <SelectItem value="INACTIVE">Status Nonaktif</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        {/* Reset Filter Button */}
+        <Button variant="outline" onClick={handleResetFilters} className="gap-2 h-11 px-4 border-border rounded-xl">
+          <RotateCcw className="h-4 w-4" />
+          <span>Reset</span>
+        </Button>
+      </div>
+
+      {/* USERS TABLE */}
+      <Card className="border border-border shadow-sm rounded-2xl overflow-hidden bg-card">
+        <div className="overflow-x-auto w-full">
+          <table className="w-full text-xs text-left border-collapse">
+            <thead>
+              <tr className="bg-muted/40 border-b border-border text-muted-foreground font-semibold uppercase tracking-wider">
+                <th className="p-4 pl-5">No.</th>
+                <th className="p-4">Nama Lengkap</th>
+                <th className="p-4">Username</th>
+                <th className="p-4">Email</th>
+                <th className="p-4 text-center">Peran</th>
+                <th className="p-4 text-center">Status</th>
+                <th className="p-4">Terakhir Aktif</th>
+                <th className="p-4 pr-5 text-right">Aksi</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-border">
+              {filteredUsers.map((user, idx) => {
+                const username = user.email.split("@")[0];
+                return (
+                  <tr key={user.id} className="hover:bg-muted/20 transition-colors">
+                    {/* No */}
+                    <td className="p-4 pl-5 font-semibold text-muted-foreground">{idx + 1}</td>
+
+                    {/* Nama Lengkap */}
+                    <td className="p-4 font-bold text-foreground">
+                      <div className="flex items-center gap-3">
+                        <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center text-primary">
+                          <User className="h-4.5 w-4.5" />
+                        </div>
+                        <span>{user.employee?.name || getRoleLabel(user.role)}</span>
+                      </div>
+                    </td>
+
+                    {/* Username */}
+                    <td className="p-4 text-muted-foreground font-mono">{username}</td>
+
+                    {/* Email */}
+                    <td className="p-4 text-muted-foreground font-mono">{user.email}</td>
+
+                    {/* Peran */}
+                    <td className="p-4 text-center">
+                      <Badge variant="outline" className={`px-2.5 py-0.5 rounded text-[10px] font-bold ${getRoleBadgeStyle(user.role)}`}>
+                        {getRoleLabel(user.role)}
+                      </Badge>
+                    </td>
+
+                    {/* Status */}
+                    <td className="p-4 text-center">
+                      <span 
+                        onClick={() => openStatusToggleDialog(user)}
+                        className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded text-[10px] font-bold cursor-pointer transition-colors ${
+                          user.isActive 
+                            ? "bg-green-500/10 text-green-600 hover:bg-green-500/20" 
+                            : "bg-slate-500/10 text-slate-600 hover:bg-slate-500/20"
+                        }`}
+                      >
+                        {user.isActive ? <CheckCircle2 className="h-3 w-3" /> : <XCircle className="h-3 w-3" />}
+                        <span>{user.isActive ? "Aktif" : "Nonaktif"}</span>
+                      </span>
+                    </td>
+
+                    {/* Terakhir Aktif */}
+                    <td className="p-4 text-muted-foreground">
+                      {format(new Date(user.updatedAt || user.createdAt), "dd MMM yyyy, HH:mm", { locale: id })}
+                    </td>
+
+                    {/* Aksi */}
+                    <td className="p-4 pr-5 text-right">
+                      <div className="flex items-center justify-end gap-1.5">
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          className="h-8 w-8 p-0 text-muted-foreground hover:text-primary rounded-lg"
+                          onClick={() => openViewDialog(user)}
+                        >
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          className="h-8 w-8 p-0 text-muted-foreground hover:text-primary rounded-lg"
+                          onClick={() => openEditDialog(user)}
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          className="h-8 w-8 p-0 text-destructive hover:text-destructive rounded-lg"
+                          onClick={() => openDeleteDialog(user)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+
+              {filteredUsers.length === 0 && (
+                <tr>
+                  <td colSpan={8} className="p-8 text-center text-muted-foreground">
+                    <ShieldAlert className="h-10 w-10 mx-auto mb-2 text-muted-foreground/30" />
+                    <span>Tidak ditemukan user yang cocok.</span>
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        {/* PAGINATION PANEL */}
+        <div className="p-4 border-t border-border flex justify-end bg-muted/10">
+          <div className="flex items-center gap-1.5 text-[11px] font-bold text-muted-foreground">
+            <Button variant="outline" size="sm" className="h-7 w-7 p-0 rounded" disabled>&lt;</Button>
+            <span className="h-7 w-7 flex items-center justify-center bg-primary text-primary-foreground font-black rounded">1</span>
+            <Button variant="outline" size="sm" className="h-7 w-7 p-0 rounded" disabled>&gt;</Button>
           </div>
-        </CardContent>
+        </div>
       </Card>
+
+      {/* View User Details Dialog */}
+      <Dialog open={viewDialogOpen} onOpenChange={setViewDialogOpen}>
+        <DialogContent className="rounded-2xl">
+          <DialogHeader>
+            <DialogTitle>Detail Pengguna</DialogTitle>
+            <DialogDescription>
+              Rincian informasi akun pengguna
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4 text-xs leading-relaxed">
+            <div className="flex justify-between border-b pb-2">
+              <span className="font-semibold text-muted-foreground">Nama Lengkap</span>
+              <span className="font-bold text-foreground">{selectedUser?.employee?.name || getRoleLabel(selectedUser?.role || "")}</span>
+            </div>
+            <div className="flex justify-between border-b pb-2">
+              <span className="font-semibold text-muted-foreground">Username</span>
+              <span className="font-bold text-foreground">{selectedUser?.email.split("@")[0]}</span>
+            </div>
+            <div className="flex justify-between border-b pb-2">
+              <span className="font-semibold text-muted-foreground">Email</span>
+              <span className="font-bold text-foreground">{selectedUser?.email}</span>
+            </div>
+            <div className="flex justify-between border-b pb-2">
+              <span className="font-semibold text-muted-foreground">Role / Hak Akses</span>
+              <span className="font-bold text-foreground">{getRoleLabel(selectedUser?.role || "")}</span>
+            </div>
+            <div className="flex justify-between border-b pb-2">
+              <span className="font-semibold text-muted-foreground">Status Akun</span>
+              <span className={`font-bold ${selectedUser?.isActive ? "text-green-600" : "text-slate-500"}`}>
+                {selectedUser?.isActive ? "Aktif" : "Nonaktif"}
+              </span>
+            </div>
+            <div className="flex justify-between border-b pb-2">
+              <span className="font-semibold text-muted-foreground">Dibuat Pada</span>
+              <span className="font-medium text-foreground">
+                {selectedUser?.createdAt ? format(new Date(selectedUser.createdAt), "dd MMMM yyyy, HH:mm", { locale: id }) : "-"}
+              </span>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button onClick={() => setViewDialogOpen(false)} className="rounded-xl">Tutup</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Create User Dialog */}
       <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
-        <DialogContent>
+        <DialogContent className="rounded-2xl max-w-md">
           <DialogHeader>
             <DialogTitle>Tambah User Baru</DialogTitle>
             <DialogDescription>
               Buat akun user baru untuk akses sistem
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4 py-4">
+          <div className="space-y-4 py-4 text-xs">
             <div className="space-y-2">
               <Label htmlFor="email">Email (Username)</Label>
               <Input
@@ -352,6 +563,7 @@ export function UserManagementTab() {
                 placeholder="user@example.com"
                 value={formData.email}
                 onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                className="h-11 rounded-xl"
               />
             </div>
             <div className="space-y-2">
@@ -362,6 +574,7 @@ export function UserManagementTab() {
                 placeholder="Minimal 6 karakter"
                 value={formData.password}
                 onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                className="h-11 rounded-xl"
               />
             </div>
             <div className="space-y-2">
@@ -370,13 +583,13 @@ export function UserManagementTab() {
                 value={formData.role}
                 onValueChange={(value: any) => setFormData({ ...formData, role: value })}
               >
-                <SelectTrigger>
+                <SelectTrigger className="h-11 rounded-xl">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="OWNER">Owner</SelectItem>
-                  <SelectItem value="ADMIN">Admin</SelectItem>
-                  <SelectItem value="EMPLOYEE">Employee</SelectItem>
+                  <SelectItem value="ADMIN">Administrator</SelectItem>
+                  <SelectItem value="EMPLOYEE">Mekanik</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -386,11 +599,11 @@ export function UserManagementTab() {
                 value={formData.employeeId || "none"}
                 onValueChange={(value) => setFormData({ ...formData, employeeId: value === "none" ? "" : value })}
               >
-                <SelectTrigger>
+                <SelectTrigger className="h-11 rounded-xl">
                   <SelectValue placeholder="Pilih karyawan..." />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="none">Tidak ada (Buat Profil Karyawan Baru)</SelectItem>
+                  <SelectItem value="none">Tidak ada (Buat Profil Baru)</SelectItem>
                   {employees.map((emp) => (
                     <SelectItem key={emp.id} value={emp.id}>
                       {emp.name} - {emp.role}
@@ -409,6 +622,7 @@ export function UserManagementTab() {
                     placeholder="Nama Pengguna Baru"
                     value={formData.name}
                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                    className="h-11 rounded-xl"
                   />
                 </div>
                 <div className="space-y-2">
@@ -418,6 +632,7 @@ export function UserManagementTab() {
                     placeholder="08xxxxxxxxxx"
                     value={formData.phone}
                     onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                    className="h-11 rounded-xl"
                   />
                 </div>
               </>
@@ -429,7 +644,7 @@ export function UserManagementTab() {
                 value={formData.isActive ? "active" : "inactive"}
                 onValueChange={(value) => setFormData({ ...formData, isActive: value === "active" })}
               >
-                <SelectTrigger>
+                <SelectTrigger className="h-11 rounded-xl">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -440,24 +655,24 @@ export function UserManagementTab() {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setCreateDialogOpen(false)}>
+            <Button variant="outline" onClick={() => setCreateDialogOpen(false)} className="rounded-xl">
               Batal
             </Button>
-            <Button onClick={handleCreateUser}>Buat User</Button>
+            <Button onClick={handleCreateUser} className="rounded-xl">Buat User</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
       {/* Edit User Dialog */}
       <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
-        <DialogContent>
+        <DialogContent className="rounded-2xl max-w-md">
           <DialogHeader>
             <DialogTitle>Edit User</DialogTitle>
             <DialogDescription>
               Update informasi user
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4 py-4">
+          <div className="space-y-4 py-4 text-xs">
             <div className="space-y-2">
               <Label htmlFor="edit-email">Email (Username)</Label>
               <Input
@@ -465,6 +680,7 @@ export function UserManagementTab() {
                 type="email"
                 value={formData.email}
                 onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                className="h-11 rounded-xl"
               />
             </div>
             <div className="space-y-2">
@@ -474,6 +690,7 @@ export function UserManagementTab() {
                 placeholder="Nama Pengguna"
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                className="h-11 rounded-xl"
               />
             </div>
             <div className="space-y-2">
@@ -483,6 +700,7 @@ export function UserManagementTab() {
                 placeholder="08xxxxxxxxxx"
                 value={formData.phone}
                 onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                className="h-11 rounded-xl"
               />
             </div>
             <div className="space-y-2">
@@ -491,36 +709,53 @@ export function UserManagementTab() {
                 value={formData.role}
                 onValueChange={(value: any) => setFormData({ ...formData, role: value })}
               >
-                <SelectTrigger>
+                <SelectTrigger className="h-11 rounded-xl">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="OWNER">Owner</SelectItem>
-                  <SelectItem value="ADMIN">Admin</SelectItem>
-                  <SelectItem value="EMPLOYEE">Employee</SelectItem>
+                  <SelectItem value="ADMIN">Administrator</SelectItem>
+                  <SelectItem value="EMPLOYEE">Mekanik</SelectItem>
                 </SelectContent>
               </Select>
             </div>
+
+            {/* Quick Link to Reset Password */}
+            <div className="pt-2 border-t mt-2">
+              <Button 
+                variant="outline" 
+                size="sm" 
+                type="button" 
+                className="w-full gap-2 text-xs h-10 rounded-xl"
+                onClick={() => {
+                  setEditDialogOpen(false);
+                  if (selectedUser) openResetPasswordDialog(selectedUser);
+                }}
+              >
+                <Key className="h-3.5 w-3.5 text-primary" />
+                <span>Reset Password Akun Ini</span>
+              </Button>
+            </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setEditDialogOpen(false)}>
+            <Button variant="outline" onClick={() => setEditDialogOpen(false)} className="rounded-xl">
               Batal
             </Button>
-            <Button onClick={handleUpdateUser}>Simpan</Button>
+            <Button onClick={handleUpdateUser} className="rounded-xl">Simpan</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
       {/* Reset Password Dialog */}
       <Dialog open={resetPasswordDialogOpen} onOpenChange={setResetPasswordDialogOpen}>
-        <DialogContent>
+        <DialogContent className="rounded-2xl max-w-sm">
           <DialogHeader>
             <DialogTitle>Reset Password</DialogTitle>
             <DialogDescription>
               Buat password baru untuk user {selectedUser?.email}
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4 py-4">
+          <div className="space-y-4 py-4 text-xs">
             <div className="space-y-2">
               <Label htmlFor="new-password">Password Baru</Label>
               <Input
@@ -529,6 +764,7 @@ export function UserManagementTab() {
                 placeholder="Minimal 6 karakter"
                 value={newPassword}
                 onChange={(e) => setNewPassword(e.target.value)}
+                className="h-11 rounded-xl"
               />
             </div>
             <div className="space-y-2">
@@ -539,33 +775,34 @@ export function UserManagementTab() {
                 placeholder="Ketik ulang password"
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
+                className="h-11 rounded-xl"
               />
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setResetPasswordDialogOpen(false)}>
+            <Button variant="outline" onClick={() => setResetPasswordDialogOpen(false)} className="rounded-xl">
               Batal
             </Button>
-            <Button onClick={handleResetPassword}>Reset Password</Button>
+            <Button onClick={handleResetPassword} className="rounded-xl">Reset Password</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
       {/* Delete User Dialog */}
       <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <DialogContent>
+        <DialogContent className="rounded-2xl max-w-sm">
           <DialogHeader>
             <DialogTitle>Hapus User</DialogTitle>
-            <DialogDescription>
+            <DialogDescription className="text-xs">
               Apakah Anda yakin ingin menghapus user <strong>{selectedUser?.email}</strong>?
               Tindakan ini tidak dapat dibatalkan.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>
+            <Button variant="outline" onClick={() => setDeleteDialogOpen(false)} className="rounded-xl">
               Batal
             </Button>
-            <Button variant="destructive" onClick={handleDeleteUser}>
+            <Button variant="destructive" onClick={handleDeleteUser} className="rounded-xl">
               Hapus User
             </Button>
           </DialogFooter>
@@ -574,22 +811,23 @@ export function UserManagementTab() {
 
       {/* Toggle Status User Dialog */}
       <Dialog open={statusDialogOpen} onOpenChange={setStatusDialogOpen}>
-        <DialogContent>
+        <DialogContent className="rounded-2xl max-w-sm">
           <DialogHeader>
             <DialogTitle>Konfirmasi Perubahan Status</DialogTitle>
-            <DialogDescription>
+            <DialogDescription className="text-xs">
               Apakah Anda yakin ingin <strong>{selectedUser?.isActive ? "menonaktifkan" : "mengaktifkan"}</strong> user <strong>{selectedUser?.email}</strong>?
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setStatusDialogOpen(false)}>
+            <Button variant="outline" onClick={() => setStatusDialogOpen(false)} className="rounded-xl">
               Batal
             </Button>
             <Button 
               variant={selectedUser?.isActive ? "destructive" : "default"} 
               onClick={handleToggleStatus}
+              className="rounded-xl"
             >
-              Ya, {selectedUser?.isActive ? "Ubah Status" : "Ubah Status"}
+              Ya, Ubah Status
             </Button>
           </DialogFooter>
         </DialogContent>

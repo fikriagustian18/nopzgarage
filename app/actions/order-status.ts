@@ -12,22 +12,42 @@ import { startOfDay } from 'date-fns';
  * @param {string} plateNumber - Nomor plat kendaraan.
  * @returns {Object} Hasil pencarian order terkait.
  */
-export async function searchOrderByPlate(plateNumber: string) {
+export async function searchOrderByPlate(searchQuery: string) {
   try {
-    if (!plateNumber || plateNumber.trim().length < 3) {
-      return { success: false, error: 'Nomor plat terlalu pendek. Minimal 3 karakter.' };
+    if (!searchQuery || searchQuery.trim().length < 3) {
+      return { success: false, error: 'Kata kunci pencarian terlalu pendek. Minimal 3 karakter.' };
     }
 
-    // Normalisasi input: uppercase, hapus spasi berlebih
-    const normalizedPlate = plateNumber.trim().toUpperCase();
+    // Normalisasi input: hapus spasi berlebih
+    let cleanQuery = searchQuery.trim();
+    // Jika formatnya ORD-XXXXXX, ambil XXXXXX
+    if (cleanQuery.toUpperCase().startsWith("ORD-")) {
+      cleanQuery = cleanQuery.substring(4);
+    }
 
-    // Cari order dengan plat yang sesuai (case insensitive)
+    // Cari order dengan ID, nomor HP, atau nomor plat yang sesuai (case insensitive)
     const orders = await prisma.order.findMany({
       where: {
-        plateNumber: {
-          contains: normalizedPlate,
-          mode: 'insensitive'
-        }
+        OR: [
+          {
+            id: {
+              contains: cleanQuery,
+              mode: 'insensitive'
+            }
+          },
+          {
+            custPhone: {
+              contains: cleanQuery,
+              mode: 'insensitive'
+            }
+          },
+          {
+            plateNumber: {
+              contains: cleanQuery,
+              mode: 'insensitive'
+            }
+          }
+        ]
       },
       orderBy: {
         createdAt: 'desc'
@@ -37,6 +57,7 @@ export async function searchOrderByPlate(plateNumber: string) {
         id: true,
         vehicle: true,
         custName: true,
+        custPhone: true,
         plateNumber: true,
         status: true,
         paymentStatus: true,
@@ -53,7 +74,7 @@ export async function searchOrderByPlate(plateNumber: string) {
     if (orders.length === 0) {
       return { 
         success: false, 
-        error: `Tidak ditemukan motor dengan plat nomor "${normalizedPlate}". Pastikan plat nomor sudah benar.` 
+        error: `Tidak ditemukan data servis dengan kata kunci "${searchQuery}". Pastikan nomor order, WhatsApp, atau plat nomor sudah benar.` 
       };
     }
 

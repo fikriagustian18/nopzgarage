@@ -23,6 +23,7 @@ import {
   ImagePlus,
   Database,
   CreditCard,
+  Shield,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -102,6 +103,11 @@ export function AdminSidebar() {
       href: "/query",
       label: "Database Console",
       icon: Database,
+    },
+    {
+      href: "/admin/users",
+      label: "Pengguna",
+      icon: Shield,
     },
     {
       href: "/admin/settings",

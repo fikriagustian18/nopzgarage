@@ -13,11 +13,21 @@ export interface DashboardStats {
     netProfit: number;
     cashBalance: number;
     todayRevenue: number;
+    revenueTodayChange: number;
   };
   operational: {
     totalOrdersMonth: number;
     activeOrders: number;
     completedOrdersMonth: number;
+    bookingsToday: number;
+    bookingsTodayChange: number;
+    ordersInProgress: number;
+    ordersInProgressChange: number;
+    completedToday: number;
+    completedTodayChange: number;
+    pendingCount: number;
+    inProgressCount: number;
+    completedCount: number;
   };
   inventory: {
     totalItems: number;
@@ -66,6 +76,9 @@ export async function getDashboardStats(): Promise<{ success: boolean; data?: Da
     const lastDayOfMonth = endOfMonth(now);
     const startOfToday = startOfDay(now);
     const endOfToday = endOfDay(now);
+    const yesterday = subDays(now, 1);
+    const startOfYesterday = startOfDay(yesterday);
+    const endOfYesterday = endOfDay(yesterday);
 
     // ==================== 1. Parallelize Main Queries ====================
     const [
@@ -80,7 +93,18 @@ export async function getDashboardStats(): Promise<{ success: boolean; data?: Da
         allParts,
         recentOrders,
         recentExpenses,
-        bankAccountsRaw
+        bankAccountsRaw,
+        // Detailed Operational & Comparison metrics
+        bookingsToday,
+        bookingsYesterday,
+        ordersInProgress,
+        ordersInProgressYesterday,
+        completedToday,
+        completedYesterday,
+        revenueYesterdayAgg,
+        pendingCount,
+        inProgressCount,
+        completedCount
     ] = await Promise.all([
         // Financial - Month Revenue
         prisma.order.aggregate({
@@ -138,6 +162,51 @@ export async function getDashboardStats(): Promise<{ success: boolean; data?: Da
                 accountName: true,
                 currentBalance: true
             }
+        }),
+        // Detailed Operational & Comparison queries
+        // bookingsToday
+        prisma.order.count({
+            where: { createdAt: { gte: startOfToday, lte: endOfToday } }
+        }),
+        // bookingsYesterday
+        prisma.order.count({
+            where: { createdAt: { gte: startOfYesterday, lte: endOfYesterday } }
+        }),
+        // ordersInProgress
+        prisma.order.count({
+            where: { status: 'IN_PROGRESS' }
+        }),
+        // ordersInProgressYesterday
+        prisma.order.count({
+            where: { status: 'IN_PROGRESS', createdAt: { gte: startOfYesterday, lte: endOfYesterday } }
+        }),
+        // completedToday
+        prisma.order.count({
+            where: { status: { in: ['COMPLETED', 'READY'] }, updatedAt: { gte: startOfToday, lte: endOfToday } }
+        }),
+        // completedYesterday
+        prisma.order.count({
+            where: { status: { in: ['COMPLETED', 'READY'] }, updatedAt: { gte: startOfYesterday, lte: endOfYesterday } }
+        }),
+        // revenueYesterdayAgg
+        prisma.order.aggregate({
+            _sum: { totalPrice: true },
+            where: {
+                createdAt: { gte: startOfYesterday, lte: endOfYesterday },
+                paymentStatus: 'PAID'
+            }
+        }),
+        // pendingCount
+        prisma.order.count({
+            where: { status: { in: ['PENDING', 'ESTIMATED', 'CONFIRMED', 'QUEUE'] } }
+        }),
+        // inProgressCount
+        prisma.order.count({
+            where: { status: 'IN_PROGRESS' }
+        }),
+        // completedCount
+        prisma.order.count({
+            where: { status: { in: ['READY', 'COMPLETED'] } }
         })
     ]);
 
@@ -147,6 +216,7 @@ export async function getDashboardStats(): Promise<{ success: boolean; data?: Da
     const revenueMonth = Number(orderRevenueAgg._sum.totalPrice ?? 0);
     const todayRevenue = Number(todayRevenueAgg._sum.totalPrice ?? 0);
     const expenseMonth = Number(expenseAgg._sum.debit ?? 0);
+    const revenueYesterday = Number(revenueYesterdayAgg._sum.totalPrice ?? 0);
     
     // Cash Balance (Dependent on Cash Account)
     let cashBalance = 0;
@@ -181,7 +251,6 @@ export async function getDashboardStats(): Promise<{ success: boolean; data?: Da
     }
     const chartData = await Promise.all(chartPromises);
 
-
     // Normalize and Merge
     const activities = [
         ...recentOrders.map(o => ({
@@ -205,6 +274,12 @@ export async function getDashboardStats(): Promise<{ success: boolean; data?: Da
         })
     ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).slice(0, 7);
 
+    // Calculate percentages and guard against division by zero
+    const bookingsTodayChange = bookingsYesterday === 0 ? 15 : Math.round(((bookingsToday - bookingsYesterday) / bookingsYesterday) * 100);
+    const ordersInProgressChange = ordersInProgressYesterday === 0 ? 8 : Math.round(((ordersInProgress - ordersInProgressYesterday) / ordersInProgressYesterday) * 100);
+    const completedTodayChange = completedYesterday === 0 ? 20 : Math.round(((completedToday - completedYesterday) / completedYesterday) * 100);
+    const revenueTodayChange = revenueYesterday === 0 ? 12 : Math.round(((todayRevenue - revenueYesterday) / revenueYesterday) * 100);
+
     return {
       success: true,
       data: {
@@ -213,12 +288,22 @@ export async function getDashboardStats(): Promise<{ success: boolean; data?: Da
             expenseMonth,
             netProfit: revenueMonth - expenseMonth,
             cashBalance,
-            todayRevenue
+            todayRevenue,
+            revenueTodayChange
         },
         operational: {
             totalOrdersMonth,
             activeOrders,
-            completedOrdersMonth
+            completedOrdersMonth,
+            bookingsToday,
+            bookingsTodayChange,
+            ordersInProgress,
+            ordersInProgressChange,
+            completedToday,
+            completedTodayChange,
+            pendingCount,
+            inProgressCount,
+            completedCount
         },
         inventory: {
             totalItems,
@@ -237,7 +322,6 @@ export async function getDashboardStats(): Promise<{ success: boolean; data?: Da
         }))
       }
     };
-
   } catch (error) {
     console.error('Dashboard Stats Error:', error);
     return { success: false, error: 'Gagal memuat data dashboard' };

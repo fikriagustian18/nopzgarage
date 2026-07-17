@@ -3,6 +3,7 @@ import Link from "next/link";
 import { BookingForm } from "@/components/BookingForm";
 import { LiveQueueList } from "@/components/LiveQueueList";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { Button } from "@/components/ui/button";
 import { getAllSettings, GeneralSettings, HolidaySettings } from "@/app/actions/settings";
 import { getMediaGallery } from "@/app/actions/media-gallery";
 import { getSocialEmbeds } from "@/app/actions/social-embeds";
@@ -221,14 +222,14 @@ export default async function Home() {
               
               {/* CTA Buttons - Enhanced with better visual weight */}
               <div className="pt-6 flex flex-col sm:flex-row items-center justify-center gap-4 animate-in fade-in-0 slide-in-from-bottom-5 duration-1000 delay-300">
-                  <a 
-                    href="#booking" 
+                  <Link 
+                    href="/booking" 
                     className="group w-full sm:w-auto px-8 py-4 bg-primary text-primary-foreground text-base md:text-lg font-bold rounded-2xl hover:scale-[1.02] active:scale-[0.98] transition-all duration-300 shadow-2xl shadow-primary/40 hover:shadow-primary/60 flex items-center justify-center gap-2.5 border-2 border-primary/20"
                   >
                     <Calendar className="h-5 w-5 transition-transform duration-300 group-hover:scale-110" />
                     <span>{content.hero.ctaText || "Booking Sekarang"}</span>
                     <ArrowRight className="h-5 w-5 transition-transform duration-300 group-hover:translate-x-1" />
-                  </a>
+                  </Link>
                   <Link 
                     href="/status" 
                     className="group w-full sm:w-auto px-8 py-4 bg-background border-2 border-border hover:border-primary/50 text-foreground text-base md:text-lg font-bold rounded-2xl hover:bg-muted/50 transition-all duration-300 flex items-center justify-center gap-2.5 hover:scale-[1.02] active:scale-[0.98]"
@@ -472,16 +473,25 @@ export default async function Home() {
                    </div>
                </div>
 
-               {/* Booking Form Card */}
-               <div className="bg-card/80 backdrop-blur-xl border-2 border-border hover:border-primary/30 rounded-3xl p-8 lg:p-10 shadow-2xl hover:shadow-primary/10 transition-all duration-500">
-                   <div className="flex items-center gap-3 mb-8">
-                      <div className="p-3 bg-primary/10 rounded-xl border-2 border-primary/20">
-                        <Calendar className="h-6 w-6 text-primary" />
-                      </div>
-                      <h3 className="text-2xl font-black text-foreground">Form Booking</h3>
-                   </div>
-                    <BookingForm serviceOptions={serviceItems} garagePhone={general?.phone} />
-               </div>
+               {/* Booking CTA Card */}
+                <div className="bg-card/80 backdrop-blur-xl border-2 border-border hover:border-primary/30 rounded-3xl p-8 lg:p-12 shadow-2xl hover:shadow-primary/10 transition-all duration-500 flex flex-col justify-between min-h-[380px]">
+                    <div className="space-y-6">
+                       <div className="inline-flex p-3 bg-primary/10 rounded-xl border border-primary/20">
+                         <Calendar className="h-6 w-6 text-primary" />
+                       </div>
+                       <h3 className="text-3xl font-black text-foreground">Booking Servis Online</h3>
+                       <p className="text-muted-foreground text-sm leading-relaxed">
+                         Gunakan form booking online interaktif kami untuk mendaftarkan kendaraan Anda secara berkala. Pilih layanan, sesuaikan jadwal, dan dapatkan nomor antrian digital Anda instan.
+                       </p>
+                    </div>
+                    <div className="pt-8">
+                       <Link href="/booking">
+                         <Button className="w-full h-14 text-sm font-bold uppercase tracking-widest hover:scale-[1.02] transition-transform rounded-xl">
+                           Mulai Booking Sekarang
+                         </Button>
+                       </Link>
+                    </div>
+                </div>
            </div>
         </div>
       </section>
@@ -711,7 +721,7 @@ export default async function Home() {
                 </li>
                 <li>
                   <Link 
-                    href="#booking" 
+                    href="/booking" 
                     className="group text-muted-foreground hover:text-primary transition-all duration-300 flex items-center gap-3 font-semibold text-sm"
                   >
                     <ChevronRight className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-1" />
