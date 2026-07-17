@@ -43,6 +43,8 @@ type Employee = {
   id: string;
   name: string;
   role: string;
+  salaryType?: string;
+  commissionRate?: number;
 };
 
 type FeeAllocation = {
@@ -87,7 +89,7 @@ export function ProcessOrderDialog({
       setSpareParts(partRes.spareParts);
     }
     if (contentRes.success && contentRes.data?.content && Array.isArray((contentRes.data.content as any).items)) {
-       setServicesList((contentRes.data.content as any).items);
+      setServicesList((contentRes.data.content as any).items);
     }
   }
 
@@ -138,14 +140,8 @@ export function ProcessOrderDialog({
       
       // Auto-fill fee amount logic
       let defaultAmount = 0;
-      // Asumsi: Kita perlu tahu salaryType/commissionRate dari object emp.
-      // Saat ini Employee type di component belum punya field itu, perlu diupdate di type definition & load data.
-      // Tapi karena Type Employee di atas simple, mari kita update Type & State dulu atau lakukan casting if data exists.
-      // Data dari getEmployees di backend SAMA dengan schema, jadi fieldnya ADA meski type TS di sini belum lengkap.
-      const empData = emp as any; 
-      
-      if (empData?.salaryType === 'COMMISSION' && empData?.commissionRate) {
-        defaultAmount = Number(empData.commissionRate);
+      if (emp?.salaryType === 'COMMISSION' && emp?.commissionRate) {
+        defaultAmount = Number(emp.commissionRate);
       }
       
       newFees[index] = { 
@@ -167,6 +163,30 @@ export function ProcessOrderDialog({
 
   const handleRemoveFee = (index: number) => {
     setFees(fees.filter((_, i) => i !== index));
+  };
+
+  const handleLeadMechanicChange = (value: string) => {
+    setSelectedLeadId(value);
+    if (value) {
+      const isAlreadyInFees = fees.some(f => f.employeeId === value);
+      if (!isAlreadyInFees) {
+        const emp = employees.find(e => e.id === value);
+        if (emp) {
+          let defaultAmount = 0;
+          if (emp.salaryType === 'COMMISSION' && emp.commissionRate) {
+            defaultAmount = Number(emp.commissionRate);
+          }
+          setFees(prev => [
+            ...prev,
+            {
+              employeeId: value,
+              name: emp.name,
+              amount: defaultAmount
+            }
+          ]);
+        }
+      }
+    }
   };
 
   // Validate and show confirmation
@@ -206,7 +226,16 @@ export function ProcessOrderDialog({
         }
     }
     
-    // Check fee completeness
+    // Check fee completeness (fee wajib diisi)
+    if (fees.length === 0) {
+      toast({
+        variant: "destructive",
+        title: "Periksa Alokasi Fee",
+        description: "Alokasi fee wajib diisi. Harap tentukan minimal 1 penerima fee.",
+      });
+      return;
+    }
+
     if (fees.some(f => !f.employeeId || f.amount <= 0)) {
       toast({
         variant: "destructive",
@@ -359,7 +388,7 @@ export function ProcessOrderDialog({
                           <SelectValue placeholder="Pilih Karyawan" />
                         </SelectTrigger>
                         <SelectContent>
-                          {employees.map(e => (
+                          {employees.filter(e => e.role.toLowerCase().includes('mekanik')).map(e => (
                              <SelectItem key={e.id} value={e.id}>
                                {e.name} - <span className="text-gray-400 text-[10px]">{e.role}</span>
                              </SelectItem>
@@ -406,7 +435,7 @@ export function ProcessOrderDialog({
                  <Label className="text-xs mb-1 block">Penanggung Jawab Utama (Lead)</Label>
                  <Select
                     value={selectedLeadId}
-                    onValueChange={setSelectedLeadId}
+                    onValueChange={handleLeadMechanicChange}
                   >
                     <SelectTrigger className="h-9">
                       <SelectValue placeholder="Pilih Lead Mechanic..." />
