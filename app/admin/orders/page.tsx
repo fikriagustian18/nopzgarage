@@ -432,30 +432,17 @@ export default function OrdersPage() {
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex gap-2">
                         {order.status === "PENDING" && (
-                          <div className="flex gap-2">
-                            <Button 
-                              variant="default" 
-                              size="sm"
-                              className="bg-indigo-600 hover:bg-indigo-700 text-white"
-                              onClick={() => {
-                                setOrderToConfirm(order);
-                                setConfirmDialogOpen(true);
-                              }}
-                            >
-                              <CheckCircle className="h-4 w-4 mr-1" /> Konfirmasi
-                            </Button>
-                            <Button 
-                              variant="outline" 
-                              size="sm"
-                              className="border-blue-200 text-blue-700 hover:bg-blue-50"
-                              onClick={() => {
-                                setSelectedOrder(order);
-                                setProcessDialogOpen(true);
-                              }}
-                            >
-                              <Wrench className="h-4 w-4 mr-1" /> Proses
-                            </Button>
-                          </div>
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            className="border-blue-200 text-blue-700 hover:bg-blue-50"
+                            onClick={() => {
+                              setSelectedOrder(order);
+                              setProcessDialogOpen(true);
+                            }}
+                          >
+                            <Wrench className="h-4 w-4 mr-1" /> Proses
+                          </Button>
                         )}
                         {order.status === "IN_PROGRESS" && (
                           <Button 
