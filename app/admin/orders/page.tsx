@@ -358,6 +358,9 @@ export default function OrdersPage() {
                       Order ID
                     </th>
                     <th className="px-6 py-4 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                      No. Antrian
+                    </th>
+                    <th className="px-6 py-4 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
                       Pelanggan
                     </th>
                     <th className="px-6 py-4 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
@@ -387,6 +390,15 @@ export default function OrdersPage() {
                         <div className="text-xs text-muted-foreground">
                           {new Date(order.createdAt).toLocaleDateString("id-ID")}
                         </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        {order.status === "CANCELLED" ? (
+                          <span className="text-sm text-muted-foreground">-</span>
+                        ) : (
+                          <Badge variant="secondary" className="font-mono font-bold text-xs bg-primary/10 text-primary border-primary/20">
+                            {(order as any).queueNumber || "-"}
+                          </Badge>
+                        )}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="text-sm font-medium text-foreground">

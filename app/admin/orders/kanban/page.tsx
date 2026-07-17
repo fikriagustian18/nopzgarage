@@ -39,6 +39,7 @@ type KanbanOrder = {
   mechanic?: {
     name: string;
   } | null;
+  queueNumber?: string;
 };
 
 const KANBAN_STATUSES: OrderStatus[] = ["PENDING", "IN_PROGRESS", "READY", "COMPLETED"];
@@ -157,9 +158,16 @@ export default function KanbanBoardPage() {
                       <CardContent className="p-4">
                         <div className="flex justify-between items-start mb-2">
                           <div>
-                            <span className="text-[10px] font-mono text-muted-foreground block mb-1">
-                              ID: {order.id.slice(-6)}
-                            </span>
+                            <div className="flex items-center gap-1.5 mb-1">
+                              <span className="text-[10px] font-mono text-muted-foreground">
+                                ID: {order.id.slice(-6)}
+                              </span>
+                              {order.queueNumber && (
+                                <Badge className="text-[9px] h-4 px-1 bg-primary/10 text-primary border border-primary/20 font-mono font-bold">
+                                  {order.queueNumber}
+                                </Badge>
+                              )}
+                            </div>
                             <h4 className="font-bold text-foreground text-sm line-clamp-1">{order.custName}</h4>
                           </div>
                           

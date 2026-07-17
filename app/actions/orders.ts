@@ -5,6 +5,7 @@ import { auth } from '@/lib/auth';
 import { OrderStatus, ServiceType, PaymentStatus } from '@prisma/client';
 import { revalidatePath } from 'next/cache';
 import { createLog } from './logs';
+import { format, startOfDay, endOfDay } from 'date-fns';
 
 // ==================== Types ====================
 export type OrderItem = {
@@ -556,7 +557,8 @@ export async function getAdminOrders(filters?: {
     });
 
     const ordersWithNumbers = orders.map(serializeOrder);
-    return { success: true, orders: ordersWithNumbers };
+    const ordersWithQueueNumbers = await addQueueNumbersToOrders(ordersWithNumbers);
+    return { success: true, orders: ordersWithQueueNumbers };
   } catch (error) {
     console.error('Get admin orders error:', error);
     return { success: false, error: 'Gagal load orders' };
@@ -652,7 +654,8 @@ export async function getPublicKanbanOrders() {
         : order.id.slice(-3),
     }));
 
-    return { success: true, orders: maskedOrders };
+    const ordersWithQueueNumbers = await addQueueNumbersToOrders(maskedOrders);
+    return { success: true, orders: ordersWithQueueNumbers };
   } catch (error) {
     console.error('Get public kanban error:', error);
     return { success: false, error: 'Gagal load kanban' };
@@ -783,4 +786,67 @@ export async function deleteOrder(orderId: string) {
   } catch (error) {
     return { success: false, error: 'Gagal menghapus order' };
   }
+}
+
+// Helper function to dynamically add queue numbers to a list of orders based on their creation index on each date
+async function addQueueNumbersToOrders(orders: any[]) {
+  if (orders.length === 0) return [];
+
+  // 1. Get unique dates formatted as yyyy-MM-dd
+  const dateStrings = Array.from(
+    new Set(
+      orders.map(o => {
+        const d = o.createdAt instanceof Date ? o.createdAt : new Date(o.createdAt);
+        return format(d, 'yyyy-MM-dd');
+      })
+    )
+  );
+
+  // 2. Query all orders on those dates
+  const allOrdersForDates = await prisma.order.findMany({
+    where: {
+      OR: dateStrings.map(dateStr => {
+        const date = new Date(dateStr);
+        return {
+          createdAt: {
+            gte: startOfDay(date),
+            lte: endOfDay(date)
+          }
+        };
+      })
+    },
+    select: {
+      id: true,
+      createdAt: true
+    },
+    orderBy: {
+      createdAt: 'asc'
+    }
+  });
+
+  // 3. Group by date and calculate index
+  const queueMap = new Map<string, string>(); // orderId -> queueNumber
+  
+  // Group allOrdersForDates by formatted date
+  const groups: { [dateStr: string]: typeof allOrdersForDates } = {};
+  allOrdersForDates.forEach(o => {
+    const d = o.createdAt instanceof Date ? o.createdAt : new Date(o.createdAt);
+    const dateStr = format(d, 'yyyy-MM-dd');
+    if (!groups[dateStr]) groups[dateStr] = [];
+    groups[dateStr].push(o);
+  });
+
+  // Assign queue numbers within each group
+  Object.keys(groups).forEach(dateStr => {
+    groups[dateStr].forEach((o, index) => {
+      const qNum = `Q-${String(index + 1).padStart(2, '0')}`;
+      queueMap.set(o.id, qNum);
+    });
+  });
+
+  // 4. Map queue numbers back to the input orders
+  return orders.map(o => ({
+    ...o,
+    queueNumber: queueMap.get(o.id) || 'Q-00'
+  }));
 }

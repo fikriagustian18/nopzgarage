@@ -14,6 +14,7 @@ type OrderCard = {
   status: string;
   plateNumber: string;
   createdAt: Date;
+  queueNumber?: string;
 };
 
 export function PublicKanban() {
@@ -170,8 +171,13 @@ function OrderCard({ order }: { order: OrderCard }) {
         </CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="text-sm text-gray-600">
+        <div className="text-sm text-gray-600 flex justify-between items-center">
           <p>Nomor: ...{order.plateNumber}</p>
+          {order.queueNumber && (
+            <Badge variant="outline" className="font-mono font-bold text-xs bg-primary/10 text-primary border-primary/20">
+              {order.queueNumber}
+            </Badge>
+          )}
         </div>
       </CardContent>
     </Card>
