@@ -267,7 +267,7 @@ export function ProcessOrderDialog({
             Estimasi & Alokasi Fee
           </DialogTitle>
           <DialogDescription>
-            Input biaya untuk customer dan fee nominal untuk tim (Admin, Mekanik, Helper).
+            Input biaya untuk customer dan fee nominal untuk tim (Admin, Mekanik).
           </DialogDescription>
         </DialogHeader>
 

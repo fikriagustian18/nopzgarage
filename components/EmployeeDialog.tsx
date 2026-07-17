@@ -178,7 +178,6 @@ export function EmployeeDialog({
                   <SelectItem value="Admin">Admin</SelectItem>
                   <SelectItem value="Mekanik">Mekanik</SelectItem>
                   <SelectItem value="Owner">Owner</SelectItem>
-                  <SelectItem value="Helper">Helper</SelectItem>
                 </SelectContent>
               </Select>
             </div>
