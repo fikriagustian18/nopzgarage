@@ -20,6 +20,12 @@ import {
   User,
   Database,
   CreditCard,
+  Clock,
+  Wrench,
+  Shield,
+  BookOpen,
+  Book,
+  ImagePlus,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -44,9 +50,14 @@ export function MobileSidebar() {
       exact: true,
     },
     {
-      href: "/admin/orders",
-      label: "Kelola Order",
-      icon: ClipboardList,
+      href: "/admin/orders/kanban",
+      label: "Antrian Servis",
+      icon: Clock,
+    },
+    {
+      href: "/admin/pelayanan",
+      label: "Pelayanan",
+      icon: Wrench,
     },
     {
       href: "/admin/employees",
@@ -64,6 +75,26 @@ export function MobileSidebar() {
       icon: Package,
     },
     {
+      href: "/admin/expenses",
+      label: "Pengeluaran",
+      icon: Wallet,
+    },
+    {
+      href: "/admin/income",
+      label: "Pemasukan Lain",
+      icon: TrendingUp,
+    },
+    {
+      href: "/admin/journal",
+      label: "Jurnal Umum",
+      icon: BookOpen,
+    },
+    {
+      href: "/admin/transactions",
+      label: "Transaksi & Pembayaran",
+      icon: CreditCard,
+    },
+    {
       href: "/admin/finance",
       label: "Keuangan",
       icon: DollarSign,
@@ -74,24 +105,61 @@ export function MobileSidebar() {
       icon: FileText,
     },
     {
+      href: "/admin/docs",
+      label: "Documentation",
+      icon: Book,
+    },
+    {
+      href: "/admin/content",
+      label: "Konten Website",
+      icon: Globe,
+    },
+    {
+      href: "/admin/media",
+      label: "Media Gallery",
+      icon: ImagePlus,
+    },
+    {
       href: "/query",
       label: "Database Console",
       icon: Database,
+    },
+    {
+      href: "/admin/users",
+      label: "Pengguna",
+      icon: Shield,
     },
     {
       href: "/admin/settings",
       label: "Pengaturan",
       icon: Settings,
     },
+    {
+      href: "/admin/profile",
+      label: "Profil",
+      icon: User,
+    },
   ];
 
   const userRole = session?.user?.role;
   const filteredMenuItems = menuItems.filter((item) => {
     if (userRole === "ADMIN") {
-      return item.href === "/admin/orders" || item.href === "/admin/inventory" || item.href === "/admin" || item.href === "/admin/payroll";
+      return [
+        "/admin",
+        "/admin/orders/kanban",
+        "/admin/orders",
+        "/admin/pelayanan",
+        "/admin/inventory",
+        "/admin/transactions",
+        "/admin/payroll",
+        "/admin/profile"
+      ].includes(item.href);
     }
     if (userRole === "OWNER") {
-      return item.href !== "/admin/orders";
+      return ![
+        "/admin/orders",
+        "/admin/pelayanan"
+      ].includes(item.href);
     }
     return false;
   });

@@ -8,6 +8,7 @@ import { createLog } from './logs';
 export type CreateSparePartInput = {
   code: string;
   name: string;
+  category?: string;
   stock: number;
   minStock: number;
   unit: string;
@@ -30,6 +31,7 @@ export async function createSparePart(data: CreateSparePartInput) {
     const sparePart = await prisma.sparePart.create({
       data: {
         ...data,
+        category: data.category || 'Oli',
         buyPrice: data.buyPrice,
         sellPrice: data.sellPrice,
         isActive: true
@@ -68,6 +70,7 @@ export async function createSparePart(data: CreateSparePartInput) {
     }
 
     revalidatePath('/admin/products');
+    revalidatePath('/admin/inventory');
     
     await createLog({
         action: "CREATE_SPAREPART",
@@ -157,6 +160,7 @@ export async function updateSparePart(id: string, data: Partial<CreateSparePartI
     }
 
     revalidatePath('/admin/products');
+    revalidatePath('/admin/inventory');
     
       await createLog({
         action: "UPDATE_SPAREPART",
@@ -197,6 +201,7 @@ export async function deleteSparePart(id: string) {
     });
     
     revalidatePath('/admin/products');
+    revalidatePath('/admin/inventory');
     
     await createLog({
         action: "DEACTIVATE_SPAREPART",
@@ -228,6 +233,7 @@ export async function reactivateSparePart(id: string) {
       });
       
       revalidatePath('/admin/products');
+    revalidatePath('/admin/inventory');
       
       await createLog({
           action: "REACTIVATE_SPAREPART",

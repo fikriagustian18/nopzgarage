@@ -487,9 +487,9 @@ export default function AdminDashboard() {
                 </CardContent>
               </div>
               <div className="p-3 border-t border-border flex justify-center bg-muted/10">
-                <Link href="/admin/orders">
+                <Link href="/admin/pelayanan">
                   <Button variant="outline" size="sm" className="gap-2 text-xs">
-                    Lihat Semua Order
+                    Lihat Semua Pelayanan
                   </Button>
                 </Link>
               </div>

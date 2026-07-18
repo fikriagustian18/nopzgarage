@@ -28,7 +28,7 @@ export function RoleGuard({ allowedRoles, children }: RoleGuardProps) {
       if (role === "EMPLOYEE") {
         router.push("/employee");
       } else if (role === "ADMIN") {
-        router.push("/admin/orders");
+        router.push("/admin/pelayanan");
       } else if (role === "OWNER") {
         router.push("/admin");
       } else {

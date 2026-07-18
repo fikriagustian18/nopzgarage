@@ -6,7 +6,7 @@ import { NotificationPanel } from "./NotificationPanel";
 import { MobileSidebar } from "./MobileSidebar";
 import { cn } from "@/lib/utils";
 import { useSession, signOut } from "next-auth/react";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -22,6 +22,7 @@ import { LogOut, User, Globe, ChevronDown } from "lucide-react";
 export function AdminHeader() {
   const { data: session } = useSession();
   const pathname = usePathname();
+  const router = useRouter();
 
   const getInitials = (name: string) => {
     return name
@@ -34,7 +35,10 @@ export function AdminHeader() {
 
   const getPageTitle = () => {
     if (pathname === "/admin") return "Dashboard";
-    if (pathname.startsWith("/admin/orders")) return "Kelola Order";
+    if (pathname === "/admin/orders/kanban") return "Antrian Servis";
+    if (pathname.startsWith("/admin/orders")) return "Order Servis";
+    if (pathname.startsWith("/admin/pelayanan")) return "Pelayanan";
+    if (pathname.startsWith("/admin/transactions")) return "Transaksi & Pembayaran";
     if (pathname.startsWith("/admin/employees")) return "Karyawan";
     if (pathname.startsWith("/admin/payroll")) return "Gaji & Payroll";
     if (pathname.startsWith("/admin/inventory")) return "Inventory";
@@ -47,6 +51,7 @@ export function AdminHeader() {
     if (pathname.startsWith("/admin/content")) return "Konten Website";
     if (pathname.startsWith("/admin/media")) return "Media Gallery";
     if (pathname.startsWith("/admin/settings")) return "Pengaturan";
+    if (pathname.startsWith("/admin/profile")) return "Profil Pengguna";
     return "Dashboard";
   };
 
@@ -100,6 +105,11 @@ export function AdminHeader() {
                   </p>
                 </div>
               </DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => router.push('/admin/profile')} className="cursor-pointer">
+                <User className="mr-2 h-4 w-4" />
+                <span>Profil Saya</span>
+              </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={() => window.open('/', '_blank')} className="cursor-pointer">
                 <Globe className="mr-2 h-4 w-4" />

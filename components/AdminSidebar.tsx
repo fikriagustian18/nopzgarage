@@ -24,6 +24,8 @@ import {
   Database,
   CreditCard,
   Shield,
+  Clock,
+  Wrench,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -40,9 +42,14 @@ export function AdminSidebar() {
       exact: true,
     },
     {
-      href: "/admin/orders",
-      label: "Kelola Order",
-      icon: ClipboardList,
+      href: "/admin/orders/kanban",
+      label: "Antrian Servis",
+      icon: Clock,
+    },
+    {
+      href: "/admin/pelayanan",
+      label: "Pelayanan",
+      icon: Wrench,
     },
     {
       href: "/admin/employees",
@@ -73,6 +80,11 @@ export function AdminSidebar() {
       href: "/admin/journal",
       label: "Jurnal Umum",
       icon: BookOpen,
+    },
+    {
+      href: "/admin/transactions",
+      label: "Transaksi & Pembayaran",
+      icon: CreditCard,
     },
     {
       href: "/admin/finance",
@@ -114,15 +126,33 @@ export function AdminSidebar() {
       label: "Pengaturan",
       icon: Settings,
     },
+    {
+      href: "/admin/profile",
+      label: "Profil",
+      icon: User,
+    },
   ];
 
   const userRole = session?.user?.role;
   const filteredMenuItems = menuItems.filter((item) => {
     if (userRole === "ADMIN") {
-      return item.href === "/admin/orders" || item.href === "/admin/inventory" || item.href === "/admin" || item.href === "/admin/payroll";
+      return [
+        "/admin",
+        "/admin/orders/kanban",
+        "/admin/orders",
+        "/admin/pelayanan",
+        "/admin/inventory",
+        "/admin/transactions",
+        "/admin/payroll",
+        "/admin/profile"
+      ].includes(item.href);
     }
     if (userRole === "OWNER") {
-      return item.href !== "/admin/orders";
+      // Owner doesn't manage direct operations but views statistics, staff, finance, reports, content, settings
+      return ![
+        "/admin/orders",
+        "/admin/pelayanan"
+      ].includes(item.href);
     }
     return false;
   });

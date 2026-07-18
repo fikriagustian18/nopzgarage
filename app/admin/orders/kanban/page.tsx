@@ -119,9 +119,6 @@ export default function KanbanBoardPage() {
           <h1 className="text-xl font-bold text-foreground">Kanban Board</h1>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" onClick={() => router.push("/admin/orders")}>
-            List View
-          </Button>
           <Button onClick={() => setCreateDialogOpen(true)} className="gap-2">
             <Plus className="h-4 w-4" /> Order Baru
           </Button>
@@ -186,7 +183,7 @@ export default function KanbanBoardPage() {
                                   <Wrench className="h-3 w-3 mr-2" /> Proses Estimasi
                                 </DropdownMenuItem>
                               )}
-                              <DropdownMenuItem onClick={() => router.push(`/admin/orders?search=${order.id}`)}>
+                              <DropdownMenuItem onClick={() => router.push(`/admin/pelayanan?search=ORD-${order.id.slice(-6).toUpperCase()}`)}>
                                 Lihat Detail
                               </DropdownMenuItem>
                             </DropdownMenuContent>

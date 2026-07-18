@@ -2,7 +2,6 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
 import { RoleGuard } from "@/components/RoleGuard";
 import {
   Plus,
@@ -11,35 +10,32 @@ import {
   Trash2,
   Package,
   AlertTriangle,
-  TrendingDown,
-  Box,
-  Loader2,
+  Database,
+  CircleX,
+  RotateCcw,
+  Eye,
+  ChevronLeft,
+  ChevronRight,
+  ChevronsLeft,
+  ChevronsRight,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { getSpareParts, deleteSparePart, addStock, reduceStock } from "@/app/actions/inventory"; 
-import { SparepartDialog } from "@/components/SparepartDialog"; 
-import { Toaster } from "@/components/ui/toaster";
+import { getSpareParts, deleteSparePart } from "@/app/actions/inventory";
+import { SparepartDialog } from "@/components/SparepartDialog";
+import { SparepartDetailDialog } from "@/components/SparepartDetailDialog";
 import { ExportButton } from "@/components/export/ExportButton";
 import { exportInventory } from "@/lib/export/reports/inventory-export";
 import type { InventoryItemExport } from "@/lib/export/types";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from "@/components/ui/dialog";
-import { Label } from "@/components/ui/label";
 import { toast } from "@/hooks/use-toast";
 
 type SparePart = {
   id: string;
   code: string;
   name: string;
+  category?: string;
   stock: number;
   minStock: number;
   unit: string;
@@ -51,126 +47,26 @@ type SparePart = {
 };
 
 export default function InventoryPage() {
-  const router = useRouter();
-  const [searchQuery, setSearchQuery] = useState("");
   const [spareParts, setSpareParts] = useState<SparePart[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+
+  // Search & Filter States
+  const [searchQuery, setSearchQuery] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState("all");
+  const [statusFilter, setStatusFilter] = useState("all");
+
+  // Pagination State
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
 
   // Dialog States
   const [dialogOpen, setDialogOpen] = useState(false);
   const [dialogMode, setDialogMode] = useState<"create" | "edit">("create");
   const [selectedPart, setSelectedPart] = useState<SparePart | undefined>();
 
-  // Stock dialog states
-  const [stockInOpen, setStockInOpen] = useState(false);
-  const [stockOutOpen, setStockOutOpen] = useState(false);
-  const [stockLoading, setStockLoading] = useState(false);
+  // Detail Dialog State
+  const [detailOpen, setDetailOpen] = useState(false);
 
-  const [stockInForm, setStockInForm] = useState({
-    qty: 1,
-    supplier: "",
-    buyPrice: 0,
-    date: new Date().toISOString().split("T")[0]
-  });
-
-  const [stockOutForm, setStockOutForm] = useState({
-    qty: 1,
-    description: "",
-    date: new Date().toISOString().split("T")[0]
-  });
-
-  useEffect(() => {
-    if (selectedPart) {
-      setStockInForm({
-        qty: 1,
-        supplier: "",
-        buyPrice: Number(selectedPart.buyPrice),
-        date: new Date().toISOString().split("T")[0]
-      });
-      setStockOutForm({
-        qty: 1,
-        description: "",
-        date: new Date().toISOString().split("T")[0]
-      });
-    }
-  }, [selectedPart]);
-
-  const handleStockInSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!selectedPart) return;
-    setStockLoading(true);
-    try {
-      const res = await addStock(
-        selectedPart.id,
-        stockInForm.qty,
-        stockInForm.supplier,
-        stockInForm.buyPrice,
-        stockInForm.date
-      );
-
-      if (res.success) {
-        toast({
-          title: "✅ Berhasil!",
-          description: `Berhasil menambahkan stok masuk sebanyak ${stockInForm.qty} unit.`,
-        });
-        setStockInOpen(false);
-        fetchSpareParts();
-      } else {
-        toast({
-          variant: "destructive",
-          title: "❌ Gagal",
-          description: res.error || "Gagal memproses stok masuk",
-        });
-      }
-    } catch (err) {
-      toast({
-        variant: "destructive",
-        title: "❌ Error",
-        description: "Terjadi kesalahan sistem",
-      });
-    } finally {
-      setStockLoading(false);
-    }
-  };
-
-  const handleStockOutSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!selectedPart) return;
-    setStockLoading(true);
-    try {
-      const res = await reduceStock(
-        selectedPart.id,
-        stockOutForm.qty,
-        stockOutForm.description,
-        stockOutForm.date
-      );
-
-      if (res.success) {
-        toast({
-          title: "✅ Berhasil!",
-          description: `Berhasil mencatat stok keluar sebanyak ${stockOutForm.qty} unit.`,
-        });
-        setStockOutOpen(false);
-        fetchSpareParts();
-      } else {
-        toast({
-          variant: "destructive",
-          title: "❌ Gagal",
-          description: res.error || "Gagal memproses stok keluar",
-        });
-      }
-    } catch (err) {
-      toast({
-        variant: "destructive",
-        title: "❌ Error",
-        description: "Terjadi kesalahan sistem",
-      });
-    } finally {
-      setStockLoading(false);
-    }
-  };
-
-  // Fetch dari database
   useEffect(() => {
     fetchSpareParts();
   }, []);
@@ -184,312 +80,534 @@ export default function InventoryPage() {
       }
     } catch (error) {
       console.error("Failed to fetch spare parts", error);
+      toast({
+        variant: "destructive",
+        title: "❌ Error",
+        description: "Gagal mengambil data inventory",
+      });
     } finally {
       setIsLoading(false);
     }
   }
 
   const handleDelete = async (id: string) => {
-    if (confirm("Apakah anda yakin ingin menghapus produk ini?")) {
-      await deleteSparePart(id);
-      fetchSpareParts();
+    if (confirm("Apakah anda yakin ingin menghapus data barang ini?")) {
+      const res = await deleteSparePart(id);
+      if (res.success) {
+        toast({
+          title: "✅ Berhasil!",
+          description: "Data barang telah dinonaktifkan.",
+        });
+        fetchSpareParts();
+      } else {
+        toast({
+          variant: "destructive",
+          title: "❌ Gagal",
+          description: res.error || "Gagal menghapus data barang",
+        });
+      }
     }
   };
 
-  const filteredParts = spareParts.filter(
-    (part) =>
-      part.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      part.code.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const handleResetFilters = () => {
+    setSearchQuery("");
+    setCategoryFilter("all");
+    setStatusFilter("all");
+    setCurrentPage(1);
+  };
 
-  const lowStockItems = spareParts.filter((p) => p.stock <= p.minStock && p.isActive);
-  const totalValue = spareParts.reduce(
-    (sum, p) => sum + p.stock * Number(p.buyPrice),
-    0
+  // Filter Calculation
+  const filteredParts = spareParts.filter((part) => {
+    if (!part.isActive) return false;
+
+    // Search query match (Name, Code, Category)
+    const matchesSearch =
+      part.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      part.code.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (part.category && part.category.toLowerCase().includes(searchQuery.toLowerCase()));
+
+    // Category match
+    const matchesCategory =
+      categoryFilter === "all" || (part.category || "Oli") === categoryFilter;
+
+    // Status match
+    let matchesStatus = true;
+    if (statusFilter === "available") {
+      matchesStatus = part.stock > part.minStock;
+    } else if (statusFilter === "low") {
+      matchesStatus = part.stock > 0 && part.stock <= part.minStock;
+    } else if (statusFilter === "out") {
+      matchesStatus = part.stock === 0;
+    }
+
+    return matchesSearch && matchesCategory && matchesStatus;
+  });
+
+  // Stats Calculations
+  const activeParts = spareParts.filter((p) => p.isActive);
+  const totalItems = activeParts.length;
+  const availableItems = activeParts.filter((p) => p.stock > 0).length;
+  const lowStockItems = activeParts.filter((p) => p.stock > 0 && p.stock <= p.minStock).length;
+  const outOfStockItems = activeParts.filter((p) => p.stock === 0).length;
+
+  // Pagination Logic
+  const totalPages = Math.ceil(filteredParts.length / itemsPerPage) || 1;
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const paginatedParts = filteredParts.slice(startIndex, startIndex + itemsPerPage);
+
+  // Extract unique categories for dropdown filter
+  const availableCategories = Array.from(
+    new Set(spareParts.map((p) => p.category || "Oli"))
   );
 
   return (
     <RoleGuard allowedRoles={["OWNER", "ADMIN"]}>
       <div className="min-h-screen bg-background text-foreground">
-        {/* Main Content */}
         <div className="p-8 space-y-6">
-        <div className="mb-8">
-          <h2 className="text-3xl font-black text-foreground mb-2">
-            Inventory
-          </h2>
-          <p className="text-muted-foreground">
-            Kelola stok sparepart, harga, dan produk bengkel
-          </p>
-        </div>
-
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-          <Card className="border-border bg-card">
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
-                Total Item
-              </CardTitle>
-              <Package className="h-4 w-4 text-primary" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold text-foreground">
-                {spareParts.filter((p) => p.isActive).length}
+          {/* Breadcrumb & Header */}
+          <div>
+            <div className="text-xs text-muted-foreground mb-1 font-medium">
+              Beranda &gt; <span className="text-foreground">Inventory</span>
+            </div>
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div>
+                <h1 className="text-3xl font-black tracking-tight text-foreground">
+                  Inventory
+                </h1>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Kelola data stok suku cadang dan bahan yang tersedia di bengkel.
+                </p>
               </div>
-              <p className="text-xs text-muted-foreground mt-1">
-                Item aktif
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card className="border-border bg-card">
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
-                Stok Rendah
-              </CardTitle>
-              <AlertTriangle className="h-4 w-4 text-orange-500" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold text-orange-500">
-                {lowStockItems.length}
-              </div>
-              <p className="text-xs text-muted-foreground mt-1">
-                Perlu restock
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card className="border-border bg-card">
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
-                Nilai Aset
-              </CardTitle>
-              <TrendingDown className="h-4 w-4 text-green-500" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-foreground">
-                Rp {(totalValue / 1000000).toFixed(1)}jt
-              </div>
-              <p className="text-xs text-muted-foreground mt-1">
-                Total modal stok
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card className="border-border bg-card">
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
-                Total Unit
-              </CardTitle>
-              <Box className="h-4 w-4 text-purple-500" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold text-foreground">
-                {spareParts.reduce((sum, p) => sum + p.stock, 0)}
-              </div>
-              <p className="text-xs text-muted-foreground mt-1">
-                Unit fisik
-              </p>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Action Bar */}
-        <div className="flex gap-4 mb-6">
-          <div className="flex-1 relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-            <Input
-              placeholder="Cari sparepart..."
-              className="pl-10"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
+              <Button
+                className="gap-2 bg-foreground text-background hover:bg-foreground/90 font-semibold"
+                onClick={() => {
+                  setDialogMode("create");
+                  setSelectedPart(undefined);
+                  setDialogOpen(true);
+                }}
+              >
+                <Plus className="h-4 w-4" />
+                Tambah Barang
+              </Button>
+            </div>
           </div>
-          <div className="flex gap-2 w-full md:w-auto">
+
+          {/* 4 Stats Cards */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+            {/* Card 1: Total Barang */}
+            <Card className="border-border bg-card shadow-sm">
+              <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <CardTitle className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                  Total Barang
+                </CardTitle>
+                <div className="p-2 bg-muted/60 rounded-md">
+                  <Package className="h-5 w-5 text-foreground" />
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="text-3xl font-extrabold text-foreground">
+                  {totalItems}
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Semua barang terdaftar
+                </p>
+              </CardContent>
+            </Card>
+
+            {/* Card 2: Stok Tersedia */}
+            <Card className="border-border bg-card shadow-sm">
+              <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <CardTitle className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                  Stok Tersedia
+                </CardTitle>
+                <div className="p-2 bg-muted/60 rounded-md">
+                  <Database className="h-5 w-5 text-emerald-600" />
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="text-3xl font-extrabold text-foreground">
+                  {availableItems}
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Barang dengan stok &gt; 0
+                </p>
+              </CardContent>
+            </Card>
+
+            {/* Card 3: Stok Menipis */}
+            <Card className="border-border bg-card shadow-sm">
+              <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <CardTitle className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                  Stok Menipis
+                </CardTitle>
+                <div className="p-2 bg-amber-500/10 rounded-md">
+                  <AlertTriangle className="h-5 w-5 text-amber-600" />
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="text-3xl font-extrabold text-foreground">
+                  {lowStockItems}
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Stok ≤ Minimum
+                </p>
+              </CardContent>
+            </Card>
+
+            {/* Card 4: Stok Habis */}
+            <Card className="border-border bg-card shadow-sm">
+              <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <CardTitle className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                  Stok Habis
+                </CardTitle>
+                <div className="p-2 bg-red-500/10 rounded-md">
+                  <CircleX className="h-5 w-5 text-red-600" />
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="text-3xl font-extrabold text-foreground">
+                  {outOfStockItems}
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Stok = 0
+                </p>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Search, Filters & Export */}
+          <div className="flex flex-col lg:flex-row gap-3">
+            {/* Search Input */}
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Cari nama barang, kode, atau kategori..."
+                className="pl-9 bg-card"
+                value={searchQuery}
+                onChange={(e) => {
+                  setSearchQuery(e.target.value);
+                  setCurrentPage(1);
+                }}
+              />
+            </div>
+
+            {/* Category Dropdown Filter */}
+            <select
+              className="h-10 px-3 rounded-md border border-input bg-card text-sm focus:outline-none focus:ring-2 focus:ring-ring w-full lg:w-48"
+              value={categoryFilter}
+              onChange={(e) => {
+                setCategoryFilter(e.target.value);
+                setCurrentPage(1);
+              }}
+            >
+              <option value="all">Semua Kategori</option>
+              {availableCategories.map((cat) => (
+                <option key={cat} value={cat}>
+                  {cat}
+                </option>
+              ))}
+            </select>
+
+            {/* Stock Status Dropdown Filter */}
+            <select
+              className="h-10 px-3 rounded-md border border-input bg-card text-sm focus:outline-none focus:ring-2 focus:ring-ring w-full lg:w-48"
+              value={statusFilter}
+              onChange={(e) => {
+                setStatusFilter(e.target.value);
+                setCurrentPage(1);
+              }}
+            >
+              <option value="all">Semua Status Stok</option>
+              <option value="available">Tersedia</option>
+              <option value="low">Stok Menipis</option>
+              <option value="out">Stok Habis</option>
+            </select>
+
+            {/* Reset Button */}
+            <Button
+              variant="outline"
+              className="gap-2 shrink-0 border-border bg-card"
+              onClick={handleResetFilters}
+            >
+              <RotateCcw className="h-4 w-4" />
+              Reset
+            </Button>
+
+            {/* Export Button */}
             <ExportButton
               title="Laporan_Inventory"
               onExport={async (format, orientation) => {
-                  const exportData: InventoryItemExport[] = filteredParts.map(part => ({
-                      id: part.id,
-                      sku: part.code,
-                      name: part.name,
-                      quantity: part.stock,
-                      unit: part.unit,
-                      unitPrice: part.buyPrice,
-                      totalValue: part.stock * part.buyPrice,
-                      lowStockThreshold: part.minStock
-                  }));
-                  return await exportInventory(exportData, format, orientation);
+                const exportData: InventoryItemExport[] = filteredParts.map((part) => ({
+                  id: part.id,
+                  sku: part.code,
+                  name: part.name,
+                  quantity: part.stock,
+                  unit: part.unit,
+                  unitPrice: Number(part.buyPrice),
+                  totalValue: part.stock * Number(part.buyPrice),
+                  lowStockThreshold: part.minStock,
+                }));
+                return await exportInventory(exportData, format, orientation);
               }}
             />
-            <Button 
-              className="gap-2"
-              onClick={() => {
-                setDialogMode("create");
-                setSelectedPart(undefined);
-                setDialogOpen(true);
-              }}
-            >
-              <Plus className="h-4 w-4" />
-              Tambah Produk
-            </Button>
           </div>
-        </div>
 
-        {/* Inventory Table */}
-        <Card className="border-border bg-card">
-          <CardContent className="p-0">
-            {isLoading ? (
-              <div className="text-center py-12">
-                <Package className="h-12 w-12 mx-auto mb-3 text-muted-foreground animate-pulse" />
-                <p className="text-muted-foreground">Memuat data inventory...</p>
-              </div>
-            ) : spareParts.length === 0 ? (
-              <div className="text-center py-12">
-                <Package className="h-12 w-12 mx-auto mb-3 text-muted-foreground" />
-                <p className="text-muted-foreground mb-4">
-                  Belum ada produk/sparepart
-                </p>
-                <Button 
-                  className="gap-2"
-                  onClick={() => {
-                    setDialogMode("create");
-                    setSelectedPart(undefined);
-                    setDialogOpen(true);
-                  }}
-                >
-                  <Plus className="h-4 w-4" />
-                  Tambah Produk Pertama
-                </Button>
-              </div>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead className="bg-muted/50 border-b border-border">
-                    <tr>
-                      <th className="px-6 py-4 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                        Kode
-                      </th>
-                      <th className="px-6 py-4 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                        Nama Produk
-                      </th>
-                      <th className="px-6 py-4 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                        Stok
-                      </th>
-                      <th className="px-6 py-4 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                        Harga Beli
-                      </th>
-                      <th className="px-6 py-4 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                        Harga Jual
-                      </th>
-                      <th className="px-6 py-4 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                        Status
-                      </th>
-                      <th className="px-6 py-4 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                        Aksi
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-border">
-                    {filteredParts.map((part) => (
-                      <tr key={part.id} className="hover:bg-muted/50 transition-colors">
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <Badge variant="outline">{part.code}</Badge>
-                        </td>
-                        <td className="px-6 py-4">
-                          <div className="text-sm font-semibold text-foreground">
-                            {part.name}
-                          </div>
-                          <div className="text-xs text-muted-foreground">
-                            Unit: {part.unit}
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="text-sm text-foreground font-medium">
-                            {part.stock} {part.unit}
-                          </div>
-                          {part.stock <= part.minStock && (
-                            <Badge className="bg-red-900/40 text-red-500 border-red-900 text-[10px] mt-1 hover:bg-red-900/60">
+          {/* Table Card */}
+          <Card className="border-border bg-card shadow-sm overflow-hidden">
+            <CardContent className="p-0">
+              {isLoading ? (
+                <div className="text-center py-12">
+                  <Package className="h-12 w-12 mx-auto mb-3 text-muted-foreground animate-pulse" />
+                  <p className="text-muted-foreground text-sm">Memuat data inventory...</p>
+                </div>
+              ) : filteredParts.length === 0 ? (
+                <div className="text-center py-12">
+                  <Package className="h-12 w-12 mx-auto mb-3 text-muted-foreground" />
+                  <p className="text-muted-foreground mb-4 font-medium text-sm">
+                    Tidak ada data barang yang sesuai
+                  </p>
+                  <Button
+                    variant="outline"
+                    className="gap-2 text-xs"
+                    onClick={handleResetFilters}
+                  >
+                    <RotateCcw className="h-3.5 w-3.5" />
+                    Reset Filter
+                  </Button>
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm text-left">
+                    <thead className="bg-muted/40 border-b border-border text-muted-foreground text-xs font-semibold uppercase tracking-wider">
+                      <tr>
+                        <th className="px-4 py-3.5 text-center w-12">No.</th>
+                        <th className="px-4 py-3.5">Kode Barang</th>
+                        <th className="px-4 py-3.5">Nama Barang</th>
+                        <th className="px-4 py-3.5">Kategori</th>
+                        <th className="px-4 py-3.5">Satuan</th>
+                        <th className="px-4 py-3.5 text-center">Stok</th>
+                        <th className="px-4 py-3.5 text-center">Stok Minimum</th>
+                        <th className="px-4 py-3.5 text-center">Status</th>
+                        <th className="px-4 py-3.5 text-right">Harga Beli</th>
+                        <th className="px-4 py-3.5 text-center w-28">Aksi</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-border">
+                      {paginatedParts.map((part, idx) => {
+                        const rowNumber = startIndex + idx + 1;
+
+                        // Status Badge styling
+                        let statusBadge;
+                        if (part.stock === 0) {
+                          statusBadge = (
+                            <Badge className="bg-muted border border-border text-foreground font-normal hover:bg-muted text-[11px] px-2.5 py-0.5">
+                              Stok Habis
+                            </Badge>
+                          );
+                        } else if (part.stock <= part.minStock) {
+                          statusBadge = (
+                            <Badge className="bg-muted border border-border text-foreground font-normal hover:bg-muted text-[11px] px-2.5 py-0.5">
                               Stok Menipis
                             </Badge>
-                          )}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="text-sm text-muted-foreground">
-                            Rp {Number(part.buyPrice).toLocaleString("id-ID")}
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="text-sm font-bold text-green-500">
-                            Rp {Number(part.sellPrice).toLocaleString("id-ID")}
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <Badge
-                            className={
-                              part.isActive
-                                ? "bg-green-900/40 text-green-500 border-green-900"
-                                : "bg-gray-800 text-gray-400 border-gray-700"
-                            }
+                          );
+                        } else {
+                          statusBadge = (
+                            <Badge className="bg-muted border border-border text-foreground font-normal hover:bg-muted text-[11px] px-2.5 py-0.5">
+                              Tersedia
+                            </Badge>
+                          );
+                        }
+
+                        return (
+                          <tr
+                            key={part.id}
+                            className="hover:bg-muted/30 transition-colors"
                           >
-                            {part.isActive ? "Aktif" : "Non-Aktif"}
-                          </Badge>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="flex gap-2">
-                            <Button 
-                              variant="outline" 
-                              size="sm"
-                              className="text-green-600 border-green-200 hover:bg-green-50 dark:hover:bg-green-950/20 text-xs py-1 h-8"
-                              onClick={() => {
-                                setSelectedPart(part);
-                                setStockInOpen(true);
-                              }}
-                            >
-                              + Masuk
-                            </Button>
-                            <Button 
-                              variant="outline" 
-                              size="sm"
-                              className="text-orange-600 border-orange-200 hover:bg-orange-50 dark:hover:bg-orange-950/20 text-xs py-1 h-8"
-                              onClick={() => {
-                                setSelectedPart(part);
-                                setStockOutOpen(true);
-                              }}
-                            >
-                              - Keluar
-                            </Button>
-                            <Button 
-                              variant="ghost" 
-                              size="sm"
-                              className="h-8 w-8 p-0"
-                              onClick={() => {
-                                setSelectedPart(part);
-                                setDialogMode("edit");
-                                setDialogOpen(true);
-                              }}
-                            >
-                              <Edit className="h-4 w-4" />
-                            </Button>
-                            <Button 
-                              variant="ghost" 
-                              size="sm"
-                              className="h-8 w-8 p-0 text-red-500 hover:text-red-600"
-                              onClick={() => handleDelete(part.id)}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+                            <td className="px-4 py-3 text-center text-muted-foreground font-medium">
+                              {rowNumber}
+                            </td>
+                            <td className="px-4 py-3 whitespace-nowrap font-mono text-xs font-semibold">
+                              {part.code}
+                            </td>
+                            <td className="px-4 py-3 font-semibold text-foreground">
+                              {part.name}
+                            </td>
+                            <td className="px-4 py-3 text-muted-foreground whitespace-nowrap">
+                              {part.category || "Oli"}
+                            </td>
+                            <td className="px-4 py-3 text-muted-foreground whitespace-nowrap">
+                              {part.unit}
+                            </td>
+                            <td className="px-4 py-3 text-center font-bold text-foreground">
+                              {part.stock}
+                            </td>
+                            <td className="px-4 py-3 text-center text-muted-foreground font-medium">
+                              {part.minStock}
+                            </td>
+                            <td className="px-4 py-3 text-center whitespace-nowrap">
+                              {statusBadge}
+                            </td>
+                            <td className="px-4 py-3 text-right font-medium whitespace-nowrap text-foreground">
+                              Rp {Number(part.buyPrice).toLocaleString("id-ID")}
+                            </td>
+                            <td className="px-4 py-3 text-center whitespace-nowrap">
+                              <div className="flex items-center justify-center gap-1">
+                                {/* Detail Button */}
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground"
+                                  title="Lihat Detail"
+                                  onClick={() => {
+                                    setSelectedPart(part);
+                                    setDetailOpen(true);
+                                  }}
+                                >
+                                  <Eye className="h-4 w-4" />
+                                </Button>
+                                {/* Edit Button */}
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground"
+                                  title="Edit Barang"
+                                  onClick={() => {
+                                    setSelectedPart(part);
+                                    setDialogMode("edit");
+                                    setDialogOpen(true);
+                                  }}
+                                >
+                                  <Edit className="h-4 w-4" />
+                                </Button>
+                                {/* Delete Button */}
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-8 w-8 p-0 text-muted-foreground hover:text-red-600"
+                                  title="Hapus Barang"
+                                  onClick={() => handleDelete(part.id)}
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Pagination Footer */}
+          {!isLoading && filteredParts.length > 0 && (
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-2">
+              <div className="text-xs text-muted-foreground">
+                Menampilkan{" "}
+                <span className="font-semibold text-foreground">
+                  {startIndex + 1}
+                </span>{" "}
+                -{" "}
+                <span className="font-semibold text-foreground">
+                  {Math.min(startIndex + itemsPerPage, filteredParts.length)}
+                </span>{" "}
+                dari{" "}
+                <span className="font-semibold text-foreground">
+                  {filteredParts.length}
+                </span>{" "}
+                data
               </div>
-            )}
-          </CardContent>
-        </Card>
+
+              <div className="flex items-center gap-1">
+                {/* First Page */}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-8 w-8 p-0 border-border"
+                  disabled={currentPage === 1}
+                  onClick={() => setCurrentPage(1)}
+                >
+                  <ChevronsLeft className="h-4 w-4" />
+                </Button>
+
+                {/* Prev Page */}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-8 w-8 p-0 border-border"
+                  disabled={currentPage === 1}
+                  onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+
+                {/* Page numbers */}
+                {Array.from({ length: totalPages }, (_, i) => i + 1)
+                  .filter(
+                    (p) =>
+                      p === 1 ||
+                      p === totalPages ||
+                      Math.abs(p - currentPage) <= 1
+                  )
+                  .map((p, idx, arr) => {
+                    const prev = arr[idx - 1];
+                    const showEllipsis = prev && p - prev > 1;
+
+                    return (
+                      <div key={p} className="flex items-center gap-1">
+                        {showEllipsis && (
+                          <span className="text-xs text-muted-foreground px-1">
+                            ...
+                          </span>
+                        )}
+                        <Button
+                          variant={currentPage === p ? "default" : "outline"}
+                          size="sm"
+                          className={`h-8 w-8 p-0 border-border ${
+                            currentPage === p
+                              ? "bg-foreground text-background hover:bg-foreground/90 font-bold"
+                              : ""
+                          }`}
+                          onClick={() => setCurrentPage(p)}
+                        >
+                          {p}
+                        </Button>
+                      </div>
+                    );
+                  })}
+
+                {/* Next Page */}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-8 w-8 p-0 border-border"
+                  disabled={currentPage === totalPages}
+                  onClick={() =>
+                    setCurrentPage((p) => Math.min(totalPages, p + 1))
+                  }
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+
+                {/* Last Page */}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-8 w-8 p-0 border-border"
+                  disabled={currentPage === totalPages}
+                  onClick={() => setCurrentPage(totalPages)}
+                >
+                  <ChevronsRight className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
 
+      {/* Tambah / Edit Sparepart Dialog */}
       <SparepartDialog
         open={dialogOpen}
         onOpenChange={setDialogOpen}
@@ -497,194 +615,14 @@ export default function InventoryPage() {
         sparepart={selectedPart}
         onSuccess={fetchSpareParts}
       />
-      {/* Stok Masuk Dialog */}
-      {selectedPart && (
-        <Dialog open={stockInOpen} onOpenChange={setStockInOpen}>
-          <DialogContent className="max-w-md bg-card border border-border">
-            <DialogHeader>
-              <DialogTitle className="flex items-center gap-2 text-foreground font-black">
-                <Box className="h-5 w-5 text-green-600" />
-                Kelola Stok Masuk (Restock)
-              </DialogTitle>
-              <DialogDescription className="text-muted-foreground">
-                Catat penambahan stok fisik barang yang masuk ke inventori.
-              </DialogDescription>
-            </DialogHeader>
 
-            <form onSubmit={handleStockInSubmit} className="space-y-4 py-4">
-              <div className="space-y-2">
-                <Label className="text-foreground">Nama Barang</Label>
-                <Input value={selectedPart.name} disabled className="bg-muted text-foreground" />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="in-qty" className="text-foreground">Jumlah Masuk</Label>
-                  <Input 
-                    id="in-qty" 
-                    type="number" 
-                    min={1} 
-                    required 
-                    value={stockInForm.qty}
-                    onChange={(e) => setStockInForm({ ...stockInForm, qty: parseInt(e.target.value) || 0 })}
-                    className="text-foreground bg-background"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label className="text-foreground">Satuan</Label>
-                  <Input value={selectedPart.unit} disabled className="bg-muted text-foreground" />
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="in-supplier" className="text-foreground">Supplier / Penyuplai</Label>
-                <Input 
-                  id="in-supplier" 
-                  type="text" 
-                  placeholder="Nama Vendor / Supplier" 
-                  required
-                  value={stockInForm.supplier}
-                  onChange={(e) => setStockInForm({ ...stockInForm, supplier: e.target.value })}
-                  className="text-foreground bg-background"
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="in-price" className="text-foreground">Harga Beli Baru (Rp)</Label>
-                  <Input 
-                    id="in-price" 
-                    type="number" 
-                    min={0}
-                    required
-                    value={stockInForm.buyPrice}
-                    onChange={(e) => setStockInForm({ ...stockInForm, buyPrice: parseInt(e.target.value) || 0 })}
-                    className="text-foreground bg-background"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="in-date" className="text-foreground">Tanggal Masuk</Label>
-                  <Input 
-                    id="in-date" 
-                    type="date" 
-                    required
-                    value={stockInForm.date}
-                    onChange={(e) => setStockInForm({ ...stockInForm, date: e.target.value })}
-                    className="text-foreground bg-background"
-                  />
-                </div>
-              </div>
-
-              <DialogFooter className="pt-4">
-                <Button 
-                  type="button" 
-                  variant="outline" 
-                  onClick={() => setStockInOpen(false)}
-                  disabled={stockLoading}
-                  className="text-foreground"
-                >
-                  Batal
-                </Button>
-                <Button 
-                  type="submit" 
-                  disabled={stockLoading}
-                  className="bg-green-600 hover:bg-green-700 text-white gap-2"
-                >
-                  {stockLoading && <Loader2 className="h-4 w-4 animate-spin" />}
-                  Simpan Stok Masuk
-                </Button>
-              </DialogFooter>
-            </form>
-          </DialogContent>
-        </Dialog>
-      )}
-
-      {/* Stok Keluar Dialog */}
-      {selectedPart && (
-        <Dialog open={stockOutOpen} onOpenChange={setStockOutOpen}>
-          <DialogContent className="max-w-md bg-card border border-border">
-            <DialogHeader>
-              <DialogTitle className="flex items-center gap-2 text-foreground font-black">
-                <Box className="h-5 w-5 text-orange-600" />
-                Kelola Stok Keluar (Penyesuaian)
-              </DialogTitle>
-              <DialogDescription className="text-muted-foreground">
-                Catat pengurangan stok fisik barang untuk keperluan internal atau penyesuaian.
-              </DialogDescription>
-            </DialogHeader>
-
-            <form onSubmit={handleStockOutSubmit} className="space-y-4 py-4">
-              <div className="space-y-2">
-                <Label className="text-foreground">Nama Barang</Label>
-                <Input value={selectedPart.name} disabled className="bg-muted text-foreground" />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="out-qty" className="text-foreground">Jumlah Keluar</Label>
-                  <Input 
-                    id="out-qty" 
-                    type="number" 
-                    min={1} 
-                    max={selectedPart.stock}
-                    required 
-                    value={stockOutForm.qty}
-                    onChange={(e) => setStockOutForm({ ...stockOutForm, qty: parseInt(e.target.value) || 0 })}
-                    className="text-foreground bg-background"
-                  />
-                  <p className="text-[10px] text-muted-foreground mt-0.5">Sisa stok: {selectedPart.stock} {selectedPart.unit}</p>
-                </div>
-                <div className="space-y-2">
-                  <Label className="text-foreground">Satuan</Label>
-                  <Input value={selectedPart.unit} disabled className="bg-muted text-foreground" />
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="out-desc" className="text-foreground">Keperluan / Pelanggan</Label>
-                <Input 
-                  id="out-desc" 
-                  type="text" 
-                  placeholder="Contoh: Dipakai servis motor budi, Stok pecah/rusak" 
-                  required
-                  value={stockOutForm.description}
-                  onChange={(e) => setStockOutForm({ ...stockOutForm, description: e.target.value })}
-                  className="text-foreground bg-background"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="out-date" className="text-foreground">Tanggal Keluar</Label>
-                <Input 
-                  id="out-date" 
-                  type="date" 
-                  required
-                  value={stockOutForm.date}
-                  onChange={(e) => setStockOutForm({ ...stockOutForm, date: e.target.value })}
-                  className="text-foreground bg-background"
-                />
-              </div>
-
-              <DialogFooter className="pt-4">
-                <Button 
-                  type="button" 
-                  variant="outline" 
-                  onClick={() => setStockOutOpen(false)}
-                  disabled={stockLoading}
-                  className="text-foreground"
-                >
-                  Batal
-                </Button>
-                <Button 
-                  type="submit" 
-                  disabled={stockLoading}
-                  className="bg-orange-600 hover:bg-orange-700 text-white gap-2"
-                >
-                  {stockLoading && <Loader2 className="h-4 w-4 animate-spin" />}
-                  Simpan Stok Keluar
-                </Button>
-              </DialogFooter>
-            </form>
-          </DialogContent>
-        </Dialog>
-      )}
-
-      <Toaster />
-      </div>
+      {/* Detail & Stok Masuk/Keluar Dialog */}
+      <SparepartDetailDialog
+        open={detailOpen}
+        onOpenChange={setDetailOpen}
+        sparepart={selectedPart}
+        onSuccess={fetchSpareParts}
+      />
     </RoleGuard>
   );
 }

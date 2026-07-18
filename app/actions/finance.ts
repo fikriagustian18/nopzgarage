@@ -236,6 +236,13 @@ export async function getOperationalReports() {
         unitPrice: toNumber(item.unitPrice),
         totalPrice: toNumber(item.totalPrice),
         createdAt: item.createdAt instanceof Date ? item.createdAt.toISOString() : item.createdAt,
+        sparePart: item.sparePart ? {
+          ...item.sparePart,
+          buyPrice: toNumber(item.sparePart.buyPrice),
+          sellPrice: toNumber(item.sparePart.sellPrice),
+          createdAt: item.sparePart.createdAt instanceof Date ? item.sparePart.createdAt.toISOString() : item.sparePart.createdAt,
+          updatedAt: item.sparePart.updatedAt instanceof Date ? item.sparePart.updatedAt.toISOString() : item.sparePart.updatedAt,
+        } : null,
       }))
     }));
 

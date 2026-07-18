@@ -521,6 +521,7 @@ export async function getAdminOrders(filters?: {
   dateTo?: Date;
   search?: string;
   limit?: number;
+  mechanicId?: string;
 }) {
   try {
     const session = await auth();
@@ -532,6 +533,7 @@ export async function getAdminOrders(filters?: {
         ...(filters?.serviceType && { serviceType: filters.serviceType }),
         ...(filters?.dateFrom && { createdAt: { gte: filters.dateFrom } }),
         ...(filters?.dateTo && { createdAt: { lte: filters.dateTo } }),
+        ...(filters?.mechanicId && { mechanicId: filters.mechanicId }),
     };
 
     if (filters?.search) {

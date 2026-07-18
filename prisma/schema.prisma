@@ -227,6 +227,7 @@ model SparePart {
   id         String      @id @default(cuid())
   code       String      @unique
   name       String
+  category   String?     @default("Oli")
   stock      Int         @default(0)
   minStock   Int         @default(5)
   unit       String
@@ -238,6 +239,7 @@ model SparePart {
   orderItems OrderItem[]
 
   @@index([stock])
+  @@index([category])
 }
 
 model SystemSetting {

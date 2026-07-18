@@ -477,3 +477,171 @@ export async function deleteUser(userId: string) {
     return { success: false, error: 'Gagal hapus user' };
   }
 }
+
+// ==================== Get Current User Profile ====================
+export async function getCurrentProfile() {
+  try {
+    const session = await auth();
+    if (!session || !session.user?.email) {
+      return { success: false, error: 'Belum login' };
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { email: session.user.email },
+      include: { employee: true },
+    });
+
+    if (!user) {
+      return { success: false, error: 'User tidak ditemukan' };
+    }
+
+    // Get user activities from ActivityLog
+    const activities = await prisma.activityLog.findMany({
+      where: {
+        OR: [
+          { userId: user.id },
+          { userName: user.employee?.name || undefined },
+          { details: { contains: user.email } }
+        ]
+      },
+      orderBy: { createdAt: 'desc' },
+      take: 10,
+    });
+
+    const serializedActivities = activities.map(a => ({
+      ...a,
+      createdAt: a.createdAt.toISOString(),
+    }));
+
+    return {
+      success: true,
+      profile: {
+        id: user.id,
+        email: user.email,
+        role: user.role,
+        isActive: user.isActive,
+        createdAt: user.createdAt.toISOString(),
+        employee: user.employee ? {
+          id: user.employee.id,
+          name: user.employee.name,
+          role: user.employee.role,
+          phone: user.employee.phone,
+        } : null,
+      },
+      activities: serializedActivities,
+    };
+  } catch (error) {
+    console.error('Get current profile error:', error);
+    return { success: false, error: 'Gagal memuat profil' };
+  }
+}
+
+// ==================== Update Current User Profile ====================
+export async function updateCurrentProfile(data: { name: string; phone: string; email: string }) {
+  try {
+    const session = await auth();
+    if (!session || !session.user?.email) {
+      return { success: false, error: 'Belum login' };
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { email: session.user.email },
+      include: { employee: true },
+    });
+
+    if (!user) {
+      return { success: false, error: 'User tidak ditemukan' };
+    }
+
+    // Check email availability if changing email
+    if (data.email !== user.email) {
+      const emailExists = await prisma.user.findUnique({
+        where: { email: data.email }
+      });
+      if (emailExists) {
+        return { success: false, error: 'Email sudah digunakan oleh akun lain' };
+      }
+    }
+
+    // Update User table
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { email: data.email }
+    });
+
+    // Update Employee table if exists
+    if (user.employeeId) {
+      await prisma.employee.update({
+        where: { id: user.employeeId },
+        data: {
+          name: data.name,
+          phone: data.phone,
+        }
+      });
+    }
+
+    // Log the update
+    await createLog({
+      action: "UPDATE_PROFILE",
+      title: "Profil Diperbarui",
+      details: `Memperbarui informasi profil untuk ${data.email}`,
+      metadata: { userId: user.id },
+      userName: user.employee?.name || "User",
+      role: user.role
+    });
+
+    return { success: true, message: 'Profil berhasil diperbarui' };
+  } catch (error) {
+    console.error('Update current profile error:', error);
+    return { success: false, error: 'Gagal memperbarui profil' };
+  }
+}
+
+// ==================== Change Current User Password ====================
+export async function changeCurrentPassword(data: { currentPassword: string; newPassword: string }) {
+  try {
+    const session = await auth();
+    if (!session || !session.user?.email) {
+      return { success: false, error: 'Belum login' };
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { email: session.user.email },
+      include: { employee: true },
+    });
+
+    if (!user) {
+      return { success: false, error: 'User tidak ditemukan' };
+    }
+
+    // Verify current password
+    const isPasswordValid = await bcrypt.compare(data.currentPassword, user.password);
+    if (!isPasswordValid) {
+      return { success: false, error: 'Password saat ini salah' };
+    }
+
+    // Hash new password
+    const hashedNewPassword = await bcrypt.hash(data.newPassword, 10);
+
+    // Update password
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { password: hashedNewPassword }
+    });
+
+    // Log password change
+    await createLog({
+      action: "CHANGE_PASSWORD",
+      title: "Password Diubah",
+      details: `Password akun berhasil diubah untuk ${user.email}`,
+      metadata: { userId: user.id },
+      userName: user.employee?.name || "User",
+      role: user.role
+    });
+
+    return { success: true, message: 'Password berhasil diubah' };
+  } catch (error) {
+    console.error('Change current password error:', error);
+    return { success: false, error: 'Gagal mengubah password' };
+  }
+}

@@ -20,6 +20,7 @@ type SparePart = {
   id: string;
   code: string;
   name: string;
+  category?: string;
   stock: number;
   minStock: number;
   unit: string;
@@ -46,9 +47,10 @@ export function SparepartDialog({
   const [formData, setFormData] = useState<CreateSparePartInput>({
     code: "",
     name: "",
+    category: "Oli",
     stock: 0,
     minStock: 5,
-    unit: "pcs",
+    unit: "Pcs",
     buyPrice: 0,
     sellPrice: 0,
   });
@@ -58,6 +60,7 @@ export function SparepartDialog({
       setFormData({
         code: sparepart.code,
         name: sparepart.name,
+        category: sparepart.category || "Oli",
         stock: sparepart.stock,
         minStock: sparepart.minStock,
         unit: sparepart.unit,
@@ -68,9 +71,10 @@ export function SparepartDialog({
       setFormData({
         code: "",
         name: "",
+        category: "Oli",
         stock: 0,
         minStock: 5,
-        unit: "pcs",
+        unit: "Pcs",
         buyPrice: 0,
         sellPrice: 0,
       });
@@ -130,22 +134,22 @@ export function SparepartDialog({
       <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="text-2xl font-bold">
-            {mode === "create" && " Tambah Produk Baru"}
-            {mode === "edit" && "✏️ Edit Produk"}
+            {mode === "create" && "➕ Tambah Barang Baru"}
+            {mode === "edit" && "✏️ Edit Barang"}
           </DialogTitle>
           <DialogDescription>
-            {mode === "create" && "Masukkan data sparepart/produk baru ke sistem"}
-            {mode === "edit" && "Update informasi produk"}
+            {mode === "create" && "Masukkan data suku cadang / bahan baru ke sistem"}
+            {mode === "edit" && "Update informasi data barang"}
           </DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-6 mt-4">
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="code">Kode Produk <span className="text-red-500">*</span></Label>
+              <Label htmlFor="code">Kode Barang <span className="text-red-500">*</span></Label>
               <Input
                 id="code"
-                placeholder="Contoh: OLI-HM-01"
+                placeholder="Contoh: BRG-0001"
                 value={formData.code}
                 onChange={(e) => setFormData({ ...formData, code: e.target.value })}
                 required
@@ -153,10 +157,10 @@ export function SparepartDialog({
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="name">Nama Produk <span className="text-red-500">*</span></Label>
+              <Label htmlFor="name">Nama Barang <span className="text-red-500">*</span></Label>
               <Input
                 id="name"
-                placeholder="Contoh: Oli MPX2 0.8L"
+                placeholder="Contoh: Oli Mesin Federal Matic 10W-30"
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                 required
@@ -164,7 +168,40 @@ export function SparepartDialog({
             </div>
           </div>
 
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="category">Kategori <span className="text-red-500">*</span></Label>
+              <select
+                id="category"
+                className="w-full h-10 px-3 rounded-md border border-input bg-background text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                value={formData.category}
+                onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+                required
+              >
+                <option value="Oli">Oli</option>
+                <option value="Kelistrikan">Kelistrikan</option>
+                <option value="Rem">Rem</option>
+                <option value="Filter">Filter</option>
+                <option value="Drivetrain">Drivetrain</option>
+                <option value="Ban">Ban</option>
+                <option value="Aksesoris">Aksesoris</option>
+                <option value="Umum">Umum</option>
+              </select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="unit">Satuan <span className="text-red-500">*</span></Label>
+              <Input
+                id="unit"
+                placeholder="Botol, Pcs, Set, Dus"
+                value={formData.unit}
+                onChange={(e) => setFormData({ ...formData, unit: e.target.value })}
+                required
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="stock">Stok Awal</Label>
               <Input
@@ -187,21 +224,11 @@ export function SparepartDialog({
                 required
               />
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="unit">Satuan</Label>
-              <Input
-                id="unit"
-                placeholder="pcs, box, botol"
-                value={formData.unit}
-                onChange={(e) => setFormData({ ...formData, unit: e.target.value })}
-                required
-              />
-            </div>
           </div>
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="buyPrice">Harga Beli (Modal)</Label>
+              <Label htmlFor="buyPrice">Harga Beli (Rp)</Label>
               <Input
                 id="buyPrice"
                 type="number"
@@ -212,7 +239,7 @@ export function SparepartDialog({
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="sellPrice">Harga Jual</Label>
+              <Label htmlFor="sellPrice">Harga Jual (Rp)</Label>
               <Input
                 id="sellPrice"
                 type="number"

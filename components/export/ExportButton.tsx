@@ -16,6 +16,7 @@ import { ReactNode } from "react"; // Ensure ReactNode is imported if not alread
 
 interface ExportButtonProps {
   title: string;
+  tooltip?: string;
   onExport: (format: ExportFormat, orientation: PageOrientation) => Promise<Blob>;
   variant?: "default" | "outline" | "ghost";
   size?: "default" | "sm" | "lg";
@@ -23,10 +24,12 @@ interface ExportButtonProps {
   label?: string;
   hideLabel?: boolean;
   icon?: ReactNode;
+  className?: string;
 }
 
 export function ExportButton({
   title,
+  tooltip,
   onExport,
   variant = "outline",
   size = "default",
@@ -34,6 +37,7 @@ export function ExportButton({
   label = "Export",
   hideLabel = false,
   icon,
+  className,
 }: ExportButtonProps) {
   const [showPreview, setShowPreview] = useState(false);
   const [selectedFormat, setSelectedFormat] = useState<ExportFormat>("pdf");
@@ -47,7 +51,7 @@ export function ExportButton({
     <>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button variant={variant} size={size} className="gap-2">
+          <Button variant={variant} size={size} className={`gap-2 ${className || ""}`} title={tooltip || title}>
             {icon ? icon : (showIcon && <Download className="h-4 w-4" />)}
             {!hideLabel && label}
             {!hideLabel && <ChevronDown className="h-4 w-4" />}

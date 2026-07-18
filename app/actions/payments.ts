@@ -608,8 +608,8 @@ export async function getPaymentHistory(filters?: {
 }) {
   try {
     const session = await auth();
-    if (!session || session.user?.role !== "OWNER") {
-      return { success: false, error: "Akses ditolak: Hanya Owner yang dapat melihat riwayat pembayaran." };
+    if (!session || !["OWNER", "ADMIN"].includes(session.user?.role || "")) {
+      return { success: false, error: "Akses ditolak: Anda tidak memiliki wewenang untuk melihat riwayat pembayaran." };
     }
     const payments = await prisma.payment.findMany({
       where: {
