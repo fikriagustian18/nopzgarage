@@ -201,7 +201,7 @@ export async function createPayment(data: CreatePaymentInput) {
 }
 
 // ==================== Helper: Calculate Revenue Breakdown ====================
-async function getRevenueBreakdown(tx: TransactionClient, orderId: string) {
+async function getRevenueBreakdown(tx: TransactionClient, orderId: string, orderHeader?: any) {
   // Ambil detail item order
   const orderItems = await tx.orderItem.findMany({
     where: { orderId },
@@ -210,12 +210,36 @@ async function getRevenueBreakdown(tx: TransactionClient, orderId: string) {
   let serviceRevenue = 0;
   let partRevenue = 0;
 
-  for (const item of orderItems) {
-    const totalPrice = Number(item.totalPrice);
-    if (item.itemType === 'service') {
-      serviceRevenue += totalPrice;
-    } else if (item.itemType === 'part') {
-      partRevenue += totalPrice;
+  if (orderItems.length > 0) {
+    for (const item of orderItems) {
+      const totalPrice = Number(item.totalPrice);
+      if (item.itemType === 'service') {
+        serviceRevenue += totalPrice;
+      } else if (item.itemType === 'part') {
+        partRevenue += totalPrice;
+      }
+    }
+  } else {
+    // Fallback ke JSON items
+    const order = orderHeader || await tx.order.findUnique({
+      where: { id: orderId },
+      select: { items: true }
+    });
+
+    if (order && order.items) {
+      const itemsList = typeof order.items === 'string' ? JSON.parse(order.items) : order.items;
+      if (Array.isArray(itemsList)) {
+        for (const item of itemsList) {
+          const qty = Number(item.qty || 0);
+          const price = Number(item.price || 0);
+          const itemTotalPrice = qty * price;
+          if (item.type === 'service') {
+            serviceRevenue += itemTotalPrice;
+          } else if (item.type === 'part') {
+            partRevenue += itemTotalPrice;
+          }
+        }
+      }
     }
   }
 
@@ -341,16 +365,25 @@ async function handleOrderPayment(tx: TransactionClient, orderId: string, paymen
     );
   } else if (isFullPayment && isFirstPayment) {
     // Lunas Langsung - Pisahkan pendapatan jasa vs sparepart
-    const breakdown = await getRevenueBreakdown(tx, orderId);
+    const breakdown = await getRevenueBreakdown(tx, orderId, order);
+    let serviceRevenue = breakdown.serviceRevenue;
+    let partRevenue = breakdown.partRevenue;
+    const totalRev = serviceRevenue + partRevenue;
+
+    if (totalRev !== amount) {
+      // Ada selisih, masukkan ke pendapatan jasa (serviceRevenue) agar jurnal balance
+      serviceRevenue += (amount - totalRev);
+    }
+
     const journalItems: any[] = [
       { accountCode: cashAccountCode, debit: amount },
     ];
     
-    if (breakdown.serviceRevenue > 0) {
-      journalItems.push({ accountCode: "401", credit: breakdown.serviceRevenue });
+    if (serviceRevenue > 0) {
+      journalItems.push({ accountCode: "401", credit: serviceRevenue });
     }
-    if (breakdown.partRevenue > 0) {
-      journalItems.push({ accountCode: "402", credit: breakdown.partRevenue });
+    if (partRevenue > 0) {
+      journalItems.push({ accountCode: "402", credit: partRevenue });
     }
 
     await createJournalEntry(
@@ -379,16 +412,25 @@ async function handleOrderPayment(tx: TransactionClient, orderId: string, paymen
     
     if (isFullPayment) {
       // Pisahkan pendapatan jasa vs sparepart
-      const breakdown = await getRevenueBreakdown(tx, orderId);
+      const breakdown = await getRevenueBreakdown(tx, orderId, order);
+      let serviceRevenue = breakdown.serviceRevenue;
+      let partRevenue = breakdown.partRevenue;
+      const totalRev = serviceRevenue + partRevenue;
+
+      if (totalRev !== totalPrice) {
+        // Ada selisih, masukkan ke pendapatan jasa (serviceRevenue) agar jurnal balance
+        serviceRevenue += (totalPrice - totalRev);
+      }
+
       const revenueItems: any[] = [
         { accountCode: "103", debit: totalPrice },
       ];
       
-      if (breakdown.serviceRevenue > 0) {
-        revenueItems.push({ accountCode: "401", credit: breakdown.serviceRevenue });
+      if (serviceRevenue > 0) {
+        revenueItems.push({ accountCode: "401", credit: serviceRevenue });
       }
-      if (breakdown.partRevenue > 0) {
-        revenueItems.push({ accountCode: "402", credit: breakdown.partRevenue });
+      if (partRevenue > 0) {
+        revenueItems.push({ accountCode: "402", credit: partRevenue });
       }
 
       await createJournalEntry(

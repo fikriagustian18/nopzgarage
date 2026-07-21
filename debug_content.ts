@@ -21,7 +21,7 @@ async function main() {
     console.log(`✅ Updated ${updatedEmployees.count} records in Employee table.`);
 
     // Update role of USERS records (ERD Table)
-    const updatedUSERS = await prisma.uSERS.updateMany({
+    const updatedUSERS = await (prisma as any).uSERS.updateMany({
       where: {
         role: {
           mode: 'insensitive',

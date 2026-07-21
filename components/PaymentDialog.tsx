@@ -61,6 +61,20 @@ export function PaymentDialog({
     setCashReceived(amount);
   }, [amount]);
 
+  // Reset states when dialog is opened or order changes
+  useEffect(() => {
+    if (open && order) {
+      const remainingVal = Number(order.totalPrice) - Number(order.totalPaid);
+      const initialAmount = remainingVal > 0 ? remainingVal : 0;
+      setAmount(initialAmount);
+      setCashReceived(initialAmount);
+      setNote("");
+      setMethod("CASH");
+      setSelectedBankId("");
+      setPayCommission(false);
+    }
+  }, [open, order?.id]);
+
   // Load Bank Accounts only when dialog opens
   useEffect(() => {
       if (open) {
