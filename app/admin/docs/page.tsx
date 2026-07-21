@@ -56,56 +56,60 @@ export default function TechnicalDocsPage() {
   const [activeTab, setActiveTab] = useState("overview");
 
   const stats = {
-    totalTables: 26,
-    totalRelationships: 34,
-    totalEnums: 4,
+    totalTables: 18,
+    totalRelationships: 14,
+    totalEnums: 6,
     totalComponents: 50,
     totalPages: 16,
-    totalServerActions: 12,
+    totalServerActions: 20,
   };
 
   const tables = [
-    // ERD v2.2.0 Tables
-    { name: "USERS", columns: 9, purpose: "Akun login & data pengguna (Owner/Admin/Mekanik)" },
-    { name: "KENDARAAN", columns: 8, purpose: "Master data kendaraan pelanggan" },
-    { name: "BOOKING_SERVIS", columns: 10, purpose: "Transaksi booking servis pelanggan" },
-    { name: "LAYANAN_SERVIS", columns: 6, purpose: "Master data layanan & harga jasa servis" },
-    { name: "ORDER_SERVIS", columns: 8, purpose: "Pengelolaan order servis kendaraan" },
-    { name: "DETAIL_SERVIS", columns: 5, purpose: "Detail penggunaan layanan jasa per order" },
-    { name: "DETAIL_ORDER_SUKUCADANG", columns: 6, purpose: "Detail pemakaian suku cadang per order" },
-    { name: "INVENTORY (BARANG)", columns: 10, purpose: "Master data barang/sparepart & inventory" },
-    { name: "TRANSAKSI", columns: 10, purpose: "Pencatatan transaksi pembayaran order" },
-    { name: "DETAIL_TRANSAKSI", columns: 8, purpose: "Detail item transaksi (jasa/sukucadang)" },
-    { name: "RIWAYAT_PEMBAYARAN", columns: 5, purpose: "Histori pembayaran transaksi" },
-    { name: "RIWAYAT_ORDER", columns: 5, purpose: "Histori perubahan status order servis" },
-    { name: "STOK_MASUK", columns: 8, purpose: "Pencatatan penerimaan stok barang (inventory)" },
-    { name: "STOK_KELUAR", columns: 6, purpose: "Pencatatan pengeluaran stok barang (inventory)" },
-    // Core Engine Backing Tables
-    { name: "Order", columns: 14, purpose: "Core Engine: Transaksi servis kendaraan (Legacy/RSC compatibility)" },
-    { name: "OrderItem", columns: 8, purpose: "Core Engine: Detail item order (jasa & sparepart)" },
-    { name: "OrderFee", columns: 7, purpose: "Core Engine: Komisi karyawan per order" },
-    { name: "Employee", columns: 11, purpose: "Core Engine: Data karyawan bengkel" },
-    { name: "User", columns: 10, purpose: "Core Engine: Akun login sistem" },
-    { name: "SparePart", columns: 10, purpose: "Core Engine: Master data sparepart & stok" },
-    { name: "Payment", columns: 9, purpose: "Core Engine: Pembayaran order & payroll" },
-    { name: "Payroll", columns: 10, purpose: "Core Engine: Penggajian karyawan" },
-    { name: "BankAccount", columns: 9, purpose: "Core Engine: Master rekening bank" },
-    { name: "Account", columns: 6, purpose: "Core Engine: Chart of Accounts (COA)" },
-    { name: "JournalEntry", columns: 6, purpose: "Core Engine: Header jurnal akuntansi" },
-    { name: "JournalItem", columns: 5, purpose: "Core Engine: Detail jurnal (debit/kredit)" },
+    { name: "User", columns: 10, purpose: "Akun login pengguna sistem (Owner/Admin/Employee)" },
+    { name: "ForgotPasswordRequest", columns: 6, purpose: "Pencatatan permintaan reset password karyawan" },
+    { name: "Employee", columns: 11, purpose: "Profil data karyawan (mekanik/owner) & skema gaji" },
+    { name: "Order", columns: 18, purpose: "Transaksi servis motor (status, total, feedback)" },
+    { name: "OrderItem", columns: 9, purpose: "Detail item (jasa & sparepart) yang dipasang per order" },
+    { name: "OrderFee", columns: 8, purpose: "Pencatatan komisi mekanik per order servis" },
+    { name: "SparePart", columns: 12, purpose: "Master data persediaan suku cadang (stok & harga)" },
+    { name: "Payroll", columns: 12, purpose: "Rekap gaji & komisi karyawan per periode" },
+    { name: "BankAccount", columns: 9, purpose: "Master data rekening bank bengkel & saldo real-time" },
+    { name: "Payment", columns: 10, purpose: "Pencatatan transaksi pembayaran (DP, pelunasan, gaji)" },
+    { name: "ContentSection", columns: 8, purpose: "Manajemen teks dan media statis landing page" },
+    { name: "Account", columns: 7, purpose: "Bagan Akun (Chart of Accounts) untuk pembukuan" },
+    { name: "JournalEntry", columns: 6, purpose: "Header jurnal transaksi akuntansi double-entry" },
+    { name: "JournalItem", columns: 5, purpose: "Baris detail debit/kredit per jurnal entry" },
+    { name: "SystemSetting", columns: 4, purpose: "Konfigurasi parameter sistem (jam kerja, max booking)" },
+    { name: "ActivityLog", columns: 9, purpose: "Audit trail / log aktivitas pengguna sistem" },
+    { name: "MediaGallery", columns: 10, purpose: "Galeri foto & media promosi di landing page" },
+    { name: "SocialEmbed", columns: 11, purpose: "Embed media sosial (Instagram/TikTok) di landing page" }
   ];
 
   const accounts = [
+    // ASSETS
     { code: "101", name: "Kas Tunai", type: "ASSET" },
     { code: "102", name: "Bank", type: "ASSET" },
     { code: "103", name: "Piutang Usaha", type: "ASSET" },
     { code: "111", name: "Persediaan Sparepart", type: "ASSET" },
+    { code: "121", name: "Peralatan Bengkel", type: "ASSET" },
+    { code: "122", name: "Akumulasi Penyusutan Peralatan", type: "ASSET" },
+    // LIABILITIES
     { code: "201", name: "Hutang Usaha", type: "LIABILITY" },
     { code: "202", name: "Utang Gaji & Komisi", type: "LIABILITY" },
+    // EQUITY
     { code: "301", name: "Modal Pemilik", type: "EQUITY" },
+    { code: "302", name: "Prive", type: "EQUITY" },
+    { code: "303", name: "Laba Ditahan", type: "EQUITY" },
+    // REVENUE
     { code: "401", name: "Pendapatan Jasa Servis", type: "REVENUE" },
     { code: "402", name: "Pendapatan Penjualan Sparepart", type: "REVENUE" },
+    { code: "403", name: "Pendapatan Modifikasi", type: "REVENUE" },
+    // EXPENSES
     { code: "501", name: "Beban Gaji & Komisi", type: "EXPENSE" },
+    { code: "502", name: "Beban Listrik", type: "EXPENSE" },
+    { code: "503", name: "Beban Air", type: "EXPENSE" },
+    { code: "504", name: "Beban Sewa Tempat", type: "EXPENSE" },
+    { code: "505", name: "Beban Supplies", type: "EXPENSE" },
     { code: "511", name: "Harga Pokok Penjualan (HPP)", type: "EXPENSE" },
   ];
 
@@ -129,181 +133,247 @@ export default function TechnicalDocsPage() {
     { title: "Website CMS", status: "Complete", icon: Code },
   ];
 
-  // Mermaid Definitions based on user's reference files
+  // Mermaid Definitions based on actual active system
   const diagrams = {
     erd: `erDiagram
-    USERS {
-        string id_user PK
-        string nama
-        string username UK
+    User {
+        string id PK
+        string email UK
         string password
         string role
-        string no_telp
-        string alamat
-        boolean status
-        datetime created_at
+        string employeeId FK
+        string resetToken UK
+        datetime resetTokenExpiry
+        boolean isActive
+        datetime createdAt
+        datetime updatedAt
     }
-    KENDARAAN {
-        string id_kendaraan PK
-        string no_polisi
-        string merek
-        string tipe
-        int tahun
-        string warna
-        string no_rangka
-        string no_mesin
+    ForgotPasswordRequest {
+        string id PK
+        string userId FK
+        string status
+        string resolvedBy
+        datetime resolvedAt
+        datetime createdAt
     }
-    BOOKING_SERVIS {
-        string id_booking PK
-        string nama_pelanggan
-        string no_telp
-        string alamat
-        string id_kendaraan FK
-        string id_layanan FK
-        string keluhan
-        datetime tanggal_booking
-        string jam_booking
-        string status_booking
+    Employee {
+        string id PK
+        string name
+        string role
+        string phone
+        string salaryType
+        decimal dailyRate
+        decimal commissionRate
+        boolean isActive
+        datetime createdAt
+        datetime updatedAt
     }
-    LAYANAN_SERVIS {
-        string id_layanan PK
-        string nama_layanan
-        string kategori
-        string deskripsi
-        decimal harga_jasa
-        boolean status
+    Order {
+        string id PK
+        string custName
+        string custPhone
+        string vehicle
+        string plateNumber
+        string complaint
+        string serviceType
+        string status
+        datetime scheduledAt
+        json items
+        decimal totalPrice
+        decimal totalPaid
+        string paymentStatus
+        string mechanicId FK
+        datetime createdAt
+        datetime updatedAt
+        string feedback
+        int rating
     }
-    ORDER_SERVIS {
-        string id_order PK
-        string id_booking FK
-        string id_user FK
-        string no_order UK
-        datetime tanggal_order
-        string status_order
-        datetime estimasi_selesai
-        string catatan
+    OrderItem {
+        string id PK
+        string orderId FK
+        string itemType
+        string itemName
+        int quantity
+        decimal unitPrice
+        decimal totalPrice
+        string sparePartId FK
+        datetime createdAt
     }
-    DETAIL_SERVIS {
-        string id_detail_servis PK
-        string id_order FK
-        string id_layanan FK
-        string keterangan
-        decimal biaya_jasa
+    OrderFee {
+        string id PK
+        string orderId FK
+        string employeeId FK
+        decimal amount
+        string description
+        boolean isPaid
+        datetime paidAt
+        datetime createdAt
     }
-    DETAIL_ORDER_SUKUCADANG {
-        string id_detail_sc PK
-        string id_order FK
-        string id_barang FK
-        int jumlah
-        decimal harga_satuan
-        decimal subtotal
+    SparePart {
+        string id PK
+        string code UK
+        string name
+        string category
+        int stock
+        int minStock
+        string unit
+        decimal buyPrice
+        decimal sellPrice
+        boolean isActive
+        datetime createdAt
+        datetime updatedAt
     }
-    INVENTORY {
-        string id_barang PK
-        string kode_barang UK
-        string nama_barang
-        string kategori
-        string satuan
-        decimal harga_beli
-        decimal harga_jual
-        int stok_akhir
-        string lokasi
-        boolean status
+    Payroll {
+        string id PK
+        datetime startDate
+        datetime endDate
+        string employeeId FK
+        decimal baseSalary
+        decimal bonus
+        decimal totalEarned
+        string details
+        decimal totalPaid
+        string status
+        datetime createdAt
+        datetime updatedAt
     }
-    TRANSAKSI {
-        string id_transaksi PK
-        string id_order FK
-        datetime tanggal_transaksi
-        decimal total_tagihan
-        decimal diskon
-        decimal total_bayar
-        string metode_bayar
-        decimal jumlah_bayar
-        decimal kembalian
-        string status_pembayaran
+    BankAccount {
+        string id PK
+        string bankCode
+        string bankName
+        string accountNumber
+        string accountName
+        decimal currentBalance
+        boolean isActive
+        datetime createdAt
+        datetime updatedAt
     }
-    DETAIL_TRANSAKSI {
-        string id_detail_transaksi PK
-        string id_transaksi FK
-        string tipe_item
-        string id_referensi
-        string nama_item
-        int jumlah
-        decimal harga_satuan
-        decimal subtotal
+    Payment {
+        string id PK
+        datetime date
+        decimal amount
+        string note
+        string orderId FK
+        string payrollId FK
+        string bankAccountId FK
+        string paymentMethod
+        datetime createdAt
     }
-    RIWAYAT_PEMBAYARAN {
-        string id_riwayat_bayar PK
-        string id_transaksi FK
-        datetime tanggal
-        string keterangan
-        decimal nominal
+    ContentSection {
+        string id PK
+        string sectionKey UK
+        string title
+        string subtitle
+        json content
+        string imageUrl
+        boolean isVisible
+        datetime updatedAt
     }
-    RIWAYAT_ORDER {
-        string id_riwayat_order PK
-        string id_order FK
-        datetime tanggal
-        string status_order
-        string keterangan
+    Account {
+        string id PK
+        string code UK
+        string name
+        string type
+        string category
+        boolean isActive
+        datetime createdAt
     }
-    STOK_MASUK {
-        string id_masuk PK
-        string id_barang FK
-        datetime tanggal
-        string supplier
-        int jumlah
-        decimal harga_beli
-        decimal total
-        string keterangan
+    JournalEntry {
+        string id PK
+        datetime date
+        string description
+        string reference
+        string paymentId FK
+        datetime createdAt
     }
-    STOK_KELUAR {
-        string id_keluar PK
-        string id_barang FK
-        datetime tanggal
-        string referensi
-        int jumlah
-        string keterangan
+    JournalItem {
+        string id PK
+        string journalEntryId FK
+        string accountId FK
+        decimal debit
+        decimal credit
+    }
+    SystemSetting {
+        string id PK
+        string key UK
+        string value
+        datetime updatedAt
+    }
+    ActivityLog {
+        string id PK
+        string action
+        string title
+        string details
+        json metadata
+        string userId
+        string userName
+        string role
+        datetime createdAt
+    }
+    MediaGallery {
+        string id PK
+        string title
+        string description
+        string imageUrl
+        string type
+        string category
+        boolean isActive
+        int displayOrder
+        datetime createdAt
+        datetime updatedAt
+    }
+    SocialEmbed {
+        string id PK
+        string platform
+        string embedUrl
+        string embedCode
+        string title
+        string description
+        string thumbnail
+        boolean isActive
+        int displayOrder
+        datetime createdAt
+        datetime updatedAt
     }
 
-    USERS ||--o{ ORDER_SERVIS : "mengelola"
-    KENDARAAN ||--o{ BOOKING_SERVIS : "milik"
-    LAYANAN_SERVIS ||--o{ BOOKING_SERVIS : "layanan"
-    BOOKING_SERVIS ||--o{ ORDER_SERVIS : "menjadi_dasar"
-    ORDER_SERVIS ||--o{ DETAIL_SERVIS : "memiliki"
-    LAYANAN_SERVIS ||--o{ DETAIL_SERVIS : "mengacu"
-    ORDER_SERVIS ||--o{ DETAIL_ORDER_SUKUCADANG : "menggunakan"
-    INVENTORY ||--o{ DETAIL_ORDER_SUKUCADANG : "mengacu"
-    ORDER_SERVIS ||--|| TRANSAKSI : "dibayarkan"
-    TRANSAKSI ||--o{ DETAIL_TRANSAKSI : "memiliki"
-    TRANSAKSI ||--o{ RIWAYAT_PEMBAYARAN : "mencatat"
-    ORDER_SERVIS ||--o{ RIWAYAT_ORDER : "mencatat"
-    INVENTORY ||--o{ STOK_MASUK : "menambah"
-    INVENTORY ||--o{ STOK_KELUAR : "mengurangi"`,
+    User ||--o{ ForgotPasswordRequest : "requests"
+    Employee ||--o{ User : "has_account"
+    Employee ||--o{ Order : "services"
+    Employee ||--o{ OrderFee : "earns"
+    Employee ||--o{ Payroll : "receives"
+    Order ||--o{ OrderItem : "contains"
+    Order ||--o{ OrderFee : "has_fees"
+    Order ||--o{ Payment : "has_payments"
+    SparePart ||--o{ OrderItem : "used_in"
+    Payroll ||--o{ Payment : "paid_by"
+    BankAccount ||--o{ Payment : "transacts"
+    Payment ||--o| JournalEntry : "generates"
+    JournalEntry ||--|{ JournalItem : "contains"
+    Account ||--o{ JournalItem : "records_in"`,
 
     dfd0: `flowchart LR
-    Customer["CUSTOMER<br/>Pemilik Motor"]
+    Customer["CUSTOMER<br/>Pelanggan / Pemilik Motor"]
     Owner["OWNER<br/>Pemilik Bengkel"]
     Admin["ADMIN<br/>Staff Admin"]
     Mechanic["MECHANIC<br/>Mekanik"]
     
     System(["0<br/>SISTEM MANAJEMEN<br/>NOPZGARAGE"])
     
-    Customer -->|"Data Order"| System
-    System -->|"Estimasi & Status"| Customer
-    Customer -->|"Pembayaran"| System
-    System -->|"Bukti Bayar"| Customer
+    Customer -->|"Registrasi Booking & Keluhan"| System
+    System -->|"Informasi Antrian & Status"| Customer
+    Customer -->|"Pembayaran (DP/Pelunasan)"| System
+    System -->|"Kwitansi Pembayaran"| Customer
     
-    Owner -->|"Login & Konfigurasi"| System
-    System -->|"Laporan & Dashboard"| Owner
-    Owner -->|"Persetujuan"| System
+    Owner -->|"Kelola Akun, Karyawan & Gaji"| System
+    System -->|"Laporan Keuangan & Dashboard"| Owner
     
-    Admin -->|"Input Order"| System
-    System -->|"Dashboard & Notifikasi"| Admin
-    Admin -->|"Manajemen Stok"| System
+    Admin -->|"Input Order, Estimasi & Pembayaran"| System
+    System -->|"Dashboard Notifikasi & Status"| Admin
+    Admin -->|"Kelola Inventory & Stok"| System
     
-    Mechanic -->|"Update Progress"| System
-    System -->|"Daftar Order"| Mechanic
-    System -->|"Slip Gaji"| Mechanic`,
+    Mechanic -->|"Update Progress Pekerjaan"| System
+    System -->|"Daftar Order Kerja"| Mechanic
+    System -->|"Slip & Histori Gaji"| Mechanic`,
 
     dfd1: `flowchart TB
     Pelanggan["PELANGGAN (Tidak Login)"]
@@ -311,354 +381,256 @@ export default function TechnicalDocsPage() {
     Mekanik["MEKANIK (Mekanik)"]
     Owner["OWNER (Pemilik Bengkel)"]
 
-    P1(["1.0<br/>Manajemen Pengguna"])
-    P2(["2.0<br/>Manajemen Pelayanan<br/>(Antrian & Servis)"])
-    P3(["3.0<br/>Manajemen Inventory"])
-    P4(["4.0<br/>Transaksi & Pembayaran"])
-    P5(["5.0<br/>Laporan & Keuangan"])
+    P1(["1.0<br/>Manajemen Pengguna & Karyawan"])
+    P2(["2.0<br/>Manajemen Pelayanan<br/>(Booking & Servis)"])
+    P3(["3.0<br/>Manajemen Inventory (Sparepart)"])
+    P4(["4.0<br/>Transaksi & Gaji (Payment/Payroll)"])
+    P5(["5.0<br/>Laporan & Akuntansi Jurnal"])
 
-    D1[("D1 Users")]
-    D2[("D2 Order Servis")]
-    D3[("D3 Inventory")]
-    D4[("D4 Transaksi")]
-    D5[("D5 Keuangan")]
+    DS1[("DS1 User & Employee")]
+    DS2[("DS2 Order & Fees")]
+    DS3[("DS3 SparePart")]
+    DS4[("DS4 Payment & Payroll")]
+    DS5[("DS5 Accounting")]
 
-    P1 <-->|"Data Pengguna"| D1
+    P1 <-->|"Data Pengguna & Karyawan"| DS1
     P1 --> P2
 
-    Pelanggan -->|"Data Booking Servis<br/>Data Kendaraan<br/>Keluhan Kendaraan"| P2
-    P2 -->|"Nomor Antrian<br/>Estimasi Biaya<br/>Status Servis<br/>Bukti Pembayaran"| Pelanggan
-    Admin -->|"Input Order / Servis"| P2
-    P2 -->|"Kelola Pengguna<br/>& Hak Akses"| Admin
-    P2 <-->|"Data Order Servis"| D2
+    Pelanggan -->|"Data Booking Servis & Keluhan"| P2
+    P2 -->|"Nomor Antrian, Estimasi, Status & Kwitansi"| Pelanggan
+    Admin -->|"Input & Update Order"| P2
+    P2 <-->|"Data Order & Items"| DS2
     P2 --> P3
 
-    Admin -->|"Daftar Order<br/>Dashboard & Notifikasi"| P3
-    Mekanik -->|"Update Progress/Order"| P3
-    P3 -->|"Daftar Pekerjaan / Order"| Mekanik
-    P3 <-->|"Data Inventory"| D3
+    Admin -->|"Kelola Sparepart & Stok"| P3
+    Mekanik -->|"Request Part / Update Progress"| P3
+    P3 <-->|"Data Sparepart"| DS3
     P3 --> P4
 
-    P4 -->|"Slip Gaji"| Mekanik
-    Owner -->|"Konfigurasi Sistem"| P4
-    P4 <-->|"Data Transaksi"| D4
+    Admin -->|"Pencatatan Pembayaran"| P4
+    Owner -->|"Approval & Proses Payroll"| P4
+    P4 <-->|"Data Pembayaran & Gaji"| DS4
     P4 --> P5
 
-    Owner -->|"Approval Gaji"| P5
-    P5 -->|"Laporan & Dashboard"| Owner
-    P5 <-->|"Data Keuangan"| D5`,
+    Owner -->|"Lihat Laporan & Jurnal"| P5
+    P5 <-->|"Data Jurnal & Akun"| DS5`,
 
     dfd2user: `flowchart TB
     Admin["ADMIN (Staff Admin)"]
     Mekanik["MEKANIK (Mekanik)"]
     Owner["OWNER (Pemilik Bengkel)"]
 
-    P11(["1.1<br/>Login<br/>(Autentikasi Pengguna)"])
-    P12(["1.2<br/>Kelola Pengguna<br/>(Tambah, Ubah, Hapus)"])
-    P13(["1.3<br/>Kelola Hak Akses<br/>(Assign Role / Hak Akses)"])
-    P14(["1.4<br/>Lihat Data Pengguna<br/>dan Hak Akses<br/>(Monitoring)"])
+    P11(["1.1<br/>Login & Autentikasi"])
+    P12(["1.2<br/>Kelola Akun User"])
+    P13(["1.3<br/>Kelola Data Karyawan"])
+    P14(["1.4<br/>Request Reset Password"])
 
-    D1[("D1 Users<br/>- id_user (PK)<br/>- nama<br/>- username<br/>- password<br/>- role_id (FK)<br/>- status")]
-    D2[("D2 Hak Akses<br/>- id_role (PK)<br/>- nama_role<br/>- deskripsi<br/>- hak_akses")]
+    DS1_User[("DS1 User")]
+    DS1_Employee[("DS1 Employee")]
+    DS1_Forgot[("DS1 ForgotPasswordRequest")]
 
-    Admin -->|"Data Login<br/>(username, password)"| P11
-    Mekanik -->|"Data Login<br/>(username, password)"| P11
-    P11 -->|"Status Login<br/>(berhasil / gagal)"| Admin
-    P11 -->|"Status Login<br/>(berhasil / gagal)"| Mekanik
-    P11 <-->|"Data Pengguna"| D1
-    P11 -->|"Validasi Login"| P12
+    Admin -->|"Kredensial Login"| P11
+    Mekanik -->|"Kredensial Login"| P11
+    Owner -->|"Kredensial Login"| P11
+    P11 <-->|"Verifikasi Kredensial"| DS1_User
+    P11 -->|"Get Employee Data"| DS1_Employee
 
-    Mekanik -->|"Kelola Pengguna<br/>(tambah, ubah, hapus)"| P12
-    P12 -->|"Informasi Pengguna<br/>(berhasil disimpan / diubah / dihapus)"| Mekanik
-    P12 <-->|"Data Pengguna"| D1
-    P12 --> P13
+    Owner -->|"Kelola Akun (Create/Toggle Active)"| P12
+    P12 <-->|"Data User"| DS1_User
 
-    Owner -->|"Kelola Hak Akses<br/>(ubah role / hak akses)"| P13
-    P13 -->|"Informasi Hak Akses<br/>(berhasil disimpan / diubah)"| Owner
-    P13 <-->|"Data Hak Akses"| D2
-    P13 --> P14
+    Owner -->|"Kelola Profil & Rate Karyawan"| P13
+    P13 <-->|"Data Employee"| DS1_Employee
 
-    Owner -->|"Permintaan Data Pengguna<br/>dan Hak Akses"| P14
-    P14 -->|"Informasi Data Pengguna<br/>dan Hak Akses"| Owner
-    P14 <-->|"Data Pengguna"| D1
-    P14 <-->|"Data Hak Akses"| D2`,
+    Mekanik -->|"Ajukan Reset Password"| P14
+    P14 <-->|"Data Request"| DS1_Forgot
+    Owner -->|"Approve / Reject Reset"| P14`,
 
     dfd2service: `flowchart TB
-    Pelanggan["PELANGGAN (Tidak Login)"]
-    Admin["ADMIN (Staff Admin)"]
-    Mekanik["MEKANIK (Mekanik)"]
+    Pelanggan["PELANGGAN"]
+    Admin["ADMIN / OWNER"]
+    Mekanik["MEKANIK"]
 
-    P21(["2.1<br/>Kelola Booking Servis<br/>(Pembuatan Booking)"])
-    P22(["2.2<br/>Kelola Antrian Servis<br/>(Pengelolaan Antrian)"])
-    P23(["2.3<br/>Kelola Order Servis<br/>(Pencatatan Order Servis)"])
-    P24(["2.4<br/>Kelola Progres Servis<br/>(Update Pekerjaan)"])
-    P25(["2.5<br/>Kelola Selesai Servis<br/>(Selesai & Serah Terima)"])
+    P21(["2.1<br/>Registrasi Booking<br/>(Status: PENDING)"])
+    P22(["2.2<br/>Estimasi & Konfirmasi<br/>(Status: CONFIRMED/QUEUE)"])
+    P23(["2.3<br/>Penugasan Mekanik"])
+    P24(["2.4<br/>Pengerjaan Servis<br/>(Status: IN_PROGRESS)"])
+    P25(["2.5<br/>Penyelesaian Order<br/>(Status: READY/COMPLETED)"])
 
-    D1[("D1 Users<br/>- id_user (PK)<br/>- nama")]
-    D6[("D6 Booking Servis<br/>- id_booking (PK)<br/>- id_user (FK)<br/>- tgl_booking<br/>- layanan<br/>- kendaraan<br/>- keluhan<br/>- status_booking")]
-    D2[("D2 Order Servis<br/>- id_order (PK)<br/>- id_booking (FK)<br/>- tgl_order<br/>- status_order")]
-    D7[("D7 Detail Servis<br/>- id_detail (PK)<br/>- id_order (FK)<br/>- pekerjaan<br/>- status_pekerjaan<br/>- keterangan")]
+    DS2_Order[("DS2 Order")]
+    DS2_OrderItem[("DS2 OrderItem")]
+    DS2_OrderFee[("DS2 OrderFee")]
+    DS3_SparePart[("DS3 SparePart")]
+    DS1_Employee[("DS1 Employee")]
 
-    Pelanggan -->|"Data Booking Servis<br/>(data diri, kendaraan, layanan, keluhan)"| P21
-    P21 -->|"Informasi Booking<br/>(berhasil / gagal)"| Pelanggan
-    P21 <-->|"Data Pengguna"| D1
-    P21 <-->|"Data Booking Servis"| D6
-    P21 --> P22
+    Pelanggan -->|"Isi Form Booking"| P21
+    P21 -->|"Simpan Order PENDING"| DS2_Order
 
-    Admin -->|"Lihat & Kelola Antrian<br/>(atur antrian)"| P22
-    P22 -->|"Informasi Antrian<br/>(daftar antrian)"| Admin
-    P22 <-->|"Data Booking Servis"| D6
-    P22 --> P23
+    Admin -->|"Input Estimasi Items"| P22
+    P22 <-->|"Simpan Items & Update Order"| DS2_OrderItem
+    P22 -->|"Update Status (CONFIRMED/QUEUE)"| DS2_Order
 
-    Mekanik -->|"Input Order Servis<br/>(dari booking / walk-in)"| P23
-    P23 -->|"Informasi Order<br/>(berhasil disimpan)"| Mekanik
-    P23 <-->|"Data Booking Servis"| D6
-    P23 <-->|"Data Order Servis"| D2
-    P23 --> P24
+    Admin -->|"Pilih Mekanik"| P23
+    P23 -->|"Assign mechanicId"| DS2_Order
+    P23 <--|"Ambil Data Mekanik"| DS1_Employee
 
-    Mekanik -->|"Update Progres / Pekerjaan<br/>(pekerjaan servis)"| P24
-    P24 -->|"Informasi Progres<br/>(berhasil diperbarui)"| Mekanik
-    P24 <-->|"Data Order Servis"| D2
-    P24 <-->|"Data Detail Servis (progres)"| D7
-    P24 --> P25
+    Mekanik -->|"Mulai Kerja & Pasang Part"| P24
+    P24 -->|"Update Status (IN_PROGRESS)"| DS2_Order
+    P24 <-->|"Kurangi Stok Part"| DS3_SparePart
 
-    Mekanik -->|"Konfirmasi Selesai Servis<br/>(selesai & serah terima)"| P25
-    P25 -->|"Informasi Selesai Servis<br/>(selesai / tidak selesai)"| Mekanik
-    P25 <-->|"Data Order Servis (selesai)"| D2
-    P25 <-->|"Data Detail Servis (selesai)"| D7`,
+    Mekanik -->|"Set Selesai"| P25
+    P25 -->|"Update Status (READY)"| DS2_Order
+    P25 -->|"Hitung & Simpan Komisi"| DS2_OrderFee`,
 
     dfd2inventory: `flowchart TB
-    Admin["ADMIN (Staff Admin)"]
-    Mekanik["MEKANIK (Mekanik)"]
+    Admin["ADMIN / OWNER"]
 
-    P31(["3.1<br/>Kelola Kategori Barang<br/>(Master Kategori)"])
-    P32(["3.2<br/>Kelola Barang<br/>(Master Barang)"])
-    P33(["3.3<br/>Kelola Stok Masuk<br/>(Penerimaan Barang)"])
-    P34(["3.4<br/>Kelola Stok Keluar<br/>(Pemakaian / Penyesuaian)"])
-    P35(["3.5<br/>Laporan Inventory<br/>(Stok Barang)"])
+    P31(["3.1<br/>Tambah Produk Baru"])
+    P32(["3.2<br/>Update Info Produk"])
+    P33(["3.3<br/>Input Stok Masuk"])
+    P34(["3.4<br/>Input Stok Keluar"])
 
-    D8[("D8 Kategori Barang<br/>- id_kategori (PK)<br/>- nama_kategori")]
-    D3[("D3 Barang<br/>- id_barang (PK)<br/>- id_kategori (FK)<br/>- nama_barang<br/>- satuan<br/>- stok_minimum<br/>- harga_beli<br/>- harga_jual<br/>- status")]
-    D9[("D9 Stok Masuk<br/>- id_stok_masuk (PK)<br/>- tgl_masuk<br/>- id_supplier (FK)<br/>- total<br/>- keterangan")]
-    D10[("D10 Stok Masuk Detail<br/>- id_detail_masuk (PK)<br/>- id_stok_masuk (FK)<br/>- id_barang (FK)<br/>- qty<br/>- harga_beli")]
-    D11[("D11 Stok Keluar<br/>- id_stok_keluar (PK)<br/>- tgl_keluar<br/>- jenis_keluar<br/>- keterangan")]
-    D12[("D12 Stok Keluar Detail<br/>- id_detail_keluar (PK)<br/>- id_stok_keluar (FK)<br/>- id_barang (FK)<br/>- qty")]
+    DS3_SparePart[("DS3 SparePart")]
+    DS5_Accounting[("DS5 Accounting")]
 
-    Admin -->|"Data Kategori Barang<br/>(tambah, ubah, hapus)"| P31
-    P31 -->|"Informasi Kategori Barang<br/>(berhasil disimpan / diubah / dihapus)"| Admin
-    P31 <-->|"Data Kategori Barang"| D8
-    P31 --> P32
+    Admin -->|"Input Data Sparepart Baru"| P31
+    P31 -->|"Simpan Sparepart"| DS3_SparePart
+    P31 -->|"Jurnal Persediaan Awal (jika ada stok)"| DS5_Accounting
 
-    Admin -->|"Data Barang<br/>(tambah, ubah, hapus)"| P32
-    P32 -->|"Informasi Barang<br/>(berhasil disimpan / diubah / dihapus)"| Admin
-    P32 <-->|"Data Barang"| D3
-    P32 --> P33
+    Admin -->|"Edit Info Sparepart"| P32
+    P32 <-->|"Update Data Sparepart"| DS3_SparePart
 
-    Admin -->|"Data Stok Masuk<br/>(pembelian / penerimaan)"| P33
-    P33 -->|"Informasi Stok Masuk<br/>(berhasil disimpan)"| Admin
-    P33 <-->|"Data Stok Masuk"| D9
-    P33 <-->|"Data Stok Masuk Detail"| D10
-    P33 --> P34
+    Admin -->|"Input Stok Masuk & Supplier"| P33
+    P33 -->|"Increment Stock"| DS3_SparePart
+    P33 -->|"Jurnal Pembelian Persediaan"| DS5_Accounting
 
-    Admin -->|"Data Stok Keluar<br/>(pemakaian / penyesuaian)"| P34
-    P34 -->|"Informasi Stok Keluar<br/>(berhasil disimpan)"| Admin
-    P34 <-->|"Data Stok Keluar"| D11
-    P34 <-->|"Data Stok Keluar Detail"| D12
-    P34 --> P35
-
-    Admin -->|"Permintaan Laporan Inventory"| P35
-    P35 -->|"Laporan Inventory<br/>(stok barang)"| Admin
-    Mekanik -->|"Permintaan Barang<br/>(barang servis)"| P35
-    P35 -->|"Informasi Ketersediaan Barang<br/>(tersedia / tidak tersedia)"| Mekanik
-    P35 <-->|"Data Inventory"| D12`,
+    Admin -->|"Input Stok Keluar & Keperluan"| P34
+    P34 -->|"Decrement Stock"| DS3_SparePart`,
 
     dfd2transaction: `flowchart TB
-    Pelanggan["PELANGGAN (Tidak Login)"]
-    Admin["ADMIN (Staff Admin)"]
-    Owner["OWNER (Pemilik Bengkel)"]
+    Pelanggan["PELANGGAN"]
+    Admin["ADMIN / OWNER"]
+    Owner["OWNER"]
 
-    P41(["4.1<br/>Kelola Transaksi<br/>(Pencatatan Transaksi)"])
-    P42(["4.2<br/>Proses Pembayaran<br/>(Validasi & Konfirmasi)"])
-    P43(["4.3<br/>Cetak Bukti Pembayaran<br/>(Pembuatan Bukti)"])
-    P44(["4.4<br/>Rekonsiliasi Pembayaran<br/>(Pencocokan & Validasi)"])
-    P45(["4.5<br/>Laporan Transaksi & Pembayaran<br/>(Penyusunan Laporan)"])
+    P41(["4.1<br/>Pencatatan Pembayaran Order<br/>(Kasir)"])
+    P42(["4.2<br/>Auto-Journal Pendapatan<br/>(Akuntansi Jurnal)"])
+    P43(["4.3<br/>Proses Gaji & Komisi<br/>(Payroll & Payment)"])
 
-    D4[("D4 Transaksi<br/>- id_transaksi (PK)<br/>- id_order (FK)<br/>- tgl_transaksi<br/>- total<br/>- metode_bayar<br/>- status_bayar")]
-    D13[("D13 Detail Pembayaran<br/>- id_bayar (PK)<br/>- id_transaksi (FK)<br/>- tgl_bayar<br/>- nominal<br/>- metode_bayar<br/>- referensi<br/>- status")]
-    D2[("D2 Order Servis<br/>- id_order (PK)<br/>- id_booking (FK)<br/>- tgl_order<br/>- status_order")]
+    DS2_Order[("DS2 Order")]
+    DS4_Payment_Payroll[("DS4 Payment & Payroll")]
+    DS5_Accounting[("DS5 Accounting")]
 
-    Pelanggan -->|"Pembayaran<br/>(tunai / non-tunai)"| P41
-    P41 -->|"Informasi Pembayaran<br/>(berhasil / gagal)"| Pelanggan
-    P41 <-->|"Data Transaksi"| D4
-    P41 --> P42
+    Pelanggan -->|"Bayar DP / Pelunasan"| P41
+    Admin -->|"Input Pembayaran Kasir"| P41
+    P41 -->|"Simpan Pembayaran & Sisa Bayar"| DS4_Payment_Payroll
+    P41 -->|"Update totalPaid & paymentStatus"| DS2_Order
 
-    Admin -->|"Input / Verifikasi Pembayaran<br/>(data pembayaran)"| P42
-    P42 -->|"Informasi Status Pembayaran<br/>(berhasil / gagal)"| Admin
-    P42 <-->|"Data Transaksi"| D4
-    P42 <-->|"Data Detail Pembayaran"| D13
-    P42 --> P43
+    P41 -->|"Trigger Auto-Journal"| P42
+    P42 -->|"Buat Jurnal Debit Kas/Bank, Kredit Pendapatan/Piutang"| DS5_Accounting
 
-    Admin -->|"Permintaan Cetak Bukti<br/>(id_transaksi)"| P43
-    P43 -->|"Bukti Pembayaran<br/>(cetak / digital)"| Admin
-    P43 <-->|"Data Transaksi"| D4
-    P43 <-->|"Data Detail Pembayaran"| D13
-    P43 --> P44
-
-    Admin -->|"Rekonsiliasi Pembayaran<br/>(periode)"| P44
-    P44 -->|"Informasi Hasil Rekonsiliasi<br/>(cocok / tidak cocok)"| Admin
-    P44 <-->|"Data Transaksi"| D4
-    P44 <-->|"Data Detail Pembayaran"| D13
-    P44 --> P45
-
-    Admin -->|"Permintaan Laporan Transaksi<br/>dan Pembayaran (periode)"| P45
-    P45 -->|"Laporan Transaksi & Pembayaran<br/>(ringkasan)"| Admin
-    Owner -->|"Laporan Keuangan<br/>(transaksi & pembayaran)"| P45
-    P45 -->|"Laporan Keuangan<br/>(transaksi & pembayaran)"| Owner
-    P45 <-->|"Data Transaksi"| D4
-    P45 <-->|"Data Detail Pembayaran"| D13
-    P45 <-->|"Data Order Servis"| D2`,
+    Owner -->|"Approval & Bayar Gaji"| P43
+    P43 <-->|"Update Status Payroll & Buat Payment Gaji"| DS4_Payment_Payroll
+    P43 -->|"Jurnal Debit Utang Gaji, Kredit Kas/Bank"| DS5_Accounting`,
 
     dfd2report: `flowchart TB
     Owner["OWNER (Pemilik Bengkel)"]
     Admin["ADMIN (Staff Admin)"]
 
-    P51(["5.1<br/>Kelola Laporan Penjualan<br/>(Laporan Pendapatan)"])
-    P52(["5.2<br/>Kelola Laporan Inventory<br/>(Laporan Persediaan)"])
-    P53(["5.3<br/>Kelola Laporan Servis<br/>(Laporan Pekerjaan Servis)"])
-    P54(["5.4<br/>Kelola Laporan Keuangan<br/>(Laporan Keuangan)"])
-    P55(["5.5<br/>Dashboard & Ringkasan<br/>(Rekapitulasi & Analisis)"])
+    P51(["5.1<br/>Laporan Akuntansi & Jurnal<br/>(Laba Rugi, Buku Besar)"])
+    P52(["5.2<br/>Laporan Stok & Persediaan<br/>(Mutasi & Nilai Sparepart)"])
+    P53(["5.3<br/>Laporan Analisis Operasional<br/>(Kinerja Mekanik & Servis)"])
+    P54(["5.4<br/>Laporan Penggajian Karyawan"])
+    P55(["5.5<br/>Dashboard Overview & Grafik"])
 
-    D4[("D4 Transaksi<br/>- id_transaksi (PK)<br/>- id_order (FK)<br/>- tgl_transaksi<br/>- total<br/>- metode_bayar<br/>- status_bayar")]
-    D3[("D3 Inventory<br/>- id_barang (PK)<br/>- id_kategori (FK)<br/>- nama_barang<br/>- stok_minimum<br/>- harga_beli<br/>- harga_jual")]
-    D2[("D2 Order Servis<br/>- id_order (PK)<br/>- id_booking (FK)<br/>- tgl_order<br/>- status_order")]
-    D7[("D7 Detail Servis<br/>- id_detail (PK)<br/>- id_order (FK)<br/>- pekerjaan<br/>- status_pekerjaan<br/>- keterangan")]
-    D13[("D13 Detail Pembayaran<br/>- id_bayar (PK)<br/>- id_transaksi (FK)<br/>- tgl_bayar<br/>- nominal<br/>- metode_bayar<br/>- status")]
+    DS5_Accounting[("DS5 Accounting")]
+    DS3_SparePart[("DS3 SparePart")]
+    DS2_Order[("DS2 Order")]
+    DS4_Payment_Payroll[("DS4 Payment & Payroll")]
 
-    Owner -->|"Permintaan Laporan Penjualan<br/>(periode)"| P51
-    P51 -->|"Laporan Penjualan<br/>(pendapatan)"| Owner
-    P51 <-->|"Data Transaksi"| D4
-    P51 --> P52
+    Owner -->|"Request Laporan Keuangan"| P51
+    P51 <-->|"Ambil Jurnal & Akun"| DS5_Accounting
+    P51 -->|"Laporan Laba Rugi & Neraca"| Owner
 
-    Admin -->|"Permintaan Laporan Inventory<br/>(periode)"| P52
-    P52 -->|"Laporan Inventory<br/>(stok & nilai persediaan)"| Admin
-    P52 <-->|"Data Inventory"| D3
-    P52 --> P53
+    Admin -->|"Monitor Stok & Reorder Point"| P52
+    P52 <-->|"Ambil Data Sparepart"| DS3_SparePart
+    P52 -->|"Laporan Nilai Persediaan"| Admin
 
-    Admin -->|"Permintaan Laporan Servis<br/>(periode / mekanik / jenis servis)"| P53
-    P53 -->|"Laporan Servis<br/>(pekerjaan servis)"| Admin
-    Admin -->|"Permintaan Laporan Pekerjaan<br/>(pribadi / periode)"| P53
-    P53 -->|"Laporan Pekerjaan<br/>(pekerjaan terselesaikan)"| Admin
-    P53 <-->|"Data Order Servis"| D2
-    P53 <-->|"Data Detail Servis"| D7
-    P53 --> P54
+    Admin -->|"Request Laporan Servis"| P53
+    P53 <-->|"Ambil Data Order & Items"| DS2_Order
+    P53 -->|"Laporan Kinerja Mekanik"| Admin
 
-    Admin -->|"Permintaan Laporan Keuangan<br/>(periode)"| P54
-    P54 -->|"Laporan Keuangan<br/>(laba rugi, arus kas, dll)"| Admin
-    P54 <-->|"Data Transaksi"| D4
-    P54 --> P55
+    Owner -->|"Review Payroll History"| P54
+    P54 <-->|"Ambil Data Payroll"| DS4_Payment_Payroll
+    P54 -->|"Laporan Gaji"| Owner
 
-    Admin -->|"Permintaan Dashboard & Ringkasan<br/>(periode)"| P55
-    P55 -->|"Dashboard & Ringkasan<br/>(grafik & ringkasan)"| Admin
-    P55 <-->|"Data Pembayaran"| D13
-    P55 <-->|"Data Transaksi"| D4
-    P55 <-->|"Data Order Servis"| D2
-    P55 <-->|"Data Inventory"| D3`,
+    Owner -->|"View Dashboard Summary"| P55
+    Admin -->|"View Dashboard Summary"| P55
+    P55 <--|"Summary Stats"| DS2_Order
+    P55 <--|"Summary Cash/Bank"| DS4_Payment_Payroll
+    P55 <--|"Summary Inventory Value"| DS3_SparePart`,
 
      flowOrder: `flowchart TD
-    Start([Mulai: Customer Datang])
+    Start([Mulai: Pelanggan Booking])
     
     %% Input Order
-    Input[Admin Input Order<br/>- Nama Customer<br/>- No. HP<br/>- Data Motor<br/>- Keluhan]
-    SaveOrder[(Simpan Order<br/>Status: PENDING)]
+    Input[Admin/Pelanggan Buat Order<br/>Status: PENDING]
+    SaveOrder[(Simpan Order)]
     
     %% Estimasi
-    Review{Admin Review<br/>Kompleksitas?}
-    CheckParts[Cek Sparepart<br/>yang Dibutuhkan]
-    InputEstimate[Input Estimasi:<br/>- Item Servis<br/>- Sparepart<br/>- Total Harga]
-    UpdateEstimated[(Update Order<br/>Status: ESTIMATED)]
-    SendEstimate[Kirim Estimasi<br/>ke Customer]
+    InputEstimate[Input Estimasi:<br/>- Jasa & Sparepart<br/>- Total Estimasi Biaya]
+    UpdateEstimated[(Set Status: ESTIMATED)]
     
     %% Konfirmasi
-    CustomerApprove{Customer<br/>Setuju?}
-    Cancelled[(Update Order<br/>Status: CANCELLED)]
+    CustomerApprove{Pelanggan<br/>Setuju?}
+    Cancelled[(Set Status: CANCELLED)]
     EndCancelled([Selesai:<br/>Order Dibatalkan])
     
-    %% Pembayaran DP
-    InputDP[Input Pembayaran DP<br/>Min 30%]
-    UpdateConfirmed[(Update Order<br/>Status: CONFIRMED<br/>Status Bayar: PARTIAL)]
+    %% Scheduling / Antrian
+    UpdateConfirmed[(Set Status: CONFIRMED / QUEUE)]
     
-    %% Scheduling
-    ScheduleCheck{Cek Jadwal<br/>Tersedia?}
-    SelectSlot[Pilih Slot Waktu]
-    UpdateScheduled[(Set Jadwal<br/>Status: QUEUE)]
+    %% Penugasan
+    AssignMechanic[Tugaskan Mekanik<br/>Set mechanicId]
     
-    %% Assignment
-    AssignMechanic[Tugaskan Mekanik]
-    UpdateAssigned[(Set ID Mekanik<br/>Notif ke Mekanik)]
+    %% Pengerjaan
+    StartWork[Mulai Kerja]
+    UpdateInProgress[(Set Status: IN_PROGRESS)]
+    ReduceStock[Kurangi Stok Sparepart]
+    CreateHPPEntry[(Jurnal HPP:<br/>Dr. HPP 511<br/>Cr. Persediaan 111)]
     
-    %% Work Process
-    MechanicReceive[Mekanik Terima Order]
-    StartWork[Mulai Pengerjaan]
-    UpdateInProgress[(Update Order<br/>Status: IN_PROGRESS)]
-    
-    Work[Proses Servis/<br/>Modifikasi]
+    Work[Proses Servis / Modifikasi]
     Complete[Pekerjaan Selesai]
-    UpdateReady[(Update Order<br/>Status: READY)]
-    NotifyCustomer[Notifikasi Customer<br/>Motor Siap Diambil]
+    UpdateReady[(Set Status: READY)]
+    NotifyCustomer[Notif Pelanggan:<br/>Unit Siap Diambil]
     
-    %% Completion
-    CustomerPickup[Customer<br/>Ambil Motor]
-    Pelunasan[Pelunasan<br/>Sisa Pembayaran]
-    UpdatePaid[(Update Order<br/>Status Bayar: PAID)]
+    %% Pembayaran & Penutupan
+    Payment[Pembayaran & Kasir]
+    CloseOrder[(Set Status: COMPLETED)]
+    GenerateInvoice[Cetak Invoice]
     
-    CalculateFee[Hitung Komisi Mekanik]
-    SaveFee[(Buat Data OrderFee)]
-    
-    UpdateCompleted[(Update Order<br/>Status: COMPLETED)]
-    GenerateInvoice[Buat Invoice]
-    
-    End([Selesai:<br/>Order Rampung])
+    End([Selesai:<br/>Motor Diambil])
     
     %% Flow
     Start --> Input
     Input --> SaveOrder
-    SaveOrder --> Review
-    
-    Review -->|Jalur Cepat<br/>Servis Ringan| InputEstimate
-    Review -->|Jalur Proyek<br/>Modifikasi| CheckParts
-    CheckParts --> InputEstimate
-    
+    SaveOrder --> InputEstimate
     InputEstimate --> UpdateEstimated
-    UpdateEstimated --> SendEstimate
-    SendEstimate --> CustomerApprove
+    UpdateEstimated --> CustomerApprove
     
     CustomerApprove -->|Tidak| Cancelled
     Cancelled --> EndCancelled
     
-    CustomerApprove -->|Ya| InputDP
-    InputDP --> UpdateConfirmed
-    UpdateConfirmed --> ScheduleCheck
-    
-    ScheduleCheck -->|Penuh| SelectSlot
-    SelectSlot --> ScheduleCheck
-    ScheduleCheck -->|Tersedia| UpdateScheduled
-    
-    UpdateScheduled --> AssignMechanic
-    AssignMechanic --> UpdateAssigned
-    UpdateAssigned --> MechanicReceive
-    MechanicReceive --> StartWork
+    CustomerApprove -->|Ya| UpdateConfirmed
+    UpdateConfirmed --> AssignMechanic
+    AssignMechanic --> StartWork
     StartWork --> UpdateInProgress
-    UpdateInProgress --> Work
+    UpdateInProgress --> ReduceStock
+    ReduceStock --> CreateHPPEntry
+    CreateHPPEntry --> Work
     Work --> Complete
     Complete --> UpdateReady
     UpdateReady --> NotifyCustomer
-    NotifyCustomer --> CustomerPickup
-    CustomerPickup --> Pelunasan
-    Pelunasan --> UpdatePaid
-    UpdatePaid --> CalculateFee
-    CalculateFee --> SaveFee
-    SaveFee --> UpdateCompleted
-    UpdateCompleted --> GenerateInvoice
+    NotifyCustomer --> Payment
+    Payment --> CloseOrder
+    CloseOrder --> GenerateInvoice
     GenerateInvoice --> End
     
     %% Styling
@@ -667,13 +639,13 @@ export default function TechnicalDocsPage() {
     classDef dataStyle fill:#e1f5ff,stroke:#01579b,stroke-width:2px
     classDef startEndStyle fill:#ffccbc,stroke:#bf360c,stroke-width:3px
     
-    class Input,CheckParts,InputEstimate,InputDP,SelectSlot,AssignMechanic,MechanicReceive,StartWork,Work,Complete,CustomerPickup,Pelunasan,CalculateFee,GenerateInvoice,SendEstimate,NotifyCustomer processStyle
-    class Review,CustomerApprove,ScheduleCheck decisionStyle
-    class SaveOrder,UpdateEstimated,Cancelled,UpdateConfirmed,UpdateScheduled,UpdateAssigned,UpdateInProgress,UpdateReady,UpdatePaid,SaveFee,UpdateCompleted dataStyle
+    class Input,InputEstimate,AssignMechanic,StartWork,Work,Complete,Payment,GenerateInvoice,NotifyCustomer processStyle
+    class CustomerApprove decisionStyle
+    class SaveOrder,UpdateEstimated,Cancelled,UpdateConfirmed,UpdateInProgress,ReduceStock,CreateHPPEntry,UpdateReady,CloseOrder dataStyle
     class Start,End,EndCancelled startEndStyle`,
 
     flowPayment: `flowchart TD
-    Start([Mulai:<br/>Permintaan Bayar])
+    Start([Mulai:<br/>Pencatatan Pembayaran])
     
     %% Determine Payment Type
     PaymentType{Jenis<br/>Pembayaran?}
@@ -681,61 +653,35 @@ export default function TechnicalDocsPage() {
     %% ORDER PAYMENT BRANCH
     OrderPayment[Pembayaran Order]
     GetOrder[(Ambil Data Order)]
-    CheckOrderStatus{Status Order<br/>Valid?}
-    ErrorOrder[Error:<br/>Order tidak valid]
     
-    InputOrderAmount[Input Jumlah<br/>Pembayaran]
-    CalcOrderRemaining[Hitung:<br/>Sisa = Total - Terbayar]
+    InputOrderAmount[Input Jumlah Bayar]
+    CheckOrderFull{Jumlah Bayar +<br/>Terbayar >= Total?}
     
-    ValidateAmount{Jumlah ><br/>Sisa?}
-    ErrorAmount[Error:<br/>Jumlah melebihi sisa]
+    SetOrderPaid[(Set Order:<br/>paymentStatus = PAID)]
+    SetOrderPartial[(Set Order:<br/>paymentStatus = PARTIAL)]
     
-    CreateOrderPayment[(Buat Payment<br/>- orderId<br/>- jumlah<br/>- tanggal<br/>- catatan)]
+    CheckOrderFirst{Apakah ini<br/>Pembayaran Pertama?}
     
-    UpdateOrderPaid[(Update Order:<br/>Terbayar += jumlah)]
+    %% Jurnal Order
+    JournalDP[(Jurnal DP:<br/>Dr. Kas/Bank 101/102<br/>Cr. Piutang Usaha 103)]
     
-    CheckOrderFull{Terbayar ==<br/>Total?}
-    SetOrderPaid[(Set Order:<br/>Status = LUNAS)]
-    SetOrderPartial[(Set Order:<br/>Status = PARSIAL)]
+    JournalLunasLangsung[(Jurnal Lunas:<br/>Dr. Kas/Bank 101/102<br/>Cr. Pendapatan Jasa 401<br/>& Pendapatan Part 402)]
     
-    CreateOrderJournal[Buat Jurnal Entry:<br/>Dr. Kas<br/>Cr. Pendapatan]
-    
-    GenerateOrderReceipt[Buat Bukti<br/>Pembayaran]
+    JournalPelunasan1[(Jurnal Pelunasan Kas:<br/>Dr. Kas/Bank 101/102<br/>Cr. Piutang Usaha 103)]
+    JournalPelunasan2[(Jurnal Pengakuan Pendapatan:<br/>Dr. Piutang Usaha 103<br/>Cr. Pendapatan Jasa 401<br/>& Pendapatan Part 402)]
     
     %% PAYROLL PAYMENT BRANCH
-    PayrollPayment[Pembayaran Gaji]
+    PayrollPayment[Pembayaran Gaji Karyawan]
     GetPayroll[(Ambil Data Payroll)]
-    CheckPayrollStatus{Payroll<br/>Valid?}
-    ErrorPayroll[Error:<br/>Payroll tidak valid]
     
-    InputPayrollAmount[Input Jumlah<br/>Pembayaran]
-    CalcPayrollRemaining[Hitung:<br/>Sisa = Total Gaji - Terbayar]
+    InputPayrollAmount[Input Jumlah Gaji]
+    SetPayrollPaid[(Set Payroll:<br/>status = PAID)]
     
-    ValidatePayrollAmount{Jumlah ><br/>Sisa?}
-    ErrorPayrollAmount[Error:<br/>Jumlah melebihi sisa]
-    
-    CreatePayrollPayment[(Buat Payment<br/>- payrollId<br/>- jumlah<br/>- tanggal<br/>- catatan)]
-    
-    UpdatePayrollPaid[(Update Payroll:<br/>Terbayar += jumlah)]
-    
-    CheckPayrollFull{Terbayar ==<br/>Total Gaji?}
-    SetPayrollPaid[(Set Payroll:<br/>Status = LUNAS)]
-    SetPayrollPartial[(Set Payroll:<br/>Status = PARSIAL)]
-    
-    CreatePayrollJournal[Buat Jurnal Entry:<br/>Dr. Beban Gaji<br/>Cr. Kas]
-    
-    GeneratePayrollReceipt[Buat Slip<br/>Pembayaran Gaji]
-    
-    %% Mark OrderFees as Paid (if exists)
-    CheckOrderFees{Ada Komisi<br/>Terkait?}
-    MarkFeesPaid[(Tandai Komisi:<br/>Sudah Dibayar)]
+    JournalPayroll[(Jurnal Gaji:<br/>Dr. Utang Gaji & Komisi 202<br/>Cr. Kas/Bank 101/102)]
     
     %% Common End
     LogActivity[(Catat Aktivitas)]
-    SendNotification[Kirim Notifikasi]
-    
-    Success([Sukses:<br/>Pembayaran Berhasil])
-    Failed([Gagal:<br/>Pembayaran Gagal])
+    Success([Sukses])
     
     %% Main Flow
     Start --> PaymentType
@@ -743,252 +689,122 @@ export default function TechnicalDocsPage() {
     %% ORDER PATH
     PaymentType -->|Order| OrderPayment
     OrderPayment --> GetOrder
-    GetOrder --> CheckOrderStatus
-    CheckOrderStatus -->|Tidak Valid| ErrorOrder
-    ErrorOrder --> Failed
+    GetOrder --> InputOrderAmount
+    InputOrderAmount --> CheckOrderFull
     
-    CheckOrderStatus -->|Valid| InputOrderAmount
-    InputOrderAmount --> CalcOrderRemaining
-    CalcOrderRemaining --> ValidateAmount
+    CheckOrderFull -->|Ya: Lunas| SetOrderPaid
+    CheckOrderFull -->|Tidak: Parsial| SetOrderPartial
     
-    ValidateAmount -->|Melebihi| ErrorAmount
-    ErrorAmount --> Failed
+    SetOrderPaid --> CheckOrderFirst
+    SetOrderPartial --> CheckOrderFirst
     
-    ValidateAmount -->|OK| CreateOrderPayment
-    CreateOrderPayment --> UpdateOrderPaid
-    UpdateOrderPaid --> CheckOrderFull
+    CheckOrderFirst -->|Ya, Tapi Parsial DP| JournalDP
+    CheckOrderFirst -->|Ya & Lunas| JournalLunasLangsung
+    CheckOrderFirst -->|Tidak: Pelunasan| JournalPelunasan1
+    JournalPelunasan1 --> JournalPelunasan2
     
-    CheckOrderFull -->|Lunas| SetOrderPaid
-    CheckOrderFull -->|Parsial| SetOrderPartial
-    
-    SetOrderPaid --> CreateOrderJournal
-    SetOrderPartial --> CreateOrderJournal
-    
-    CreateOrderJournal --> GenerateOrderReceipt
-    GenerateOrderReceipt --> LogActivity
+    JournalDP --> LogActivity
+    JournalLunasLangsung --> LogActivity
+    JournalPelunasan2 --> LogActivity
     
     %% PAYROLL PATH
     PaymentType -->|Gaji| PayrollPayment
     PayrollPayment --> GetPayroll
-    GetPayroll --> CheckPayrollStatus
-    CheckPayrollStatus -->|Tidak Valid| ErrorPayroll
-    ErrorPayroll --> Failed
+    GetPayroll --> InputPayrollAmount
+    InputPayrollAmount --> SetPayrollPaid
+    SetPayrollPaid --> JournalPayroll
+    JournalPayroll --> LogActivity
     
-    CheckPayrollStatus -->|Valid| InputPayrollAmount
-    InputPayrollAmount --> CalcPayrollRemaining
-    CalcPayrollRemaining --> ValidatePayrollAmount
-    
-    ValidatePayrollAmount -->|Melebihi| ErrorPayrollAmount
-    ErrorPayrollAmount --> Failed
-    
-    ValidatePayrollAmount -->|OK| CreatePayrollPayment
-    CreatePayrollPayment --> UpdatePayrollPaid
-    UpdatePayrollPaid --> CheckPayrollFull
-    
-    CheckPayrollFull -->|Lunas| SetPayrollPaid
-    CheckPayrollFull -->|Parsial| SetPayrollPartial
-    
-    SetPayrollPaid --> CheckOrderFees
-    SetPayrollPartial --> CheckOrderFees
-    
-    CheckOrderFees -->|Ya| MarkFeesPaid
-    CheckOrderFees -->|Tidak| CreatePayrollJournal
-    MarkFeesPaid --> CreatePayrollJournal
-    
-    CreatePayrollJournal --> GeneratePayrollReceipt
-    GeneratePayrollReceipt --> LogActivity
-    
-    %% Common End Flow
-    LogActivity --> SendNotification
-    SendNotification --> Success
+    LogActivity --> Success
     
     %% Styling
     classDef processStyle fill:#c8e6c9,stroke:#2e7d32,stroke-width:2px
     classDef decisionStyle fill:#fff9c4,stroke:#f57f17,stroke-width:2px
     classDef dataStyle fill:#e1f5ff,stroke:#01579b,stroke-width:2px
-    classDef errorStyle fill:#ffcdd2,stroke:#c62828,stroke-width:2px
     classDef startEndStyle fill:#ffccbc,stroke:#bf360c,stroke-width:3px
     
-    class OrderPayment,PayrollPayment,InputOrderAmount,CalcOrderRemaining,InputPayrollAmount,CalcPayrollRemaining,CreateOrderJournal,CreatePayrollJournal,GenerateOrderReceipt,GeneratePayrollReceipt,SendNotification processStyle
-    class PaymentType,CheckOrderStatus,ValidateAmount,CheckOrderFull,CheckPayrollStatus,ValidatePayrollAmount,CheckPayrollFull,CheckOrderFees decisionStyle
-    class GetOrder,CreateOrderPayment,UpdateOrderPaid,SetOrderPaid,SetOrderPartial,GetPayroll,CreatePayrollPayment,UpdatePayrollPaid,SetPayrollPaid,SetPayrollPartial,MarkFeesPaid,LogActivity dataStyle
-    class ErrorOrder,ErrorAmount,ErrorPayroll,ErrorPayrollAmount errorStyle
-    class Start,Success,Failed startEndStyle`,
-
+    class OrderPayment,InputOrderAmount,PayrollPayment,InputPayrollAmount processStyle
+    class PaymentType,CheckOrderFull,CheckOrderFirst decisionStyle
+    class GetOrder,SetOrderPaid,SetOrderPartial,JournalDP,JournalLunasLangsung,JournalPelunasan1,JournalPelunasan2,GetPayroll,SetPayrollPaid,JournalPayroll,LogActivity dataStyle
+    class Start,Success startEndStyle`,
+    
     flowPayroll: `flowchart TD
-    Start([Mulai:<br/>Generate Payroll])
+    Start([Mulai: Hitung Payroll])
     
-    %% Input Period
-    InputPeriod[Input Periode:<br/>- Tanggal Mulai<br/>- Tanggal Akhir]
-    GetEmployees[(Ambil Semua<br/>Karyawan Aktif)]
+    InputPeriod[Input Periode:<br/>Tanggal Mulai & Akhir]
+    GetEmployees[(Ambil Data Karyawan)]
     
-    LoopStart{Ada Karyawan<br/>Lagi?}
-    EndLoop([Selesai:<br/>Semua Payroll Dibuat])
+    CheckSalaryType{Tipe Gaji?}
     
-    %% Get Employee
-    GetEmployee[(Ambil Data<br/>Karyawan)]
-    CheckSalaryType{Tipe<br/>Gaji?}
+    %% DAILY
+    DailyCalc[Gaji Pokok Harian]
+    CountDays[Hitung Hari Kerja<br/>- Skip Hari Minggu]
+    CalcDailyBase[Gaji Pokok =<br/>Hari Kerja x Rate Harian]
     
-    %% DAILY SALARY CALCULATION
-    DailyCalc[Perhitungan HARIAN]
-    CountDays[Hitung Hari Kerja<br/>dalam Periode]
-    GetDailyRate[(Ambil Rate Harian)]
-    CalcDailyBase[Gaji Pokok =<br/>Hari Kerja x Rate]
+    %% COMMISSION
+    CommissionCalc[Gaji Pokok Komisi]
+    CountMotors[Hitung Jumlah Motor Selesai<br/>dalam Periode]
+    CalcCommissionBase[Gaji Pokok =<br/>Motor x Rate Komisi]
     
-    CheckDailyBonus{Ada Bonus/<br/>Insentif?}
-    InputDailyBonus[Input Bonus]
-    SetDailyBonus[Bonus = Jumlah]
-    SetDailyNoBonus[Bonus = 0]
+    %% Common
+    InputBonus[Input Bonus & Catatan]
+    CalcTotal[Total Gaji =<br/>Gaji Pokok + Bonus]
     
-    CalcDailyTotal[Total Pendapatan =<br/>Gaji Pokok + Bonus]
+    CreatePayroll[(Simpan Payroll:<br/>status = UNPAID)]
     
-    %% COMMISSION SALARY CALCULATION
-    CommissionCalc[Perhitungan KOMISI]
-    GetOrderFees[(Ambil OrderFee<br/>dalam Periode)]
+    End([Selesai])
     
-    SumFees[Jumlahkan Semua<br/>OrderFee]
-    CalcCommissionBase[Gaji Pokok =<br/>Total Fee]
-    
-    CheckCommissionBonus{Ada Bonus/<br/>Insentif?}
-    InputCommissionBonus[Input Bonus]
-    SetCommissionBonus[Bonus = Jumlah]
-    SetCommissionNoBonus[Bonus = 0]
-    
-    CalcCommissionTotal[Total Pendapatan =<br/>Gaji Pokok + Bonus]
-    
-    %% Common Process
-    PrepareDetails[Siapkan Detail JSON:<br/>- Hari Kerja/Jumlah Motor<br/>- Catatan Bonus]
-    
-    CreatePayroll[(Buat Payroll:<br/>- Employee ID<br/>- Periode<br/>- Gaji Pokok, Bonus<br/>- Total<br/>- Status: UNPAID)]
-    
-    GenerateSlip[Buat Slip Gaji]
-    SendNotification[Kirim Notifikasi<br/>ke Karyawan]
-    
-    LogActivity[(Catat Aktivitas)]
-    
-    NextEmployee[Karyawan Selanjutnya]
-    
-    %% Review Process
-    AllGenerated{Semua Payroll<br/>Sudah Dibuat?}
-    
-    ReviewByOwner[Owner Review<br/>Semua Payroll]
-    ApprovalCheck{Owner<br/>Setuju?}
-    
-    RejectPayrolls[Tolak & Hapus<br/>Payroll]
-    EndReject([Selesai:<br/>Payroll Ditolak])
-    
-    ApprovePayrolls[Setujui Payroll]
-    NotifyFinance[Notifikasi ke<br/>Keuangan untuk Bayar]
-    
-    Success([Sukses:<br/>Payroll Siap])
-    
-    %% Main Flow
+    %% Flow
     Start --> InputPeriod
     InputPeriod --> GetEmployees
-    GetEmployees --> LoopStart
+    GetEmployees --> CheckSalaryType
     
-    LoopStart -->|Ya| GetEmployee
-    LoopStart -->|Tidak| AllGenerated
-    
-    GetEmployee --> CheckSalaryType
-    
-    %% DAILY BRANCH
-    CheckSalaryType -->|HARIAN| DailyCalc
+    CheckSalaryType -->|DAILY| DailyCalc
     DailyCalc --> CountDays
-    CountDays --> GetDailyRate
-    GetDailyRate --> CalcDailyBase
-    CalcDailyBase --> CheckDailyBonus
+    CountDays --> CalcDailyBase
+    CalcDailyBase --> InputBonus
     
-    CheckDailyBonus -->|Ya| InputDailyBonus
-    InputDailyBonus --> SetDailyBonus
-    CheckDailyBonus -->|Tidak| SetDailyNoBonus
+    CheckSalaryType -->|COMMISSION| CommissionCalc
+    CommissionCalc --> CountMotors
+    CountMotors --> CalcCommissionBase
+    CalcCommissionBase --> InputBonus
     
-    SetDailyBonus --> CalcDailyTotal
-    SetDailyNoBonus --> CalcDailyTotal
-    
-    CalcDailyTotal --> PrepareDetails
-    
-    %% COMMISSION BRANCH
-    CheckSalaryType -->|KOMISI| CommissionCalc
-    CommissionCalc --> GetOrderFees
-    GetOrderFees --> SumFees
-    SumFees --> CalcCommissionBase
-    CalcCommissionBase --> CheckCommissionBonus
-    
-    CheckCommissionBonus -->|Ya| InputCommissionBonus
-    InputCommissionBonus --> SetCommissionBonus
-    CheckCommissionBonus -->|Tidak| SetCommissionNoBonus
-    
-    SetCommissionBonus --> CalcCommissionTotal
-    SetCommissionNoBonus --> CalcCommissionTotal
-    
-    CalcCommissionTotal --> PrepareDetails
-    
-    %% Common Flow
-    PrepareDetails --> CreatePayroll
-    CreatePayroll --> GenerateSlip
-    GenerateSlip --> SendNotification
-    SendNotification --> LogActivity
-    LogActivity --> NextEmployee
-    NextEmployee --> LoopStart
-    
-    %% Review Flow
-    AllGenerated -->|Ya| ReviewByOwner
-    ReviewByOwner --> ApprovalCheck
-    
-    ApprovalCheck -->|Tolak| RejectPayrolls
-    RejectPayrolls --> EndReject
-    
-    ApprovalCheck -->|Setuju| ApprovePayrolls
-    ApprovePayrolls --> NotifyFinance
-    NotifyFinance --> Success
+    InputBonus --> CalcTotal
+    CalcTotal --> CreatePayroll
+    CreatePayroll --> End
     
     %% Styling
     classDef processStyle fill:#c8e6c9,stroke:#2e7d32,stroke-width:2px
     classDef decisionStyle fill:#fff9c4,stroke:#f57f17,stroke-width:2px
     classDef dataStyle fill:#e1f5ff,stroke:#01579b,stroke-width:2px
-    classDef calcStyle fill:#b3e5fc,stroke:#0277bd,stroke-width:2px
     classDef startEndStyle fill:#ffccbc,stroke:#bf360c,stroke-width:3px
     
-    class InputPeriod,DailyCalc,CommissionCalc,InputDailyBonus,InputCommissionBonus,GenerateSlip,SendNotification,NextEmployee,ReviewByOwner,ApprovePayrolls,RejectPayrolls,NotifyFinance processStyle
-    class LoopStart,CheckSalaryType,CheckDailyBonus,CheckCommissionBonus,AllGenerated,ApprovalCheck decisionStyle
-    class GetEmployees,GetEmployee,GetDailyRate,GetOrderFees,CreatePayroll,LogActivity dataStyle
-    class CountDays,CalcDailyBase,SetDailyBonus,SetDailyNoBonus,CalcDailyTotal,SumFees,CalcCommissionBase,SetCommissionBonus,SetCommissionNoBonus,CalcCommissionTotal,PrepareDetails calcStyle
-    class Start,EndLoop,EndReject,Success startEndStyle`,
+    class InputPeriod,DailyCalc,CommissionCalc,InputBonus processStyle
+    class CheckSalaryType decisionStyle
+    class GetEmployees,CountDays,CalcDailyBase,CountMotors,CalcCommissionBase,CalcTotal,CreatePayroll dataStyle
+    class Start,End startEndStyle`,
     
     flowAuthLogin: `flowchart TD
     Start([Mulai: Login User])
     
-    InputCredentials[Input:<br/>- Email<br/>- Password]
+    InputCredentials[Input Email & Password]
+    FindUser[(Cari User by Email)]
     
-    FindUser[(Cari User<br/>berdasarkan Email)]
+    UserExists{User Ada?}
+    ErrorNotFound[Error: Email tidak terdaftar]
     
-    UserExists{User<br/>Ditemukan?}
-    ErrorNotFound[Error:<br/>Email tidak terdaftar]
-    
-    CheckActive{User<br/>Aktif?}
-    ErrorInactive[Error:<br/>Akun tidak aktif]
+    CheckActive{User Aktif?}
+    ErrorInactive[Error: Akun dinonaktifkan]
     
     VerifyPassword[Verifikasi Password<br/>menggunakan bcrypt]
+    PasswordMatch{Password Cocok?}
+    ErrorPassword[Error: Password salah]
     
-    PasswordMatch{Password<br/>Cocok?}
-    ErrorPassword[Error:<br/>Password salah]
+    CreateSession[NextAuth:<br/>Buat Sesi Login]
+    LogActivity[(Log: LOGIN_SUCCESS)]
     
-    GetUserRole[(Ambil Role User:<br/>OWNER/ADMIN/EMPLOYEE)]
-    
-    CheckEmployee{Role ==<br/>EMPLOYEE?}
-    GetEmployeeData[(Ambil Data Karyawan)]
-    
-    GenerateToken["Generate JWT Token:<br/>- userId, email<br/>- role, employeeId"]
-    
-    CreateSession[(Buat Sesi Login)]
-    LogLoginActivity[(Catat Aktivitas:<br/>LOGIN_SUCCESS)]
-    
-    SendTokenSuccess["Kirim Respon:<br/>- Token<br/>- User Data"]
-    
-    EndLoginSuccess([Sukses:<br/>Login Berhasil])
-    
-    LoginFailed([Gagal:<br/>Login Gagal])
+    Success([Sukses: Masuk Dashboard])
+    Failed([Gagal])
     
     %% Login Flow
     Start --> InputCredentials
@@ -996,30 +812,21 @@ export default function TechnicalDocsPage() {
     FindUser --> UserExists
     
     UserExists -->|Tidak| ErrorNotFound
-    ErrorNotFound --> LoginFailed
+    ErrorNotFound --> Failed
     
     UserExists -->|Ya| CheckActive
-    
     CheckActive -->|Tidak| ErrorInactive
-    ErrorInactive --> LoginFailed
+    ErrorInactive --> Failed
     
     CheckActive -->|Ya| VerifyPassword
     VerifyPassword --> PasswordMatch
     
     PasswordMatch -->|Tidak| ErrorPassword
-    ErrorPassword --> LoginFailed
+    ErrorPassword --> Failed
     
-    PasswordMatch -->|Ya| GetUserRole
-    GetUserRole --> CheckEmployee
-    
-    CheckEmployee -->|Ya| GetEmployeeData
-    CheckEmployee -->|Tidak| GenerateToken
-    GetEmployeeData --> GenerateToken
-    
-    GenerateToken --> CreateSession
-    CreateSession --> LogLoginActivity
-    LogLoginActivity --> SendTokenSuccess
-    SendTokenSuccess --> EndLoginSuccess
+    PasswordMatch -->|Ya| CreateSession
+    CreateSession --> LogActivity
+    LogActivity --> Success
     
     %% Styling
     classDef processStyle fill:#c8e6c9,stroke:#2e7d32,stroke-width:2px
@@ -1028,180 +835,78 @@ export default function TechnicalDocsPage() {
     classDef errorStyle fill:#ffcdd2,stroke:#c62828,stroke-width:2px
     classDef startEndStyle fill:#ffccbc,stroke:#bf360c,stroke-width:3px
     
-    class InputCredentials,VerifyPassword,GenerateToken,SendTokenSuccess processStyle
-    class UserExists,CheckActive,PasswordMatch,CheckEmployee decisionStyle
-    class FindUser,CreateSession,LogLoginActivity,GetUserRole,GetEmployeeData dataStyle
+    class InputCredentials,VerifyPassword,CreateSession processStyle
+    class UserExists,CheckActive,PasswordMatch decisionStyle
+    class FindUser,LogActivity dataStyle
     class ErrorNotFound,ErrorInactive,ErrorPassword errorStyle
-    class Start,EndLoginSuccess,LoginFailed startEndStyle`,
+    class Start,Success,Failed startEndStyle`,
 
     flowAuthForgot: `flowchart TD
     Start([Mulai: Lupa Password])
     
-    InputEmail[Input Email]
+    InputEmail[Input Email Pengguna]
+    FindUser[(Cari User by Email)]
     
-    FindUserForgot[(Cari User<br/>berdasarkan Email)]
+    UserExists{User Ada?}
+    ShowMessage[Tampilkan Pesan:<br/>Permintaan dikirim ke admin]
     
-    UserExistsForgot{User<br/>Ditemukan?}
-    ErrorNotFoundForgot[Error:<br/>Email tidak terdaftar]
+    CreateRequest[(Buat ForgotPasswordRequest<br/>status = PENDING)]
+    LogActivity[(Log: FORGOT_PASSWORD_REQUEST)]
     
-    CheckRole{Role User?}
+    End([Selesai])
     
-    %% Owner/Admin Path - Can Reset Directly
-    GenerateResetToken["Generate<br/>Token Reset<br/>Kedaluwarsa 24 jam"]
-    
-    SaveResetToken[(Simpan:<br/>- resetToken<br/>- Expiry)]
-    
-    SendResetEmail[Kirim Email:<br/>Link Reset + Token]
-    
-    SuccessEmailSent([Sukses:<br/>Email Reset Dikirim])
-    
-    %% Employee Path - Request to Owner
-    CreateForgotRequest[(Buat Request<br/>Lupa Password<br/>Status: PENDING)]
-    
-    NotifyOwner[Notifikasi ke Owner<br/>untuk Persetujuan]
-    
-    SuccessRequestCreated([Sukses:<br/>Request Dibuat])
-    
-    FailedForgot([Gagal])
-    
-    %% Forgot Flow
+    %% Flow
     Start --> InputEmail
-    InputEmail --> FindUserForgot
-    FindUserForgot --> UserExistsForgot
+    InputEmail --> FindUser
+    FindUser --> UserExists
     
-    UserExistsForgot -->|Tidak| ErrorNotFoundForgot
-    ErrorNotFoundForgot --> FailedForgot
-    
-    UserExistsForgot -->|Ya| CheckRole
-    
-    CheckRole -->|OWNER/ADMIN| GenerateResetToken
-    GenerateResetToken --> SaveResetToken
-    SaveResetToken --> SendResetEmail
-    SendResetEmail --> SuccessEmailSent
-    
-    CheckRole -->|EMPLOYEE| CreateForgotRequest
-    CreateForgotRequest --> NotifyOwner
-    NotifyOwner --> SuccessRequestCreated
+    UserExists -->|Tidak| ShowMessage
+    UserExists -->|Ya| CreateRequest
+    CreateRequest --> LogActivity
+    LogActivity --> ShowMessage
+    ShowMessage --> End
     
     %% Styling
     classDef processStyle fill:#c8e6c9,stroke:#2e7d32,stroke-width:2px
     classDef decisionStyle fill:#fff9c4,stroke:#f57f17,stroke-width:2px
     classDef dataStyle fill:#e1f5ff,stroke:#01579b,stroke-width:2px
-    classDef errorStyle fill:#ffcdd2,stroke:#c62828,stroke-width:2px
     classDef startEndStyle fill:#ffccbc,stroke:#bf360c,stroke-width:3px
     
-    class InputEmail,SendResetEmail,NotifyOwner processStyle
-    class UserExistsForgot,CheckRole decisionStyle
-    class FindUserForgot,GenerateResetToken,SaveResetToken,CreateForgotRequest dataStyle
-    class ErrorNotFoundForgot errorStyle
-    class Start,SuccessEmailSent,SuccessRequestCreated,FailedForgot startEndStyle`,
-
-    flowAuthReset: `flowchart TD
-    Start([Mulai: Reset Password])
-    
-    InputToken[Input:<br/>- Token Reset<br/>- Password Baru]
-    
-    FindUserByToken[(Cari User<br/>via Token)]
-    
-    TokenValid{Token<br/>Valid?}
-    ErrorInvalidToken[Error:<br/>Token tidak valid]
-    
-    CheckExpiry{Token<br/>Expired?}
-    ErrorExpiredToken[Error:<br/>Token sudah expired]
-    
-    HashNewPassword[Hash Password Baru]
-    
-    UpdatePassword[(Update User:<br/>- Password Baru<br/>- Hapus Token)]
-    
-    LogResetActivity[(Catat Aktivitas:<br/>PASSWORD_RESET)]
-    
-    SendConfirmEmail[Kirim Email:<br/>Password Berhasil Direset]
-    
-    SuccessReset([Sukses:<br/>Password Berhasil Direset])
-    
-    FailedReset([Gagal])
-    
-    %% Reset Flow
-    Start --> InputToken
-    InputToken --> FindUserByToken
-    FindUserByToken --> TokenValid
-    
-    TokenValid -->|Tidak| ErrorInvalidToken
-    ErrorInvalidToken --> FailedReset
-    
-    TokenValid -->|Ya| CheckExpiry
-    
-    CheckExpiry -->|Ya| ErrorExpiredToken
-    ErrorExpiredToken --> FailedReset
-    
-    CheckExpiry -->|Tidak| HashNewPassword
-    HashNewPassword --> UpdatePassword
-    UpdatePassword --> LogResetActivity
-    LogResetActivity --> SendConfirmEmail
-    SendConfirmEmail --> SuccessReset
-    
-    %% Styling
-    classDef processStyle fill:#c8e6c9,stroke:#2e7d32,stroke-width:2px
-    classDef decisionStyle fill:#fff9c4,stroke:#f57f17,stroke-width:2px
-    classDef dataStyle fill:#e1f5ff,stroke:#01579b,stroke-width:2px
-    classDef errorStyle fill:#ffcdd2,stroke:#c62828,stroke-width:2px
-    classDef startEndStyle fill:#ffccbc,stroke:#bf360c,stroke-width:3px
-    
-    class InputToken,HashNewPassword,SendConfirmEmail processStyle
-    class TokenValid,CheckExpiry decisionStyle
-    class FindUserByToken,UpdatePassword,LogResetActivity dataStyle
-    class ErrorInvalidToken,ErrorExpiredToken errorStyle
-    class Start,SuccessReset,FailedReset startEndStyle`,
+    class InputEmail,ShowMessage processStyle
+    class UserExists decisionStyle
+    class FindUser,CreateRequest,LogActivity dataStyle
+    class Start,End startEndStyle`,
 
     flowAuthResolve: `flowchart TD
-    Start([Mulai: Review Admin])
+    Start([Mulai: Resolusi Lupa Password])
     
-    GetPendingRequests[(Ambil Request<br/>Pending)]
+    GetRequests[(Ambil Daftar Request PENDING)]
+    OwnerInput[Owner Input Password Baru]
     
-    OwnerAction{Aksi<br/>Owner?}
+    HashPassword[Hash Password Baru]
     
-    %% Approve Path
-    GenerateEmployeeToken[Generate<br/>Token Reset<br/>untuk Employee]
+    UpdateUserAndPassword[(Transaction:<br/>- Update User Password<br/>- Set Request status = RESOLVED)]
     
-    SaveEmployeeToken[(Simpan Token<br/>ke User)]
+    LogActivity[(Log: RESOLVE_FORGOT_PASSWORD)]
     
-    MarkResolved[(Update Request:<br/>- Status: RESOLVED<br/>- Oleh: Owner)]
+    Success([Sukses: Password Berhasil Direset])
     
-    SendEmployeeEmail[Kirim Email:<br/>Link Reset ke Employee]
-    
-    SuccessApprove([Sukses:<br/>Request Disetujui])
-    
-    %% Reject Path
-    MarkRejected[(Update Request:<br/>- Status: REJECTED<br/>- Oleh: Owner)]
-    
-    NotifyEmployeeReject[Notif Employee:<br/>Request Ditolak]
-    
-    SuccessReject([Sukses:<br/>Request Ditolak])
-    
-    %% Resolve Flow
-    Start --> GetPendingRequests
-    GetPendingRequests --> OwnerAction
-    
-    OwnerAction -->|Setuju| GenerateEmployeeToken
-    GenerateEmployeeToken --> SaveEmployeeToken
-    SaveEmployeeToken --> MarkResolved
-    MarkResolved --> SendEmployeeEmail
-    SendEmployeeEmail --> SuccessApprove
-    
-    OwnerAction -->|Tolak| MarkRejected
-    MarkRejected --> NotifyEmployeeReject
-    NotifyEmployeeReject --> SuccessReject
+    %% Flow
+    Start --> GetRequests
+    GetRequests --> OwnerInput
+    OwnerInput --> HashPassword
+    HashPassword --> UpdateUserAndPassword
+    UpdateUserAndPassword --> LogActivity
+    LogActivity --> Success
     
     %% Styling
     classDef processStyle fill:#c8e6c9,stroke:#2e7d32,stroke-width:2px
-    classDef decisionStyle fill:#fff9c4,stroke:#f57f17,stroke-width:2px
     classDef dataStyle fill:#e1f5ff,stroke:#01579b,stroke-width:2px
     classDef startEndStyle fill:#ffccbc,stroke:#bf360c,stroke-width:3px
     
-    class GenerateEmployeeToken,SendEmployeeEmail,NotifyEmployeeReject processStyle
-    class OwnerAction decisionStyle
-    class GetPendingRequests,SaveEmployeeToken,MarkResolved,MarkRejected dataStyle
-    class Start,SuccessApprove,SuccessReject startEndStyle`,
+    class OwnerInput,HashPassword processStyle
+    class GetRequests,UpdateUserAndPassword,LogActivity dataStyle
+    class Start,Success startEndStyle`,
 
     useCase: `flowchart LR
     subgraph Actors["👥 AKTOR SISTEM"]
@@ -1213,31 +918,28 @@ export default function TechnicalDocsPage() {
 
     subgraph PublicFeatures["🌐 FITUR PUBLIK"]
         UC1["Booking Servis"]
-        UC2["Cek Status Order"]
-        UC3["Lihat Antrian Publik"]
+        UC2["Lacak Status Order (Kanban Publik)"]
     end
 
     subgraph AdminFeatures["⚙️ FITUR ADMIN"]
-        UC4["Input Order"]
-        UC5["Kelola Inventory"]
-        UC6["Proses Pembayaran"]
+        UC4["Input & Proses Order"]
+        UC5["Kelola Inventory & Stok"]
+        UC6["Pencatatan Pembayaran (Kasir)"]
     end
 
-    subgraph MechanicFeatures["🔨 FITUR MEKANIK"]
-        UC7["Kerjakan Servis"]
-        UC8["Lihat Slip Gaji"]
+    subgraph MechanicFeatures["🔧 FITUR MEKANIK"]
+        UC7["Kerjakan Servis (Update Progress)"]
     end
 
     subgraph OwnerFeatures["📊 FITUR OWNER"]
-        UC9["Lihat Laporan Keuangan"]
-        UC10["Approval Gaji"]
-        UC11["Kelola User dan Akses"]
+        UC9["Laporan Keuangan & Akuntansi"]
+        UC10["Proses & Bayar Payroll Gaji"]
+        UC11["Kelola Akun Pengguna & Profil"]
     end
 
     %% Customer Connections
     Customer -.-> UC1
     Customer -.-> UC2
-    Customer -.-> UC3
 
     %% Admin Connections
     Admin -.-> UC4
@@ -1247,8 +949,7 @@ export default function TechnicalDocsPage() {
 
     %% Mechanic Connections
     Mechanic -.-> UC7
-    Mechanic -.-> UC8
-    Mechanic -.-> UC3
+    Mechanic -.-> UC2
 
     %% Owner Connections
     Owner -.-> UC9
@@ -1264,73 +965,79 @@ export default function TechnicalDocsPage() {
     classDef ownerStyle fill:#fce4ec,stroke:#c2185b,stroke-width:2px
 
     class Customer,Mechanic,Admin,Owner actorStyle
-    class UC1,UC2,UC3 publicStyle
+    class UC1,UC2 publicStyle
     class UC4,UC5,UC6 adminStyle
-    class UC7,UC8 mechanicStyle
+    class UC7 mechanicStyle
     class UC9,UC10,UC11 ownerStyle`,
 
     seqAuth: `sequenceDiagram
     participant User
     participant FE as Frontend
-    participant API as Backend API
+    participant Auth as NextAuth.js
     participant DB as Database
 
     User->>FE: Input Email & Password
-    FE->>API: POST /api/auth/login
-    API->>DB: Cari User by Email
+    FE->>Auth: signIn("credentials", { email, password })
+    Auth->>DB: Cari User by Email
     
     alt User Tidak Ditemukan
-        DB-->>API: null
-        API-->>FE: Error (Email salah)
+        DB-->>Auth: null
+        Auth-->>FE: Error (Email tidak terdaftar)
         FE-->>User: Tampilkan Error
     else User Ditemukan
-        DB-->>API: Data User (Hash Password)
-        API->>API: Validasi Password (Bcrypt)
+        DB-->>Auth: Data User (Password Hash & Status Aktif)
         
-        alt Password Salah
-            API-->>FE: Error (Password salah)
+        alt Akun Tidak Aktif
+            Auth-->>FE: Error (Akun dinonaktifkan)
             FE-->>User: Tampilkan Error
-        else Password Valid
-            API->>DB: Get Role & Employee Data
-            DB-->>API: Role Access
-            API->>API: Generate JWT Token
-            API-->>FE: Return Session Data + Token
-            FE->>FE: Simpan Session
-            FE-->>User: Redirect ke Dashboard
+        else Akun Aktif
+            Auth->>Auth: Verifikasi Password (bcrypt)
+            
+            alt Password Salah
+                Auth-->>FE: Error (Password salah)
+                FE-->>User: Tampilkan Error
+            else Password Valid
+                Auth->>Auth: Buat Sesi & JWT Token
+                Auth-->>FE: Status Sukses
+                FE->>FE: Redirect ke Dashboard
+                FE-->>User: Tampilkan Dashboard
+            end
         end
     end`,
 
     seqOrder: `sequenceDiagram
     participant Cust as Customer
     participant Admin
-    participant Sys as Sistem
+    participant Sys as Sistem (Database)
     participant Mech as Mekanik
 
-    Cust->>Admin: Datang bawa motor
-    Admin->>Sys: Input Data Order (Pending)
-    Sys->>Sys: Generate Order ID
+    Cust->>Admin: Datang bawa motor / Booking Online
+    Admin->>Sys: Buat Order Baru (Status: PENDING)
+    Sys-->>Admin: Simpan Order & Generate ID
     
-    Admin->>Sys: Cek Kerusakan
-    Sys-->>Admin: Data Sparepart & Jasa
-    Admin->>Sys: Input Estimasi Biaya
-    Sys->>Cust: Kirim Estimasi (via WA/App)
+    Admin->>Sys: Input Estimasi Biaya (Jasa & Parts)
+    Sys-->>Admin: Simpan Items (Status: ESTIMATED)
     
-    Cust->>Admin: Konfirmasi Setuju
-    Admin->>Sys: Update Status -> Confirmed
+    Cust->>Admin: Setujui Estimasi
+    Admin->>Sys: Konfirmasi Order (Status: CONFIRMED/QUEUE)
     
-    Admin->>Sys: Assign Mekanik
-    Sys->>Mech: Notifikasi Order Baru
+    Admin->>Sys: Tugaskan Mekanik (Set mechanicId)
+    Sys->>Mech: Notifikasi Pekerjaan Baru
     
-    Mech->>Sys: Start Pengerjaan
+    Mech->>Sys: Mulai Kerja (Status: IN_PROGRESS)
     Sys->>Sys: Kurangi Stok Sparepart
+    Sys->>Sys: Buat Jurnal HPP (Dr. HPP, Cr. Persediaan)
     
-    Mech->>Sys: Selesai Pengerjaan
-    Sys->>Cust: Notifikasi Unit Ready
+    Mech->>Sys: Selesai Pengerjaan (Status: READY)
+    Sys-->>Cust: Notifikasi Unit Siap Diambil
     
-    Cust->>Admin: Bayar
-    Admin->>Sys: Input Payment
-    Sys->>Sys: Create Jurnal Akuntansi
-    Sys->>Sys: Update Status -> Completed`,
+    Cust->>Admin: Melakukan Pembayaran (Kasir)
+    Admin->>Sys: Input Pembayaran (CASH/TRANSFER)
+    Sys->>Sys: Update totalPaid & paymentStatus (PAID)
+    Sys->>Sys: Buat Jurnal Pendapatan (Kas vs Pendapatan)
+    
+    Admin->>Sys: Tutup Order (Status: COMPLETED)
+    Sys-->>Admin: Cetak Kwitansi/Invoice`,
 
     dfdHighLevel: `graph TD
     %% Entities
@@ -1357,7 +1064,7 @@ export default function TechnicalDocsPage() {
     Mechanic -- "4. Mengerjakan Servis" --> S4[Aksi: Proses Order]
     S4 -->|"Update Status (IN_PROGRESS)"| SystemDB
     S4 -->|"Kurangi Stok Sparepart"| SystemDB
-    S4 -->|"Catat Log Keamanan"| SystemDB
+    S4 -->|"Buat Jurnal HPP & Accrual Komisi"| SystemDB
 
     %% Flow 5: Completion
     Mechanic -- "5. Selesai Pengerjaan" --> S5[Aksi: Selesai Order]
@@ -1367,27 +1074,36 @@ export default function TechnicalDocsPage() {
     %% Flow 6: Payment & Closing
     Customer -- "6. Pembayaran" --> Admin
     Admin -- "7. Input Pembayaran" --> S6[Aksi: Proses Pembayaran]
-    S6 -->|"Update Status (COMPLETED)"| SystemDB
-    S6 -->|"Catat Jurnal Keuangan (Akuntansi)"| SystemDB`,
+    S6 -->|"Update Status (COMPLETED) & Simpan Payment"| SystemDB
+    S6 -->|"Catat Jurnal Keuangan (Kas/Pendapatan)"| SystemDB`,
 
     seqFinance: `sequenceDiagram
     participant Admin as Admin/Kasir
     participant BO as Sistem Order
     participant INV as Sistem Inventory
-    participant ACC as Sistem Akuntansi
-    participant BNK as Rekening Bank/Kas
+    participant ACC as Akuntansi Jurnal
+    participant BNK as BankAccount / Kas
 
-    Note over Admin, BNK: Skenario 1: Penggunaan Sparepart (HPP)
-    Admin->>BO: Proses Order (Pasang Sparepart)
-    BO->>INV: Cek & Kurangi Stok
-    INV->>ACC: Buat Jurnal Entry (HPP)
-    ACC->>ACC: Debit: HPP (Beban)<br/>Kredit: Persediaan (Aset)
+    Note over Admin, BNK: Skenario 1: Penggunaan Sparepart saat Servis (HPP)
+    Admin->>BO: Mulai Kerja (Status: IN_PROGRESS)
+    BO->>INV: Kurangi Stok Sparepart
+    BO->>ACC: Trigger Penjurnal HPP
+    ACC->>ACC: Debit: HPP (511)<br/>Kredit: Persediaan Sparepart (111)
 
-    Note over Admin, BNK: Skenario 2: Pembayaran Customer
-    Admin->>BO: Input Pembayaran (Terima Uang)
-    BO->>ACC: Buat Jurnal Entry (Pendapatan)
-    ACC->>ACC: Debit: Kas/Bank (Aset)<br/>Kredit: Pendapatan Jasa (Income)
-    BO->>BNK: Update Saldo Rekening`,
+    Note over Admin, BNK: Skenario 2: Komisi Mekanik Terakru (Accrual)
+    Admin->>BO: Tugaskan Mekanik & Input Komisi
+    BO->>ACC: Trigger Jurnal Accrual Komisi
+    ACC->>ACC: Debit: Beban Gaji & Komisi (501)<br/>Kredit: Utang Gaji & Komisi (202)
+
+    Note over Admin, BNK: Skenario 3: Pembayaran Order oleh Pelanggan
+    Admin->>BO: Catat Pembayaran Order (DP / Lunas)
+    BO->>ACC: Trigger Jurnal Pendapatan & Kas
+    alt Pembayaran Lunas Langsung
+        ACC->>ACC: Debit: Kas Tunai/Bank (101/102)<br/>Kredit: Pendapatan Jasa (401) & Pendapatan Part (402)
+    else Pembayaran DP (Parsial)
+        ACC->>ACC: Debit: Kas Tunai/Bank (101/102)<br/>Kredit: Piutang Usaha (103)
+    end
+    BO->>BNK: Update Saldo Rekening (jika transfer)`,
 
     flowLanding: `flowchart TD
     Start([Mulai: Kunjungan User])
@@ -1402,16 +1118,16 @@ export default function TechnicalDocsPage() {
     
     %% Booking Path
     PathBooking[Booking Servis]
-    FormBooking[Isi Form Booking:<br/>- Nama, HP<br/>- Detail Kendaraan<br/>- Keluhan]
+    FormBooking[Isi Form Booking:<br/>- Nama, HP, Motor, Keluhan<br/>- Pilih Tipe Servis & Tanggal]
     Validation{Valid?}
     ErrorValid[Tampilkan Error]
     SubmitBooking[Kirim Order]
     SaveDB[(Buat Order PENDING)]
-    SuccessBooking[Tampilkan Sukses &<br/>ID Referensi]
+    SuccessBooking[Tampilkan Sukses &<br/>Nomor Antrian]
     
     %% Tracking Path
     PathTrack[Lacak Order]
-    InputTrack[Input Plat No / HP]
+    InputTrack[Input No HP atau Plat No]
     SearchDB[(Cari Order)]
     Found{Ditemukan?}
     ShowStatus["Tampilkan Status Order<br/>(Antrian/Proses/Selesai)"]
@@ -1476,7 +1192,7 @@ export default function TechnicalDocsPage() {
     
     UploadImg[Upload Gambar]
     SaveStorage[(Simpan ke /public/uploads)]
-    CreateRecord[(Buat Data Media)]
+    CreateRecord[(Buat Data MediaGallery)]
     
     ToggleMedia[Ubah Visibilitas]
     UpdateStatus[(Update Status Aktif)]
@@ -1487,7 +1203,6 @@ export default function TechnicalDocsPage() {
     %% 2. Social Embeds
     FlowSocial[Embed Sosial Media]
     InputUrl[Input URL TikTok/IG]
-    DetectPlatform[Deteksi Platform]
     SaveEmbed[(Simpan SocialEmbed)]
     
     %% 3. Text Content
@@ -1525,8 +1240,7 @@ export default function TechnicalDocsPage() {
     %% Social Branch
     SelectFeature -->|Sosial| FlowSocial
     FlowSocial --> InputUrl
-    InputUrl --> DetectPlatform
-    DetectPlatform --> SaveEmbed
+    InputUrl --> SaveEmbed
     SaveEmbed --> Revalidate
     
     %% Text Branch
@@ -1536,7 +1250,56 @@ export default function TechnicalDocsPage() {
     EditContent --> SaveContent
     SaveContent --> Revalidate
     
-    Revalidate --> UpdatePublic`
+    Revalidate --> UpdatePublic`,
+
+    hierarchy: `graph TD
+    System[Sistem Manajemen NopzGarage]
+    
+    %% Level 1: Roles / Access Levels
+    OwnerAccess[1. Owner - Full Control]
+    AdminAccess[2. Admin - Operations & Cashier]
+    EmployeeAccess[3. Employee / Mechanic - Work Execution]
+    PublicAccess[4. Public / Guest - Customer Services]
+    
+    System --> OwnerAccess
+    System --> AdminAccess
+    System --> EmployeeAccess
+    System --> PublicAccess
+    
+    %% Owner Features
+    OwnerAccess --> OwnerU[Manajemen Pengguna & Karyawan]
+    OwnerAccess --> OwnerPay[Payroll & Gaji Karyawan]
+    OwnerAccess --> OwnerFin[Laporan Keuangan & Akuntansi]
+    OwnerAccess --> OwnerSet[Konfigurasi Sistem]
+    
+    %% Admin Features
+    AdminAccess --> AdminOrd[Input & Estimasi Order]
+    AdminAccess --> AdminPay[Kasir & Rekonsiliasi Bank]
+    AdminAccess --> AdminInv[Manajemen Stok & Penyesuaian]
+    AdminAccess --> AdminCMS[Kelola Konten CMS Landing Page]
+    
+    %% Employee Features
+    EmployeeAccess --> EmpTask[Daftar Antrian Kerja]
+    EmployeeAccess --> EmpWork[Update Progress Kerja]
+    EmployeeAccess --> EmpSlip[Lihat Slip & Histori Gaji]
+    
+    %% Public Features
+    PublicAccess --> PubBook[Form Booking Online]
+    PublicAccess --> PubTrack[Lacak Status Order]
+    PublicAccess --> PubKanban[Papan Antrian Publik]
+    
+    %% Styling
+    classDef main fill:#3b82f6,stroke:#1d4ed8,stroke-width:3px,color:#fff;
+    classDef owner fill:#fce4ec,stroke:#c2185b,stroke-width:2px;
+    classDef admin fill:#fff3e0,stroke:#f57c00,stroke-width:2px;
+    classDef mechanic fill:#f3e5f5,stroke:#7b1fa2,stroke-width:2px;
+    classDef public fill:#e8f5e9,stroke:#388e3c,stroke-width:2px;
+    
+    class System main;
+    class OwnerAccess,OwnerU,OwnerPay,OwnerFin,OwnerSet owner;
+    class AdminAccess,AdminOrd,AdminPay,AdminInv,AdminCMS admin;
+    class EmployeeAccess,EmpTask,EmpWork,EmpSlip mechanic;
+    class PublicAccess,PubBook,PubTrack,PubKanban public;`
   };
 
   return (
@@ -1743,6 +1506,20 @@ export default function TechnicalDocsPage() {
             <CardContent>
               <Accordion type="single" collapsible className="w-full">
                 
+                {/* System Hierarchy Chart */}
+                <AccordionItem value="hierarchy">
+                  <AccordionTrigger className="text-lg font-semibold flex items-center gap-2">
+                    <FolderTree className="h-5 w-5 text-blue-600" />
+                    System Hierarchy & Functional Chart
+                  </AccordionTrigger>
+                  <AccordionContent>
+                    <MermaidDiagram chart={diagrams.hierarchy} />
+                    <p className="mt-2 text-sm text-muted-foreground">
+                      Diagram hirarki fungsional ini menggambarkan pembagian peran (Role) dan cakupan fitur operasional pada sistem NopzGarage.
+                    </p>
+                  </AccordionContent>
+                </AccordionItem>
+
                 {/* DFD Level 0 (Context) */}
                 <AccordionItem value="dfd0">
                   <AccordionTrigger className="text-lg font-semibold flex items-center gap-2">
@@ -1946,30 +1723,16 @@ export default function TechnicalDocsPage() {
                   </AccordionContent>
                 </AccordionItem>
 
-                 {/* Flowchart: Authentication - Forgot Password */}
+                 {/* Flowchart: Authentication - Forgot Password Request */}
                  <AccordionItem value="flowAuthForgot">
                   <AccordionTrigger className="text-lg font-semibold flex items-center gap-2">
                     <KeyRound className="h-5 w-5 text-orange-600" />
-                    Flowchart 4B: Forgot Password Process
+                    Flowchart 4B: Forgot Password Request (Pengajuan Lupa Password)
                   </AccordionTrigger>
                   <AccordionContent>
                     <MermaidDiagram chart={diagrams.flowAuthForgot} />
                     <p className="mt-2 text-sm text-muted-foreground">
-                      Alur permintaan reset password untuk Owner/Admin dan Employee.
-                    </p>
-                  </AccordionContent>
-                </AccordionItem>
-
-                 {/* Flowchart: Authentication - Reset Password */}
-                 <AccordionItem value="flowAuthReset">
-                  <AccordionTrigger className="text-lg font-semibold flex items-center gap-2">
-                    <Lock className="h-5 w-5 text-red-600" />
-                    Flowchart 4C: Reset Password Process
-                  </AccordionTrigger>
-                  <AccordionContent>
-                    <MermaidDiagram chart={diagrams.flowAuthReset} />
-                    <p className="mt-2 text-sm text-muted-foreground">
-                      Alur reset password menggunakan token yang dikirim via email.
+                      Alur pengajuan lupa password oleh pengguna dengan mencatat request berstatus PENDING ke database.
                     </p>
                   </AccordionContent>
                 </AccordionItem>
@@ -1978,12 +1741,12 @@ export default function TechnicalDocsPage() {
                  <AccordionItem value="flowAuthResolve">
                   <AccordionTrigger className="text-lg font-semibold flex items-center gap-2">
                     <UserCheck className="h-5 w-5 text-indigo-600" />
-                    Flowchart 4D: Owner Approval Process
+                    Flowchart 4C: Reset Password Resolution (Resolusi Lupa Password oleh Owner)
                   </AccordionTrigger>
                   <AccordionContent>
                     <MermaidDiagram chart={diagrams.flowAuthResolve} />
                     <p className="mt-2 text-sm text-muted-foreground">
-                      Alur persetujuan atau penolakan request reset password dari Employee.
+                      Alur persetujuan dan reset password baru secara manual oleh Owner dari dashboard admin.
                     </p>
                   </AccordionContent>
                 </AccordionItem>

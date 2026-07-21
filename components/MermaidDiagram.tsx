@@ -73,6 +73,12 @@ export function MermaidDiagram({ chart, className }: { chart: string; className?
 
   return (
     <div className="relative w-full border rounded-lg bg-card shadow-sm overflow-hidden group">
+      <style>{`
+        #mermaid-${id} svg {
+          max-width: none !important;
+          height: auto !important;
+        }
+      `}</style>
       {/* Controls */}
       <div className="absolute top-4 right-4 z-10 flex flex-col gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 bg-background/80 backdrop-blur-sm p-1 rounded-md border shadow-sm">
         <button 
@@ -98,7 +104,7 @@ export function MermaidDiagram({ chart, className }: { chart: string; className?
         </button>
       </div>
 
-      <div className="w-full h-full overflow-auto p-4 flex justify-center bg-dots-pattern">
+      <div className="w-full h-[500px] md:h-[600px] overflow-auto p-4 flex justify-center bg-dots-pattern">
         <div 
           style={{ 
             transform: `scale(${scale})`, 
