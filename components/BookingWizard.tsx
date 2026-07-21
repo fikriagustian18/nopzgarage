@@ -47,8 +47,10 @@ const step1Schema = z.object({
     .string()
     .min(10, "Nomor HP minimal 10 digit")
     .regex(/^[0-9+]+$/, "Hanya angka dan tanda +"),
-  email: z.string().email("Format email tidak valid"),
-  address: z.string().min(5, "Alamat minimal 5 karakter"),
+  email: z
+    .union([z.string().email("Format email tidak valid"), z.literal("")])
+    .optional(),
+  address: z.string().optional(),
 });
 
 const step3Schema = z.object({
@@ -444,11 +446,11 @@ export function BookingWizard({ serviceOptions = [], generalSettings = {}, sessi
                           </div>
 
                           <div className="space-y-2">
-                            <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Email *</label>
+                            <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Email</label>
                             <div className="relative group">
                               <Mail className="absolute left-4 top-3.5 h-4 w-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
                               <Input 
-                                placeholder="nama@email.com" 
+                                placeholder="nama@email.com (Opsional)" 
                                 className="pl-11 h-12 bg-background/50 border-input"
                                 {...step1Form.register("email")}
                               />
@@ -459,11 +461,11 @@ export function BookingWizard({ serviceOptions = [], generalSettings = {}, sessi
                           </div>
 
                           <div className="space-y-2">
-                            <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Alamat *</label>
+                            <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Alamat</label>
                             <div className="relative group">
                               <MapPin className="absolute left-4 top-3.5 h-4 w-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
                               <Input 
-                                placeholder="Masukkan alamat lengkap Anda" 
+                                placeholder="Masukkan alamat lengkap Anda (Opsional)" 
                                 className="pl-11 h-12 bg-background/50 border-input"
                                 {...step1Form.register("address")}
                               />
@@ -617,7 +619,7 @@ export function BookingWizard({ serviceOptions = [], generalSettings = {}, sessi
                           </div>
                           <div className="flex justify-between border-b pb-2">
                             <span className="font-semibold text-muted-foreground">Email</span>
-                            <span className="font-bold text-foreground">{step1Values.email}</span>
+                            <span className="font-bold text-foreground">{step1Values.email || "-"}</span>
                           </div>
                           <div className="flex justify-between border-b pb-2">
                             <span className="font-semibold text-muted-foreground">Motor</span>
