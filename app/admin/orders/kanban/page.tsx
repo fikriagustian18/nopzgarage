@@ -24,7 +24,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { getAdminOrders } from "@/app/actions/orders";
-import { OrderStatus } from "@prisma/client";
+import { OrderStatus, PaymentStatus } from "@prisma/client";
 import { ProcessOrderDialog } from "@/components/ProcessOrderDialog";
 import { OrderDialog } from "@/components/OrderDialog";
 
@@ -35,6 +35,7 @@ type KanbanOrder = {
   plateNumber: string | null;
   serviceType: string;
   status: OrderStatus;
+  paymentStatus: PaymentStatus;
   totalPrice: number;
   mechanic?: {
     name: string;
@@ -42,7 +43,8 @@ type KanbanOrder = {
   queueNumber?: string;
 };
 
-const KANBAN_STATUSES: OrderStatus[] = ["PENDING", "IN_PROGRESS", "READY", "COMPLETED"];
+type KanbanColumn = "PENDING" | "IN_PROGRESS" | "WAITING_FOR_PAYMENT" | "READY";
+const KANBAN_COLUMNS: KanbanColumn[] = ["PENDING", "IN_PROGRESS", "WAITING_FOR_PAYMENT", "READY"];
 
 export default function KanbanBoardPage() {
   const router = useRouter();
@@ -70,12 +72,29 @@ export default function KanbanBoardPage() {
     }
   }
 
-  const getOrdersByStatus = (status: OrderStatus) => {
-    return orders.filter((order) => order.status === status);
+  const getOrdersByColumn = (column: KanbanColumn) => {
+    return orders.filter((order) => {
+      if (column === "PENDING") {
+        return order.status === "PENDING";
+      }
+      if (column === "IN_PROGRESS") {
+        return order.status === "IN_PROGRESS";
+      }
+      if (column === "READY") {
+        return order.status === "READY" && order.paymentStatus === "PAID";
+      }
+      if (column === "WAITING_FOR_PAYMENT") {
+        return (order.status === "READY" || order.status === "COMPLETED") && order.paymentStatus !== "PAID";
+      }
+      return false;
+    });
   };
 
-  const getStatusConfig = (status: OrderStatus) => {
-    const config: Record<string, { label: string; color: string; bg: string; borderColor: string; icon: any }> = {
+  const getStatusConfig = (column: KanbanColumn) => {
+    const config: Record<
+      KanbanColumn,
+      { label: string; color: string; bg: string; borderColor: string; icon: any }
+    > = {
       PENDING: { 
         label: "Menunggu Estimasi", 
         color: "text-secondary", 
@@ -97,15 +116,15 @@ export default function KanbanBoardPage() {
         borderColor: "border-chart-1",
         icon: CheckCircle 
       },
-      COMPLETED: { 
-        label: "Selesai", 
-        color: "text-muted-foreground", 
-        bg: "bg-muted", 
-        borderColor: "border-muted",
-        icon: CheckCircle 
+      WAITING_FOR_PAYMENT: { 
+        label: "Menunggu Pembayaran", 
+        color: "text-teal-600 dark:text-teal-400", 
+        bg: "bg-teal-100 dark:bg-teal-950/20", 
+        borderColor: "border-teal-500",
+        icon: Clock 
       },
     };
-    return config[status] || config["PENDING"];
+    return config[column] || config["PENDING"];
   };
 
   return (
@@ -128,30 +147,30 @@ export default function KanbanBoardPage() {
       {/* Board Area */}
       <main className="flex-1 overflow-x-auto overflow-y-hidden p-6">
         <div className="flex gap-6 h-full min-w-[1200px]">
-          {KANBAN_STATUSES.map((status) => {
-            const statusConfig = getStatusConfig(status);
-            const statusOrders = getOrdersByStatus(status);
-            const Icon = statusConfig.icon;
+          {KANBAN_COLUMNS.map((column) => {
+            const columnConfig = getStatusConfig(column);
+            const columnOrders = getOrdersByColumn(column);
+            const Icon = columnConfig.icon;
 
             return (
-              <div key={status} className="flex-1 flex flex-col bg-muted/30 rounded-xl border border-border h-full max-w-xs xl:max-w-sm">
+              <div key={column} className="flex-1 flex flex-col bg-muted/30 rounded-xl border border-border h-full max-w-xs xl:max-w-sm">
                 {/* Column Header */}
                 <div className={`p-4 rounded-t-xl border-b border-border bg-card flex justify-between items-center sticky top-0 z-10 shadow-sm`}>
                   <div className="flex items-center gap-2">
-                    <div className={`p-2 rounded-lg ${statusConfig.bg}`}>
-                      <Icon className={`h-5 w-5 ${statusConfig.color}`} />
+                    <div className={`p-2 rounded-lg ${columnConfig.bg}`}>
+                      <Icon className={`h-5 w-5 ${columnConfig.color}`} />
                     </div>
-                    <h3 className="font-semibold text-foreground">{statusConfig.label}</h3>
+                    <h3 className="font-semibold text-foreground">{columnConfig.label}</h3>
                   </div>
                   <Badge variant="secondary" className="bg-muted text-muted-foreground">
-                    {statusOrders.length}
+                    {columnOrders.length}
                   </Badge>
                 </div>
 
                 {/* Cards Container */}
                 <div className="p-3 flex-1 overflow-y-auto space-y-3">
-                  {statusOrders.map((order) => (
-                    <Card key={order.id} className={`cursor-move hover:shadow-lg transition-all border-l-4 ${statusConfig.borderColor} group bg-card`}>
+                  {columnOrders.map((order) => (
+                    <Card key={order.id} className={`cursor-move hover:shadow-lg transition-all border-l-4 ${columnConfig.borderColor} group bg-card`}>
                       <CardContent className="p-4">
                         <div className="flex justify-between items-start mb-2">
                           <div>
@@ -175,7 +194,7 @@ export default function KanbanBoardPage() {
                               </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
-                              {status === "PENDING" && (
+                              {column === "PENDING" && (
                                 <DropdownMenuItem onClick={() => {
                                   setSelectedOrder(order);
                                   setProcessDialogOpen(true);
@@ -228,7 +247,7 @@ export default function KanbanBoardPage() {
                     </Card>
                   ))}
                   
-                  {statusOrders.length === 0 && (
+                  {columnOrders.length === 0 && (
                     <div className="h-full flex flex-col items-center justify-center text-muted-foreground min-h-[150px] border-2 border-dashed border-border rounded-lg bg-muted/30">
                       <p className="text-sm">Kosong</p>
                     </div>
