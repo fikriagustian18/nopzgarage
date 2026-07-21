@@ -49,7 +49,7 @@ import {
   WalletCards,
   KeyRound
 } from "lucide-react";
-import MermaidDiagram from "@/components/MermaidDiagram";
+import { MermaidDiagram } from "@/components/MermaidDiagram";
 
 export default function TechnicalDocsPage() {
   const router = useRouter();

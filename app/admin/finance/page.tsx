@@ -15,12 +15,12 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { getFinancialReports, getGeneralLedger } from "@/app/actions/finance";
-import BankAccountsManager from "@/components/admin/BankAccountsManager";
+import { BankAccountsManager } from "@/components/admin/BankAccountsManager";
 import { ExportButton } from "@/components/export/ExportButton";
 import { exportJournalEntries } from "@/lib/export/reports/journal-export";
 import type { JournalEntryExport } from "@/lib/export/types";
 
-type JournalEntry = {
+interface JournalEntry {
   id: string;
   date: Date;
   description: string;
@@ -32,7 +32,7 @@ type JournalEntry = {
     debit: number;
     credit: number;
   }[];
-};
+}
 
 export default function FinancePage() {
   const router = useRouter();

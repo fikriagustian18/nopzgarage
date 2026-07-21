@@ -2,7 +2,7 @@
 
 import { useEffect, useId, useState } from "react";
 
-export default function MermaidDiagram({ chart, className }: { chart: string; className?: string }) {
+export function MermaidDiagram({ chart, className }: { chart: string; className?: string }) {
   const id = useId().replace(/:/g, "");
   const [isMounted, setIsMounted] = useState(false);
   const [scale, setScale] = useState(1);

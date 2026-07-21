@@ -41,7 +41,7 @@ import { INDONESIAN_BANKS, getBankColor } from '@/lib/constants/banks';
 import { getBankAccounts, createBankAccount, deleteBankAccount, updateBankAccount } from '@/app/actions/bank';
 import { toast } from 'sonner';
 
-export default function BankAccountsManager() {
+export function BankAccountsManager() {
   const [accounts, setAccounts] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isDetailOpen, setIsDetailOpen] = useState(false);

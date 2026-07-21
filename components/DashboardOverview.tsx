@@ -26,7 +26,7 @@ import {
 import { format } from "date-fns";
 import { id } from "date-fns/locale";
 
-export default function DashboardOverview() {
+export function DashboardOverview() {
   const [stats, setStats] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
