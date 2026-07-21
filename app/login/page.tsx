@@ -128,14 +128,14 @@ export default function LoginPage() {
           <div className="mb-6 relative w-full h-[320px] hover:scale-[1.02] transition-transform duration-500">
             <Image
               src="/motorcycle_garage.png"
-              alt="Bengkelku Illustration"
+              alt="NopzGarage Illustration"
               fill
               className="object-contain dark:invert dark:opacity-80 transition-all"
               priority
             />
           </div>
           <h1 className="text-4xl font-black text-primary tracking-wider mb-2">
-            BENGKELKU
+            NopzGarage
           </h1>
           <h2 className="text-base font-semibold text-foreground/80 mb-4">
             Sistem Manajemen Antrian Bengkel & Laporan Keuangan
