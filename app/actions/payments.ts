@@ -42,21 +42,32 @@ function toNumber(val: any) {
 
 function serializeJournalItem(item: any) {
   if (!item) return null;
-  return {
+  const serialized = {
     ...item,
     debit: toNumber(item.debit),
     credit: toNumber(item.credit),
   };
+  if (serialized.account) {
+    serialized.account = {
+      ...serialized.account,
+      createdAt: serialized.account.createdAt instanceof Date ? serialized.account.createdAt.toISOString() : serialized.account.createdAt,
+    };
+  }
+  return serialized;
 }
 
 function serializeJournalEntry(entry: any) {
   if (!entry) return null;
-  return {
+  const serialized = {
     ...entry,
     date: entry.date instanceof Date ? entry.date.toISOString() : entry.date,
     createdAt: entry.createdAt instanceof Date ? entry.createdAt.toISOString() : entry.createdAt,
     items: entry.items?.map(serializeJournalItem) ?? [],
   };
+  if (serialized.payment) {
+    serialized.payment = serializePayment(serialized.payment);
+  }
+  return serialized;
 }
 
 function serializePayment(payment: any) {

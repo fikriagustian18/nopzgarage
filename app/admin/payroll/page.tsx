@@ -138,13 +138,13 @@ export default function PayrollPage() {
       if (payrollRes.success && payrollRes.payrolls) {
         // Parse details for each payroll
         const formatted = payrollRes.payrolls.map((p: any) => {
-          let detailsParsed = null;
-          try {
-            if (p.details) {
+          let detailsParsed = p.detailsParsed || null;
+          if (!detailsParsed && p.details) {
+            try {
               detailsParsed = JSON.parse(p.details);
+            } catch (e) {
+              detailsParsed = { bonusNote: p.details };
             }
-          } catch (e) {
-            console.error("Error parsing details", e);
           }
           return {
             ...p,
@@ -379,9 +379,13 @@ export default function PayrollPage() {
         {/* Header */}
         <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-black tracking-tight text-foreground">Gaji & Payroll</h1>
+            <h1 className="text-3xl font-black tracking-tight text-foreground">
+              {isOwner ? "Gaji & Payroll" : "Slip Gaji Saya"}
+            </h1>
             <p className="text-muted-foreground mt-1">
-              Manajemen gaji harian, bagi hasil komisi mekanik, persetujuan dan slip pembayaran.
+              {isOwner 
+                ? "Manajemen gaji harian, bagi hasil komisi mekanik, persetujuan dan slip pembayaran." 
+                : "Riwayat dan rincian slip gaji Anda."}
             </p>
           </div>
           <div className="flex items-center gap-2 w-full md:w-auto">

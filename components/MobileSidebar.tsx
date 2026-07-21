@@ -220,7 +220,9 @@ export function MobileSidebar() {
                   }`}
                 >
                   <Icon className={`h-5 w-5 ${active ? "text-white" : "text-muted-foreground group-hover:text-primary transition-colors"}`} />
-                  <span className="font-medium">{item.label}</span>
+                  <span className="font-medium">
+                     {item.href === "/admin/payroll" && userRole === "ADMIN" ? "Slip Gaji" : item.label}
+                  </span>
                 </Link>
               );
             })}

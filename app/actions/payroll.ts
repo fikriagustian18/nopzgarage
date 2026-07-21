@@ -30,19 +30,32 @@ function toNumber(val: any) {
 
 function serializeJournalItem(item: any) {
   if (!item) return null;
-  return {
+  const serialized = {
     ...item,
     debit: toNumber(item.debit),
     credit: toNumber(item.credit),
   };
+  if (serialized.account) {
+    serialized.account = {
+      ...serialized.account,
+      createdAt: serialized.account.createdAt instanceof Date ? serialized.account.createdAt.toISOString() : serialized.account.createdAt,
+    };
+  }
+  return serialized;
 }
 
 function serializeJournalEntry(entry: any) {
   if (!entry) return null;
-  return {
+  const serialized = {
     ...entry,
+    date: entry.date instanceof Date ? entry.date.toISOString() : entry.date,
+    createdAt: entry.createdAt instanceof Date ? entry.createdAt.toISOString() : entry.createdAt,
     items: entry.items?.map(serializeJournalItem) ?? [],
   };
+  if (serialized.payment) {
+    serialized.payment = serializePayment(serialized.payment);
+  }
+  return serialized;
 }
 
 function serializePayment(payment:any) {
@@ -275,10 +288,20 @@ export async function getPayrolls(filters?: {
     });
 
     // Parse details JSON
-    const parsedPayrolls = payrolls.map((p) => ({
-      ...p,
-      detailsParsed: p.details ? JSON.parse(p.details) : null,
-    }));
+    const parsedPayrolls = payrolls.map((p) => {
+      let detailsParsed = null;
+      if (p.details) {
+        try {
+          detailsParsed = JSON.parse(p.details);
+        } catch (e) {
+          detailsParsed = { bonusNote: p.details };
+        }
+      }
+      return {
+        ...p,
+        detailsParsed,
+      };
+    });
 
     return { success: true, payrolls: parsedPayrolls.map(serializePayroll) };
   } catch (error) {
@@ -333,9 +356,14 @@ export async function getPayrollDetail(payrollId: string) {
     }
 
     // Parse details
-    const detailsParsed = payroll.details 
-      ? JSON.parse(payroll.details) 
-      : null;
+    let detailsParsed = null;
+    if (payroll.details) {
+      try {
+        detailsParsed = JSON.parse(payroll.details);
+      } catch (e) {
+        detailsParsed = { bonusNote: payroll.details };
+      }
+    }
 
     return { 
       success: true, 
@@ -380,9 +408,14 @@ export async function updatePayroll(
     }
 
     // Parse existing details
-    const details: PayrollDetail = payroll.details 
-      ? JSON.parse(payroll.details) 
-      : {};
+    let details: PayrollDetail = {};
+    if (payroll.details) {
+      try {
+        details = JSON.parse(payroll.details) as PayrollDetail;
+      } catch (e) {
+        details = { bonusNote: payroll.details };
+      }
+    }
 
     // Update bonus
     const newBonus = updates.bonusAmount ?? Number(payroll.bonus);
