@@ -22,7 +22,7 @@ export function NotificationPanel() {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
 
-  const loadNotifications = async () => {
+  async function loadNotifications() {
     // 1. Get Client notifications (localStorage)
     const clientNotifications = getNotifications();
 
@@ -42,26 +42,11 @@ export function NotificationPanel() {
           actor: log.userName || (log.userId ? "User" : "System")
         }));
 
-        // Merge: We want to show both. 
-        // Strategy: Use client notifications for immediate feedback + server logs for history.
-        // However, this duplication might be annoying if both fire. 
-        // For now, let's just prepend unique server logs that aren't in client store if we want, OR
-        // simpler: Display Server Logs mostly. But client notifications handle the "Toasts".
-        // Let's MERGE them by timestamp.
-        
-        // Combine arrays
         const combined = [...clientNotifications, ...serverNotifications];
-        
-        // Deduplicate by ID (if possible) or content. 
-        // Since client logs are ephemeral/localStorage and server logs are persistent DB, IDs are different.
-        // Client ID: Date.now(). Server ID: cuid. Safe to merge.
-        
-        // Sort by date desc
         const sorted = combined.sort((a, b) => 
            new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
         );
         
-        // Limit to 50
         setNotifications(sorted.slice(0, 50));
       } else {
         setNotifications(clientNotifications);
@@ -72,24 +57,24 @@ export function NotificationPanel() {
     }
 
     setUnreadCount(getUnreadCount());
-  };
+  }
 
   // Helper to map log action to visual type
-  const mapActionToType = (action: string) => {
+  function mapActionToType(action: string) {
     if (action.includes("CREATE")) return "success";
     if (action.includes("UPDATE")) return "info";
     if (action.includes("DELETE")) return "error";
     if (action.includes("PAYMENT")) return "success";
     return "system";
-  };
+  }
 
   useEffect(() => {
     loadNotifications();
 
     // Listen for new notifications
-    const handleNewNotification = () => {
+    function handleNewNotification() {
       loadNotifications();
-    };
+    }
 
     window.addEventListener("notification-added", handleNewNotification);
     
@@ -102,20 +87,20 @@ export function NotificationPanel() {
     };
   }, []);
 
-  const handleMarkAsRead = (id: string) => {
+  function handleMarkAsRead(id: string) {
     markAsRead(id);
     loadNotifications();
-  };
+  }
 
-  const handleMarkAllAsRead = () => {
+  function handleMarkAllAsRead() {
     markAllAsRead();
     loadNotifications();
-  };
+  }
 
-  const handleClear = () => {
+  function handleClear() {
     clearNotifications();
     loadNotifications();
-  };
+  }
 
   return (
     <div className="relative">

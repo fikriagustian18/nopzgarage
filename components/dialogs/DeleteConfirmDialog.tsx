@@ -36,7 +36,7 @@ export function DeleteConfirmDialog({
 }: DeleteConfirmDialogProps) {
   const [loading, setLoading] = useState(false);
 
-  const handleDelete = async () => {
+  async function handleDelete() {
     setLoading(true);
 
     try {

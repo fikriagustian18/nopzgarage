@@ -36,7 +36,7 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
     setLoading(true);
@@ -83,9 +83,9 @@ export default function LoginPage() {
       setError("Terjadi kesalahan. Silakan coba lagi.");
       setLoading(false);
     }
-  };
+  }
 
-  const handleForgotPassword = async () => {
+  async function handleForgotPassword() {
     if (!forgotEmail) {
       toast.error("Masukkan email Anda");
       return;

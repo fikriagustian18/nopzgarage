@@ -32,7 +32,7 @@ export function EmployeeDeleteDialog({
 }: EmployeeDeleteDialogProps) {
   const [loading, setLoading] = useState(false);
 
-  const handleDelete = async () => {
+  async function handleDelete() {
     setLoading(true);
     try {
       const result = await deactivateEmployee(employeeId);

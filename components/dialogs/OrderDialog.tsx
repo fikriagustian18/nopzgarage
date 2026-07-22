@@ -94,7 +94,7 @@ export function OrderDialog({
     }
   }, [order, mode, open]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     
     if (mode === "view") return;

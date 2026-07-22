@@ -21,18 +21,18 @@ import { Avatar, AvatarFallback } from "@/components/ui/Avatar";
 export function EmployeeHeader() {
   const { data: session } = useSession();
 
-  const getInitials = (name: string) => {
+  function getInitials(name: string) {
     return name
       .split(" ")
       .map((n) => n[0])
       .join("")
       .toUpperCase()
       .slice(0, 2);
-  };
+  }
 
-  const handleLogout = async () => {
+  async function handleLogout() {
     await signOut({ callbackUrl: "/login" });
-  };
+  }
 
   return (
     <header className="sticky top-0 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 z-50">

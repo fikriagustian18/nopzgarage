@@ -24,16 +24,16 @@ export function AdminHeader() {
   const pathname = usePathname();
   const router = useRouter();
 
-  const getInitials = (name: string) => {
+  function getInitials(name: string) {
     return name
       .split(" ")
       .map((n) => n[0])
       .join("")
       .toUpperCase()
       .slice(0, 2);
-  };
+  }
 
-  const getPageTitle = () => {
+  function getPageTitle() {
     if (pathname === "/admin") return "Dashboard";
     if (pathname === "/admin/orders/kanban") return "Antrian Servis";
     if (pathname.startsWith("/admin/orders")) return "Order Servis";
@@ -53,17 +53,17 @@ export function AdminHeader() {
     if (pathname.startsWith("/admin/settings")) return "Pengaturan";
     if (pathname.startsWith("/admin/profile")) return "Profil Pengguna";
     return "Dashboard";
-  };
+  }
 
-  const getRoleLabel = (role?: string) => {
+  function getRoleLabel(role?: string) {
     if (role === "OWNER") return "Owner";
     if (role === "ADMIN") return "Administrator";
     return role || "Administrator";
-  };
+  }
 
-  const handleLogout = async () => {
+  async function handleLogout() {
     await signOut({ callbackUrl: "/login" });
-  };
+  }
 
   return (
     <header className="sticky top-0 z-30 w-full border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">

@@ -164,16 +164,16 @@ export function MobileSidebar() {
     return false;
   });
 
-  const isActive = (href: string, exact?: boolean) => {
+  function isActive(href: string, exact?: boolean) {
     if (exact) {
       return pathname === href;
     }
     return pathname.startsWith(href);
-  };
+  }
 
-  const handleLogout = async () => {
+  async function handleLogout() {
     await signOut({ callbackUrl: "/login" });
-  };
+  }
 
   return (
     <Sheet open={open} onOpenChange={setOpen}>

@@ -42,10 +42,10 @@ export function ExportButton({
   const [showPreview, setShowPreview] = useState(false);
   const [selectedFormat, setSelectedFormat] = useState<ExportFormat>("pdf");
 
-  const handleExportClick = (format: ExportFormat) => {
+  function handleExportClick(format: ExportFormat) {
     setSelectedFormat(format);
     setShowPreview(true);
-  };
+  }
 
   return (
     <>

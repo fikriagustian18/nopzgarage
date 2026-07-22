@@ -221,13 +221,13 @@ export default function DatabaseConsolePublic() {
     localStorage.setItem("nopzgarage_query_history", JSON.stringify(updated));
   };
 
-  const handleClearHistory = () => {
+  function handleClearHistory() {
     setHistory([]);
     localStorage.removeItem("nopzgarage_query_history");
     toast.success("Riwayat kueri dibersihkan.");
-  };
+  }
 
-  const handleFormatJson = () => {
+  function handleFormatJson() {
     try {
       const parsed = JSON.parse(prismaArgs);
       setPrismaArgs(JSON.stringify(parsed, null, 2));
@@ -235,9 +235,9 @@ export default function DatabaseConsolePublic() {
     } catch (err: any) {
       toast.error(`Format JSON salah: ${err.message}`);
     }
-  };
+  }
 
-  const executeQuery = async () => {
+  async function executeQuery() {
     setLoading(true);
     setErrorMsg(null);
     setResultData(null);
@@ -280,9 +280,9 @@ export default function DatabaseConsolePublic() {
     } finally {
       setLoading(false);
     }
-  };
+  }
 
-  const handleApplyPreset = (modelName: string) => {
+  function handleApplyPreset(modelName: string) {
     const model = DB_MODELS.find(m => m.name === modelName);
     if (model) {
       setSelectedModel(modelName);
@@ -384,7 +384,7 @@ export default function DatabaseConsolePublic() {
   };
 
   // Filtered result table
-  const getFilteredResult = () => {
+  function getFilteredResult() {
     if (!resultData) return [];
     if (!Array.isArray(resultData)) return [resultData];
     

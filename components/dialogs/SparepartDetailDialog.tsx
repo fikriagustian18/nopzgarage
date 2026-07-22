@@ -60,8 +60,9 @@ export function SparepartDetailDialog({
 
   if (!sparepart) return null;
 
-  const handleStockInSubmit = async (e: React.FormEvent) => {
+  async function handleStockInSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (!sparepart) return;
     setLoading(true);
     try {
       const res = await addStock(
@@ -95,10 +96,11 @@ export function SparepartDetailDialog({
     } finally {
       setLoading(false);
     }
-  };
+  }
 
-  const handleStockOutSubmit = async (e: React.FormEvent) => {
+  async function handleStockOutSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (!sparepart) return;
     setLoading(true);
     try {
       const res = await reduceStock(
@@ -131,9 +133,10 @@ export function SparepartDetailDialog({
     } finally {
       setLoading(false);
     }
-  };
+  }
 
-  const getStatusBadge = () => {
+  function getStatusBadge() {
+    if (!sparepart) return null;
     if (sparepart.stock === 0) {
       return <Badge className="bg-red-100 text-red-700 hover:bg-red-100 border-red-200">Stok Habis</Badge>;
     }
@@ -141,7 +144,7 @@ export function SparepartDetailDialog({
       return <Badge className="bg-amber-100 text-amber-800 hover:bg-amber-100 border-amber-200">Stok Menipis</Badge>;
     }
     return <Badge className="bg-emerald-100 text-emerald-700 hover:bg-emerald-100 border-emerald-200">Tersedia</Badge>;
-  };
+  }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>

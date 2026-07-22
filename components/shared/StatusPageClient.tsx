@@ -47,7 +47,7 @@ export function StatusPageClient({ generalSettings = {}, session }: StatusPageCl
   const [error, setError] = useState("");
   const [orders, setOrders] = useState<any[]>([]);
 
-  const handleSearch = async (e: React.FormEvent) => {
+  async function handleSearch(e: React.FormEvent) {
     e.preventDefault();
     if (!searchQuery.trim()) return;
 
@@ -68,9 +68,9 @@ export function StatusPageClient({ generalSettings = {}, session }: StatusPageCl
       setLoading(false);
       setError("Terjadi kesalahan sistem saat mencari data.");
     }
-  };
+  }
 
-  const getStatusLabel = (status: string) => {
+  function getStatusLabel(status: string) {
     const statusMap: any = {
       'PENDING': 'MENUNGGU KONFIRMASI',
       'ESTIMATED': 'SUDAH DIESTIMASI',
@@ -82,26 +82,26 @@ export function StatusPageClient({ generalSettings = {}, session }: StatusPageCl
       'CANCELLED': 'DIBATALKAN',
     };
     return statusMap[status] || status;
-  };
+  }
 
-  const maskPhone = (phone: string) => {
+  function maskPhone(phone: string) {
     if (!phone) return "-";
     const cleaned = phone.trim();
     if (cleaned.length <= 6) return cleaned;
     return cleaned.slice(0, 4) + "-****-" + cleaned.slice(-4);
-  };
+  }
 
-  const formatScheduledDate = (dateStr: any) => {
+  function formatScheduledDate(dateStr: any) {
     if (!dateStr) return "-";
     try {
       return format(new Date(dateStr), "dd MMMM yyyy, HH:mm", { locale: id });
     } catch (e) {
       return "-";
     }
-  };
+  }
 
   // Stepper milestones helper
-  const getMilestoneState = (status: string, stepNum: number) => {
+  function getMilestoneState(status: string, stepNum: number) {
     // 1: Booking Diterima, 2: Antrian Servis, 3: Sedang Dikerjakan, 4: Selesai
     if (status === "CANCELLED") return "inactive";
 
@@ -120,7 +120,7 @@ export function StatusPageClient({ generalSettings = {}, session }: StatusPageCl
     if (currentWeight > stepNum) return "completed";
     if (currentWeight === stepNum) return "active";
     return "inactive";
-  };
+  }
 
   return (
     <div className="min-h-screen bg-background text-foreground overflow-x-hidden antialiased">

@@ -3,12 +3,12 @@
 import { prisma } from '@/lib/prisma';
 import { auth } from '@/lib/auth';
 
-const toNumber = (val: any) => {
+function toNumber(val: any) {
   if (!val) return 0;
   if (typeof val === 'number') return val;
   if (val && typeof val.toNumber === 'function') return val.toNumber();
   return Number(val);
-};
+}
 
 // ==================== Get Financial Reports ====================
 /**

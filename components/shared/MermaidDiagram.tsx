@@ -14,7 +14,7 @@ export function MermaidDiagram({ chart, className }: { chart: string; className?
   useEffect(() => {
     if (!isMounted) return;
 
-    const init = async () => {
+    async function init() {
       try {
         const mermaid = (await import("mermaid")).default;
         mermaid.initialize({
@@ -61,15 +61,15 @@ export function MermaidDiagram({ chart, className }: { chart: string; className?
           element.appendChild(errorContainer);
         }
       }
-    };
+    }
     init();
   }, [chart, id, isMounted]);
 
   if (!isMounted) return <div className="animate-pulse h-64 w-full bg-muted/20 rounded-lg flex items-center justify-center text-muted-foreground text-sm">Loading Diagram...</div>;
 
-  const handleZoomIn = () => setScale(prev => Math.min(prev + 0.2, 5));
-  const handleZoomOut = () => setScale(prev => Math.max(prev - 0.2, 0.2));
-  const handleReset = () => setScale(1);
+  function handleZoomIn() { setScale(prev => Math.min(prev + 0.2, 5)); }
+  function handleZoomOut() { setScale(prev => Math.max(prev - 0.2, 0.2)); }
+  function handleReset() { setScale(1); }
 
   return (
     <div className="relative w-full border rounded-lg bg-card shadow-sm overflow-hidden group">

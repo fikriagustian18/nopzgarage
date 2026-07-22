@@ -62,7 +62,7 @@ export function ExportPreviewDialog({
     }
   }, [format, orientation]);
 
-  const generatePreview = async () => {
+  async function generatePreview() {
     setIsGenerating(true);
     try {
       const blob = await onExport(format, orientation);
@@ -84,9 +84,9 @@ export function ExportPreviewDialog({
     } finally {
       setIsGenerating(false);
     }
-  };
+  }
 
-  const handleDownload = async () => {
+  async function handleDownload() {
     setIsGenerating(true);
     try {
       const blob = await onExport(format, orientation);

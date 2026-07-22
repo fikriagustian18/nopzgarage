@@ -104,36 +104,36 @@ export function ProcessOrderDialog({
   const totalPrice = items.reduce((sum, item) => sum + item.qty * item.price, 0);
   const totalFee = fees.reduce((sum, f) => sum + f.amount, 0);
 
-  const handleAddService = () => {
+  function handleAddService() {
     setItems([...items, { name: "", qty: 1, price: 0, type: "service" }]);
-  };
+  }
 
-  const handleAddPart = () => {
+  function handleAddPart() {
     setItems([...items, { name: "", qty: 1, price: 0, type: "part" }]);
-  };
+  }
 
-  const handleAddItem = () => {
+  function handleAddItem() {
     setItems([...items, { name: "", qty: 1, price: 0, type: "service" }]);
-  };
+  }
 
-  const handleRemoveItem = (index: number) => {
+  function handleRemoveItem(index: number) {
     setItems(items.filter((_, i) => i !== index));
-  };
+  }
 
-  const handleUpdateItem = (index: number, updates: Partial<OrderItem>) => {
+  function handleUpdateItem(index: number, updates: Partial<OrderItem>) {
     setItems(prevItems => {
       const newItems = [...prevItems];
       newItems[index] = { ...newItems[index], ...updates };
       return newItems;
     });
-  };
+  }
 
   // Fee Handlers
-  const handleAddFee = () => {
+  function handleAddFee() {
     setFees([...fees, { employeeId: "", name: "", amount: 0 }]);
-  };
+  }
 
-  const handleUpdateFee = (index: number, field: keyof FeeAllocation, value: any) => {
+  function handleUpdateFee(index: number, field: keyof FeeAllocation, value: any) {
     const newFees = [...fees];
     if (field === 'employeeId') {
       const emp = employees.find(e => e.id === value);
@@ -159,13 +159,13 @@ export function ProcessOrderDialog({
       newFees[index] = { ...newFees[index], [field]: value };
     }
     setFees(newFees);
-  };
+  }
 
-  const handleRemoveFee = (index: number) => {
+  function handleRemoveFee(index: number) {
     setFees(fees.filter((_, i) => i !== index));
-  };
+  }
 
-  const handleLeadMechanicChange = (value: string) => {
+  function handleLeadMechanicChange(value: string) {
     setSelectedLeadId(value);
     if (value) {
       const isAlreadyInFees = fees.some(f => f.employeeId === value);
@@ -187,10 +187,10 @@ export function ProcessOrderDialog({
         }
       }
     }
-  };
+  }
 
   // Validate and show confirmation
-  const handleValidateAndConfirm = () => {
+  function handleValidateAndConfirm() {
     if (!selectedLeadId) {
       toast({
         variant: "destructive",

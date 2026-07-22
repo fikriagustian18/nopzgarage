@@ -50,7 +50,7 @@ export function LiveQueueList() {
     return () => clearInterval(interval);
   }, [dateFilter]);
 
-  const getStatusInfo = (status: string) => {
+  function getStatusInfo(status: string) {
     switch (status) {
       case "QUEUE": 
       case "PENDING":

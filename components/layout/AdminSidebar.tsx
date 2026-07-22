@@ -157,16 +157,16 @@ export function AdminSidebar() {
     return false;
   });
 
-  const isActive = (href: string, exact?: boolean) => {
+  function isActive(href: string, exact?: boolean) {
     if (exact) {
       return pathname === href;
     }
     return pathname.startsWith(href);
-  };
+  }
 
-  const handleLogout = async () => {
+  async function handleLogout() {
     await signOut({ callbackUrl: "/login" });
-  };
+  }
 
   return (
     <aside className="hidden md:flex fixed left-0 top-0 h-full w-64 flex-col bg-sidebar border-r border-sidebar-border text-sidebar-foreground z-50">

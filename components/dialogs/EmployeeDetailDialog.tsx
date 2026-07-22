@@ -135,10 +135,11 @@ export function EmployeeDetailDialog({
   }
 
   // Helper formats
-  const formatMoney = (val: number) => 
-    new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", maximumFractionDigits: 0 }).format(val);
+  function formatMoney(val: number) {
+    return new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", maximumFractionDigits: 0 }).format(val);
+  }
 
-  const getJobDesc = (order: any) => {
+  function getJobDesc(order: any) {
     if (!order) return "";
     try {
         const items = typeof order.items === 'string' ? JSON.parse(order.items) : order.items;

@@ -74,7 +74,7 @@ export function EmployeeDialog({
     }
   }, [open, mode, employee]);
 
-  const handleSubmit = async () => {
+  async function handleSubmit() {
     if (!formData.name || !formData.role) {
       toast({
         variant: "destructive",

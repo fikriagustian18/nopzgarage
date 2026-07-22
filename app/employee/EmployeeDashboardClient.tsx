@@ -40,7 +40,7 @@ export function EmployeeDashboardClient({ employee, user }: EmployeeDashboardCli
   const router = useRouter();
   const [updatingId, setUpdatingId] = useState<string | null>(null);
 
-  const handleUpdateStatus = async (orderId: string, newStatus: string) => {
+  async function handleUpdateStatus(orderId: string, newStatus: string) {
     setUpdatingId(orderId);
     try {
       const { updateOrderStatus } = await import("@/lib/actions/orders");

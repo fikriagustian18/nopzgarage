@@ -37,7 +37,7 @@ export function PaymentConfirmDialog({
 }: PaymentConfirmDialogProps) {
     const [loading, setLoading] = useState(false);
 
-    const handleConfirm = async () => {
+    async function handleConfirm() {
         setLoading(true);
         try {
             await onConfirm();
