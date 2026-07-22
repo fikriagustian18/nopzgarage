@@ -1,14 +1,14 @@
 import { auth } from "@/lib/auth";
 import Link from "next/link";
-import { BookingForm } from "@/components/BookingForm";
-import { LiveQueueList } from "@/components/LiveQueueList";
-import { ThemeToggle } from "@/components/ThemeToggle";
+import { BookingForm } from "@/components/booking/BookingForm";
+import { LiveQueueList } from "@/components/shared/LiveQueueList";
+import { ThemeToggle } from "@/components/shared/ThemeToggle";
 import { Button } from "@/components/ui/Button";
-import { getAllSettings, GeneralSettings, HolidaySettings } from "@/app/actions/settings";
-import { getMediaGallery } from "@/app/actions/mediaGallery";
-import { getSocialEmbeds } from "@/app/actions/socialEmbeds";
-import { MediaGalleryDisplay } from "@/components/MediaGalleryDisplay";
-import { SocialEmbedsDisplay } from "@/components/SocialEmbedsDisplay";
+import { getAllSettings, GeneralSettings, HolidaySettings } from "@/lib/actions/settings";
+import { getMediaGallery } from "@/lib/actions/mediaGallery";
+import { getSocialEmbeds } from "@/lib/actions/socialEmbeds";
+import { MediaGalleryDisplay } from "@/components/shared/MediaGalleryDisplay";
+import { SocialEmbedsDisplay } from "@/components/shared/SocialEmbedsDisplay";
 import { 
   Wrench, 
   Clock, 

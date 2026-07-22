@@ -1,8 +1,8 @@
 // components/AdminHeader.tsx
 "use client";
 
-import { ThemeToggle } from "./ThemeToggle";
-import { NotificationPanel } from "./NotificationPanel";
+import { ThemeToggle } from "@/components/shared/ThemeToggle";
+import { NotificationPanel } from "@/components/shared/NotificationPanel";
 import { MobileSidebar } from "./MobileSidebar";
 import { cn } from "@/lib/utils";
 import { useSession, signOut } from "next-auth/react";

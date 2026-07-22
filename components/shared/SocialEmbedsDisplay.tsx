@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
-import { SocialEmbedItem } from "@/app/actions/socialEmbeds";
+import { SocialEmbedItem } from "@/lib/actions/socialEmbeds";
 import { Card, CardContent } from "@/components/ui/Card";
 import { ExternalLink, Instagram, Music, Youtube } from "lucide-react";
 

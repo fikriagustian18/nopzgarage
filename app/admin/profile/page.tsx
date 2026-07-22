@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
-import { RoleGuard } from "@/components/RoleGuard";
+import { RoleGuard } from "@/components/shared/RoleGuard";
 import {
   User,
   Mail,
@@ -41,7 +41,7 @@ import {
   getCurrentProfile,
   updateCurrentProfile,
   changeCurrentPassword,
-} from "@/app/actions/auth";
+} from "@/lib/actions/auth";
 
 type UserProfile = {
   id: string;

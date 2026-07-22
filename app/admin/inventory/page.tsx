@@ -2,7 +2,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { RoleGuard } from "@/components/RoleGuard";
+import { RoleGuard } from "@/components/shared/RoleGuard";
 import {
   Plus,
   Search,
@@ -23,9 +23,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Badge } from "@/components/ui/Badge";
-import { getSpareParts, deleteSparePart } from "@/app/actions/inventory";
-import { SparepartDialog } from "@/components/SparepartDialog";
-import { SparepartDetailDialog } from "@/components/SparepartDetailDialog";
+import { getSpareParts, deleteSparePart } from "@/lib/actions/inventory";
+import { SparepartDialog } from "@/components/dialogs/SparepartDialog";
+import { SparepartDetailDialog } from "@/components/dialogs/SparepartDetailDialog";
 import { ExportButton } from "@/components/export/ExportButton";
 import { exportInventory } from "@/lib/export/reports/inventoryExport";
 import type { InventoryItemExport } from "@/lib/export/types";

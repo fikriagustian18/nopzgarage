@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { RoleGuard } from "@/components/RoleGuard";
-import { getFinancialReports, getGeneralLedger, getOperationalReports } from "@/app/actions/finance";
+import { RoleGuard } from "@/components/shared/RoleGuard";
+import { getFinancialReports, getGeneralLedger, getOperationalReports } from "@/lib/actions/finance";
 import { Button } from "@/components/ui/Button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";

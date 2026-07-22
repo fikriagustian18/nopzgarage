@@ -4,7 +4,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/Button";
-import { RoleGuard } from "@/components/RoleGuard";
+import { RoleGuard } from "@/components/shared/RoleGuard";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/Tabs";
@@ -49,7 +49,7 @@ import {
   WalletCards,
   KeyRound
 } from "lucide-react";
-import { MermaidDiagram } from "@/components/MermaidDiagram";
+import { MermaidDiagram } from "@/components/shared/MermaidDiagram";
 
 export default function TechnicalDocsPage() {
   const router = useRouter();

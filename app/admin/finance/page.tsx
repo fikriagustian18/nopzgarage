@@ -3,7 +3,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { RoleGuard } from "@/components/RoleGuard";
+import { RoleGuard } from "@/components/shared/RoleGuard";
 import {
   TrendingUp,
   TrendingDown,
@@ -14,7 +14,7 @@ import {
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
-import { getFinancialReports, getGeneralLedger } from "@/app/actions/finance";
+import { getFinancialReports, getGeneralLedger } from "@/lib/actions/finance";
 import { BankAccountsManager } from "@/components/admin/BankAccountsManager";
 import { ExportButton } from "@/components/export/ExportButton";
 import { exportJournalEntries } from "@/lib/export/reports/journalExport";

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { getContent, updateContent } from "@/app/actions/content";
+import { getContent, updateContent } from "@/lib/actions/content";
 import { 
   Plus, Trash2, GripVertical, Check, 
   Zap, Settings, Wrench, Clock, Shield, Award, Star, Heart, Target, ThumbsUp,
@@ -17,7 +17,7 @@ import { Switch } from "@/components/ui/Switch";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/Tabs";
-import { Slider } from "./ui/Slider";
+import { Slider } from "@/components/ui/Slider";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/Select";
 
 // Available Icons for Services

@@ -10,7 +10,7 @@ import {
   DialogFooter,
 } from "@/components/ui/Dialog";
 import { Button } from "@/components/ui/Button";
-import { deactivateEmployee } from "@/app/actions/employees";
+import { deactivateEmployee } from "@/lib/actions/employees";
 import { toast } from "@/hooks/useToast";
 import { Loader2, AlertTriangle } from "lucide-react";
 import { notifyEmployeeDeleted } from "@/hooks/useNotification";

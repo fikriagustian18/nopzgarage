@@ -8,7 +8,7 @@ import {
   updateSocialEmbed,
   deleteSocialEmbed,
   SocialEmbedItem,
-} from "@/app/actions/socialEmbeds";
+} from "@/lib/actions/socialEmbeds";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Label } from "@/components/ui/Label";

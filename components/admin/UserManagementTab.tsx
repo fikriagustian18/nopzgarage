@@ -2,8 +2,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { getUsers, createUser, updateUser, resetUserPassword, deleteUser } from "@/app/actions/auth";
-import { getEmployees } from "@/app/actions/employees";
+import { getUsers, createUser, updateUser, resetUserPassword, deleteUser } from "@/lib/actions/auth";
+import { getEmployees } from "@/lib/actions/employees";
 import { Card, CardContent } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";

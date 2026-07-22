@@ -1,14 +1,14 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { RoleGuard } from "@/components/RoleGuard";
+import { RoleGuard } from "@/components/shared/RoleGuard";
 import { 
     getIncomeCategories, 
     createIncome, 
     getIncomeRecords, 
     deleteIncome,
     CreateIncomeInput 
-} from "@/app/actions/income";
+} from "@/lib/actions/income";
 import { format } from "date-fns";
 import { id } from "date-fns/locale";
 import { 

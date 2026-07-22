@@ -1,7 +1,7 @@
 // app/booking/page.tsx
 import { auth } from "@/lib/auth";
-import { getAllSettings } from "@/app/actions/settings";
-import { BookingWizard } from "@/components/BookingWizard";
+import { getAllSettings } from "@/lib/actions/settings";
+import { BookingWizard } from "@/components/booking/BookingWizard";
 
 export const dynamic = "force-dynamic";
 

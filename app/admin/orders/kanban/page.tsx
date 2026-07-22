@@ -23,10 +23,10 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/DropdownMenu";
-import { getAdminOrders } from "@/app/actions/orders";
+import { getAdminOrders } from "@/lib/actions/orders";
 import { OrderStatus, PaymentStatus } from "@prisma/client";
-import { ProcessOrderDialog } from "@/components/ProcessOrderDialog";
-import { OrderDialog } from "@/components/OrderDialog";
+import { ProcessOrderDialog } from "@/components/dialogs/ProcessOrderDialog";
+import { OrderDialog } from "@/components/dialogs/OrderDialog";
 
 type KanbanOrder = {
   id: string;

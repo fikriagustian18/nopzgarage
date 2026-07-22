@@ -1,7 +1,7 @@
 "use client";
 
-import { WebsiteContentTab } from "@/components/WebsiteContentTab";
-import { RoleGuard } from "@/components/RoleGuard";
+import { WebsiteContentTab } from "@/components/admin/WebsiteContentTab";
+import { RoleGuard } from "@/components/shared/RoleGuard";
 
 /**
  * Halaman Manajemen Konten Website (CMS).

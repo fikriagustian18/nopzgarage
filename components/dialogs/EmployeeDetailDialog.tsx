@@ -22,7 +22,7 @@ import {
   User,
   DollarSign
 } from "lucide-react";
-import { getEmployeeDetail } from "@/app/actions/employees";
+import { getEmployeeDetail } from "@/lib/actions/employees";
 import { format } from "date-fns";
 import { id } from "date-fns/locale";
 import { PaymentConfirmDialog } from "./PaymentConfirmDialog";
@@ -111,7 +111,7 @@ export function EmployeeDetailDialog({
     // setPayLoading(true); // Handled by Dialog
     try {
         if (confirmState.type === 'BULK') {
-            const { payAllCommissions } = await import("@/app/actions/employees");
+            const { payAllCommissions } = await import("@/lib/actions/employees");
             const res = await payAllCommissions(employeeId);
             if (res.success) {
                 // alert(`Berhasil membayar Rp ${res.amount?.toLocaleString()} untuk ${res.count} order.`);
@@ -121,7 +121,7 @@ export function EmployeeDetailDialog({
             }
         } else {
             if (!confirmState.fee) return;
-            const { payCommission } = await import("@/app/actions/employees");
+            const { payCommission } = await import("@/lib/actions/employees");
             const res = await payCommission(confirmState.fee.id);
             if (res.success) {
                 fetchDetail();

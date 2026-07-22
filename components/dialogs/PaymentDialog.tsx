@@ -12,7 +12,7 @@ import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Label } from "@/components/ui/Label";
 import { Textarea } from "@/components/ui/Textarea";
-import { createPayment } from "@/app/actions/payments";
+import { createPayment } from "@/lib/actions/payments";
 import { toast } from "@/hooks/useToast";
 import { Loader2, DollarSign } from "lucide-react";
 import { formatCurrency } from "@/lib/utils"; 
@@ -88,7 +88,7 @@ export function PaymentDialog({
       // but here we use standard import at top level usually. Let's assume we can fetch bank list.
       // Since getBankAccounts is a server action, let's assume we can import it.
       // Actually we need to import it at the top. Let's add import.
-      const { getBankAccounts } = await import("@/app/actions/bank");
+      const { getBankAccounts } = await import("@/lib/actions/bank");
       const res = await getBankAccounts();
       if (res.success && res.data) {
           setBanks(res.data.filter((b: any) => b.isActive));

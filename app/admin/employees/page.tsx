@@ -3,7 +3,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { RoleGuard } from "@/components/RoleGuard";
+import { RoleGuard } from "@/components/shared/RoleGuard";
 import {
   Users,
   DollarSign,
@@ -31,10 +31,10 @@ import {
   DialogDescription,
   DialogFooter,
 } from "@/components/ui/Dialog";
-import { getEmployees, reactivateEmployee, getEmployeeStats } from "@/app/actions/employees";
-import { EmployeeDialog } from "@/components/EmployeeDialog";
-import { EmployeeDeleteDialog } from "@/components/EmployeeDeleteDialog";
-import { EmployeeDetailDialog } from "@/components/EmployeeDetailDialog";
+import { getEmployees, reactivateEmployee, getEmployeeStats } from "@/lib/actions/employees";
+import { EmployeeDialog } from "@/components/dialogs/EmployeeDialog";
+import { EmployeeDeleteDialog } from "@/components/dialogs/EmployeeDeleteDialog";
+import { EmployeeDetailDialog } from "@/components/dialogs/EmployeeDetailDialog";
 import { Toaster } from "@/components/ui/Toaster";
 import { toast } from "sonner";
 import { 

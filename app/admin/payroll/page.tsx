@@ -4,15 +4,15 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
-import { RoleGuard } from "@/components/RoleGuard";
+import { RoleGuard } from "@/components/shared/RoleGuard";
 import {
   getPayrolls,
   bulkGeneratePayroll,
   updatePayroll,
   deletePayroll,
-} from "@/app/actions/payroll";
-import { getBankAccounts } from "@/app/actions/bank";
-import { createPayment } from "@/app/actions/payments";
+} from "@/lib/actions/payroll";
+import { getBankAccounts } from "@/lib/actions/bank";
+import { createPayment } from "@/lib/actions/payments";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";

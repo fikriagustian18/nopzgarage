@@ -3,11 +3,11 @@
 
 import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
-import { RoleGuard } from "@/components/RoleGuard";
-import { getDashboardStats } from "@/app/actions/dashboard";
-import { getEmployees } from "@/app/actions/employees";
-import { getAdminOrders } from "@/app/actions/orders";
-import { getSpareParts } from "@/app/actions/inventory";
+import { RoleGuard } from "@/components/shared/RoleGuard";
+import { getDashboardStats } from "@/lib/actions/dashboard";
+import { getEmployees } from "@/lib/actions/employees";
+import { getAdminOrders } from "@/lib/actions/orders";
+import { getSpareParts } from "@/lib/actions/inventory";
 import { 
     Card, 
     CardContent, 

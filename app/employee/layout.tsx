@@ -2,7 +2,7 @@
 import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { requireRole } from "@/lib/authCheck";
-import { EmployeeHeader } from "@/components/EmployeeHeader";
+import { EmployeeHeader } from "@/components/layout/EmployeeHeader";
 
 export default async function EmployeeLayout({
   children,

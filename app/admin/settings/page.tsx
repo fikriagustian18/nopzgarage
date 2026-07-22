@@ -3,10 +3,10 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
-import { RoleGuard } from "@/components/RoleGuard";
-import { getAllSettings, updateSetting, GeneralSettings, HolidaySettings } from "@/app/actions/settings";
-import { getRecentLogs } from "@/app/actions/logs";
-import { getUsers } from "@/app/actions/auth";
+import { RoleGuard } from "@/components/shared/RoleGuard";
+import { getAllSettings, updateSetting, GeneralSettings, HolidaySettings } from "@/lib/actions/settings";
+import { getRecentLogs } from "@/lib/actions/logs";
+import { getUsers } from "@/lib/actions/auth";
 import { formatDistanceToNow } from "date-fns";
 import { id as idLocale } from "date-fns/locale";
 import {
@@ -36,10 +36,10 @@ import { Switch } from "@/components/ui/Switch";
 import { Textarea } from "@/components/ui/Textarea";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/Badge";
-import { UserManagementTab } from "@/components/UserManagementTab";
-import { ForgotPasswordRequestsTab } from "@/components/ForgotPasswordRequestsTab";
+import { UserManagementTab } from "@/components/admin/UserManagementTab";
+import { ForgotPasswordRequestsTab } from "@/components/admin/ForgotPasswordRequestsTab";
 
-import { BankAccountsTab } from "@/components/BankAccountsTab";
+import { BankAccountsTab } from "@/components/admin/BankAccountsTab";
 
 export default function SettingsPage() {
   const router = useRouter();

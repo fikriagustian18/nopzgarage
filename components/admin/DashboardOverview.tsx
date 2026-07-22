@@ -2,7 +2,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { getDashboardStats } from "@/app/actions/dashboard";
+import { getDashboardStats } from "@/lib/actions/dashboard";
 import { 
     Card, 
     CardContent, 

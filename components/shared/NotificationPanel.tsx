@@ -15,7 +15,7 @@ import {
 } from "@/lib/notifications";
 import { formatDistanceToNow } from "date-fns";
 import { id as idLocale } from "date-fns/locale";
-import { getRecentLogs } from "@/app/actions/logs"; // Import logs action
+import { getRecentLogs } from "@/lib/actions/logs"; // Import logs action
 
 export function NotificationPanel() {
   const [isOpen, setIsOpen] = useState(false);

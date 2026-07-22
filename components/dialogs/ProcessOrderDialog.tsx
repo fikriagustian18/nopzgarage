@@ -19,10 +19,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/Select";
-import { OrderItem, processOrder } from "@/app/actions/orders";
-import { getEmployees } from "@/app/actions/employees";
-import { getSpareParts } from "@/app/actions/inventory";
-import { getContent } from "@/app/actions/content"; // Added import
+import { OrderItem, processOrder } from "@/lib/actions/orders";
+import { getEmployees } from "@/lib/actions/employees";
+import { getSpareParts } from "@/lib/actions/inventory";
+import { getContent } from "@/lib/actions/content"; // Added import
 import { toast } from "@/hooks/useToast";
 import { Loader2, Plus, Trash2, Calculator, User, UserPlus, DollarSign, Wrench, Settings, List as ListIcon, Package } from "lucide-react";
 import { notifyOrderUpdated } from "@/hooks/useNotification";

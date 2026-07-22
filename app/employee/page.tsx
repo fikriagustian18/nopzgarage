@@ -1,7 +1,7 @@
 // app/employee/page.tsx - Employee Dashboard (Server Component)
 import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
-import { getEmployeeDetail } from "@/app/actions/employees";
+import { getEmployeeDetail } from "@/lib/actions/employees";
 import { EmployeeDashboardClient } from "./EmployeeDashboardClient";
 
 export const dynamic = "force-dynamic";

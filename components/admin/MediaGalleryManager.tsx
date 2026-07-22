@@ -12,7 +12,7 @@ import {
   updateMediaItem,
   deleteMediaItem,
   MediaGalleryItem,
-} from "@/app/actions/mediaGallery";
+} from "@/lib/actions/mediaGallery";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Label } from "@/components/ui/Label";

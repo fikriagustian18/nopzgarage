@@ -43,7 +43,7 @@ export function EmployeeDashboardClient({ employee, user }: EmployeeDashboardCli
   const handleUpdateStatus = async (orderId: string, newStatus: string) => {
     setUpdatingId(orderId);
     try {
-      const { updateOrderStatus } = await import("@/app/actions/orders");
+      const { updateOrderStatus } = await import("@/lib/actions/orders");
       const res = await updateOrderStatus(orderId, newStatus as any);
       if (res.success) {
         toast.success("Status berhasil diperbarui!");

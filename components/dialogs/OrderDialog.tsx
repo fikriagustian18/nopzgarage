@@ -21,8 +21,8 @@ import {
 } from "@/components/ui/Select";
 import { Textarea } from "@/components/ui/Textarea";
 import { ServiceType } from "@prisma/client";
-import { createOrder, updateOrder } from "@/app/actions/orders";
-import { getContent } from "@/app/actions/content"; // Added import
+import { createOrder, updateOrder } from "@/lib/actions/orders";
+import { getContent } from "@/lib/actions/content"; // Added import
 import { toast } from "@/hooks/useToast";
 import { Loader2 } from "lucide-react";
 import { notifyOrderCreated, notifyOrderUpdated } from "@/hooks/useNotification";

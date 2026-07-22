@@ -1,6 +1,6 @@
 // app/kanban/page.tsx - Public Kanban Board untuk Customer
 import Link from "next/link";
-import { PublicKanban } from "@/components/PublicKanban";
+import { PublicKanban } from "@/components/shared/PublicKanban";
 import { ArrowLeft, Wrench } from "lucide-react";
 
 export default function KanbanPage() {

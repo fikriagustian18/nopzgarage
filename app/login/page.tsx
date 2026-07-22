@@ -12,8 +12,8 @@ import { Label } from "@/components/ui/Label";
 import { Alert, AlertDescription } from "@/components/ui/Alert";
 import { Loader2, Lock, User, Eye, EyeOff, ShieldCheck, Settings, Wrench, AlertCircle, Home } from "lucide-react";
 import { toast } from "sonner";
-import { createForgotPasswordRequest } from "@/app/actions/auth";
-import { ThemeToggle } from "@/components/ThemeToggle";
+import { createForgotPasswordRequest } from "@/lib/actions/auth";
+import { ThemeToggle } from "@/components/shared/ThemeToggle";
 import {
   Dialog,
   DialogContent,

@@ -11,7 +11,7 @@ import {
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Label } from "@/components/ui/Label";
-import { createSparePart, updateSparePart, CreateSparePartInput } from "@/app/actions/inventory";
+import { createSparePart, updateSparePart, CreateSparePartInput } from "@/lib/actions/inventory";
 import { toast } from "@/hooks/useToast";
 import { Loader2 } from "lucide-react";
 import { notifySparepartAdded, notifySparepartUpdated } from "@/hooks/useNotification";

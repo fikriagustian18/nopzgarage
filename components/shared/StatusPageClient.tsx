@@ -2,7 +2,7 @@
 "use client";
 
 import { useState } from "react";
-import { searchOrderByPlate } from "@/app/actions/orderStatus";
+import { searchOrderByPlate } from "@/lib/actions/orderStatus";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Card, CardContent } from "@/components/ui/Card";

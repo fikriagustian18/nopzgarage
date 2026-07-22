@@ -1,9 +1,9 @@
 "use client";
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/Tabs";
-import { RoleGuard } from "@/components/RoleGuard";
-import { MediaGalleryManager } from "@/components/MediaGalleryManager";
-import { SocialEmbedsManager } from "@/components/SocialEmbedsManager";
+import { RoleGuard } from "@/components/shared/RoleGuard";
+import { MediaGalleryManager } from "@/components/admin/MediaGalleryManager";
+import { SocialEmbedsManager } from "@/components/admin/SocialEmbedsManager";
 import { ImagePlus, Share2, Info } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/Card";
 import { Alert, AlertDescription } from "@/components/ui/Alert";

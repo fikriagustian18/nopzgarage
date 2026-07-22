@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { getJournalEntries } from "@/app/actions/payments";
-import { RoleGuard } from "@/components/RoleGuard";
+import { getJournalEntries } from "@/lib/actions/payments";
+import { RoleGuard } from "@/components/shared/RoleGuard";
 import { format } from "date-fns";
 import { id } from "date-fns/locale";
 import { 

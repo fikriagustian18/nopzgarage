@@ -1,7 +1,7 @@
 // app/status/page.tsx
 import { auth } from "@/lib/auth";
-import { getAllSettings } from "@/app/actions/settings";
-import { StatusPageClient } from "@/components/StatusPageClient";
+import { getAllSettings } from "@/lib/actions/settings";
+import { StatusPageClient } from "@/components/shared/StatusPageClient";
 
 export const dynamic = "force-dynamic";
 

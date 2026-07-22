@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { MediaGalleryItem } from "@/app/actions/mediaGallery";
+import { MediaGalleryItem } from "@/lib/actions/mediaGallery";
 import Image from "next/image";
 import { Card } from "@/components/ui/Card";
 import { Loader2 } from "lucide-react";

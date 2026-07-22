@@ -2,7 +2,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { getPublicKanbanOrders } from "@/app/actions/orders";
+import { getPublicKanbanOrders } from "@/lib/actions/orders";
 import { Badge } from "@/components/ui/Badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Clock, Wrench, CheckCircle2, Shield } from "lucide-react";

@@ -7,7 +7,7 @@ import Image from "next/image";
 import { signOut, useSession } from "next-auth/react";
 import { Wrench, LogOut, User, Bell } from "lucide-react";
 import { Button } from "@/components/ui/Button";
-import { ThemeToggle } from "@/components/ThemeToggle";
+import { ThemeToggle } from "@/components/shared/ThemeToggle";
 import {
   DropdownMenu,
   DropdownMenuContent,

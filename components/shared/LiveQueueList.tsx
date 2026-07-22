@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { getLiveQueueStats, QueueOrder, QueueStats } from "@/app/actions/queue";
+import { getLiveQueueStats, QueueOrder, QueueStats } from "@/lib/actions/queue";
 import { Badge } from "@/components/ui/Badge";
 import { 
     Loader2, Wrench, Clock, CheckCircle, Bike, 

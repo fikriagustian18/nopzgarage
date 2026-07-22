@@ -2,7 +2,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { getForgotPasswordRequests, resolveForgotPasswordRequest } from "@/app/actions/auth";
+import { getForgotPasswordRequests, resolveForgotPasswordRequest } from "@/lib/actions/auth";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";

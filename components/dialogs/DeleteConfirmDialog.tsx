@@ -11,7 +11,7 @@ import {
   DialogFooter,
 } from "@/components/ui/Dialog";
 import { Button } from "@/components/ui/Button";
-import { deleteOrder } from "@/app/actions/orders";
+import { deleteOrder } from "@/lib/actions/orders";
 import { toast } from "@/hooks/useToast";
 import { Loader2, AlertTriangle } from "lucide-react";
 import { notifyOrderDeleted } from "@/hooks/useNotification";

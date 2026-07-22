@@ -1,14 +1,14 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { RoleGuard } from "@/components/RoleGuard";
+import { RoleGuard } from "@/components/shared/RoleGuard";
 import { 
     getExpenseCategories, 
     createExpense, 
     getExpenses, 
     deleteExpense,
     CreateExpenseInput 
-} from "@/app/actions/expenses";
+} from "@/lib/actions/expenses";
 import { format } from "date-fns";
 import { id } from "date-fns/locale";
 import { 

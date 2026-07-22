@@ -38,7 +38,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/DropdownMenu';
 import { INDONESIAN_BANKS, getBankColor } from '@/lib/constants/banks';
-import { getBankAccounts, createBankAccount, deleteBankAccount, updateBankAccount } from '@/app/actions/bank';
+import { getBankAccounts, createBankAccount, deleteBankAccount, updateBankAccount } from '@/lib/actions/bank';
 import { toast } from 'sonner';
 
 export function BankAccountsManager() {

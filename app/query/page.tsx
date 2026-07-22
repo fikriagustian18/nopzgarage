@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { executePrismaQuery, executeRawSql, executePrismaCode } from "@/app/actions/database";
+import { executePrismaQuery, executeRawSql, executePrismaCode } from "@/lib/actions/database";
 import { 
   Database, 
   Terminal, 
@@ -29,7 +29,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/Tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/Table";
 import { Badge } from "@/components/ui/Badge";
 import { toast } from "sonner";
-import { RoleGuard } from "@/components/RoleGuard";
+import { RoleGuard } from "@/components/shared/RoleGuard";
 
 // Database models and schema information for sidebar
 const DB_MODELS = [

@@ -6,7 +6,7 @@ import {
   createBankAccount, 
   deleteBankAccount, 
   toggleBankAccount 
-} from "@/app/actions/bank";
+} from "@/lib/actions/bank";
 import { 
   Trash2, 
   Plus, 

@@ -1,5 +1,5 @@
-import { AdminSidebar } from "@/components/AdminSidebar";
-import { AdminHeader } from "@/components/AdminHeader";
+import { AdminSidebar } from "@/components/layout/AdminSidebar";
+import { AdminHeader } from "@/components/layout/AdminHeader";
 import { Toaster } from "sonner";
 import { requireRole } from "@/lib/authCheck";
 

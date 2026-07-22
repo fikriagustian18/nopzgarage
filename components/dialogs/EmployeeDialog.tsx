@@ -19,7 +19,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/Select";
-import { createEmployee, updateEmployee } from "@/app/actions/employees";
+import { createEmployee, updateEmployee } from "@/lib/actions/employees";
 import { toast } from "@/hooks/useToast";
 import { Loader2, Briefcase, User, Phone, DollarSign } from "lucide-react";
 import { notifyEmployeeCreated, notifyEmployeeUpdated } from "@/hooks/useNotification";

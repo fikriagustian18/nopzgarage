@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { RoleGuard } from "@/components/RoleGuard";
+import { RoleGuard } from "@/components/shared/RoleGuard";
 import {
   Search,
   CheckCircle,
@@ -45,11 +45,11 @@ import {
   SelectValue,
 } from "@/components/ui/Select";
 import { Label } from "@/components/ui/Label";
-import { getAdminOrders, getOrderDetail } from "@/app/actions/orders";
-import { getPaymentHistory, createPayment } from "@/app/actions/payments";
-import { getBankAccounts } from "@/app/actions/bank";
+import { getAdminOrders, getOrderDetail } from "@/lib/actions/orders";
+import { getPaymentHistory, createPayment } from "@/lib/actions/payments";
+import { getBankAccounts } from "@/lib/actions/bank";
 import { OrderStatus as PrismaOrderStatus, ServiceType } from "@prisma/client";
-import { PaymentDialog } from "@/components/PaymentDialog"; 
+import { PaymentDialog } from "@/components/dialogs/PaymentDialog"; 
 import { Toaster } from "@/components/ui/Toaster";
 import { toast } from "@/hooks/useToast";
 import { ExportButton } from "@/components/export/ExportButton";

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { RoleGuard } from "@/components/RoleGuard";
+import { RoleGuard } from "@/components/shared/RoleGuard";
 import {
   Search,
   Edit,
@@ -41,18 +41,18 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/Select";
-import { getAdminOrders, finishOrder, closeOrder, confirmOrder } from "@/app/actions/orders";
-import { getMechanics } from "@/app/actions/employees";
+import { getAdminOrders, finishOrder, closeOrder, confirmOrder } from "@/lib/actions/orders";
+import { getMechanics } from "@/lib/actions/employees";
 import { OrderStatus as PrismaOrderStatus, ServiceType } from "@prisma/client";
-import { OrderDialog } from "@/components/OrderDialog";
-import { DeleteConfirmDialog } from "@/components/DeleteConfirmDialog";
-import { ProcessOrderDialog } from "@/components/ProcessOrderDialog";
-import { PaymentDialog } from "@/components/PaymentDialog"; 
+import { OrderDialog } from "@/components/dialogs/OrderDialog";
+import { DeleteConfirmDialog } from "@/components/dialogs/DeleteConfirmDialog";
+import { ProcessOrderDialog } from "@/components/dialogs/ProcessOrderDialog";
+import { PaymentDialog } from "@/components/dialogs/PaymentDialog"; 
 import { Toaster } from "@/components/ui/Toaster";
 import { toast } from "@/hooks/useToast";
 import { ExportButton } from "@/components/export/ExportButton";
 import { exportInvoice } from "@/lib/export/reports/invoiceExport";
-import { getOrderDetail } from "@/app/actions/orders";
+import { getOrderDetail } from "@/lib/actions/orders";
 import type { InvoiceExport } from "@/lib/export/types";
 
 type Order = {

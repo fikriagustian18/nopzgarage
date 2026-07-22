@@ -1,6 +1,6 @@
 // app/admin/users/page.tsx
-import { RoleGuard } from "@/components/RoleGuard";
-import { UserManagementTab } from "@/components/UserManagementTab";
+import { RoleGuard } from "@/components/shared/RoleGuard";
+import { UserManagementTab } from "@/components/admin/UserManagementTab";
 
 export const dynamic = "force-dynamic";
 
