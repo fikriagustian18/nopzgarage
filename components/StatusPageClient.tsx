@@ -2,11 +2,11 @@
 "use client";
 
 import { useState } from "react";
-import { searchOrderByPlate } from "@/app/actions/order-status";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { searchOrderByPlate } from "@/app/actions/orderStatus";
+import { Button } from "@/components/ui/Button";
+import { Input } from "@/components/ui/Input";
+import { Card, CardContent } from "@/components/ui/Card";
+import { Badge } from "@/components/ui/Badge";
 import { 
   Search, 
   Gauge, 

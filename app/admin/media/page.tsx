@@ -1,12 +1,12 @@
 "use client";
 
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/Tabs";
 import { RoleGuard } from "@/components/RoleGuard";
 import { MediaGalleryManager } from "@/components/MediaGalleryManager";
 import { SocialEmbedsManager } from "@/components/SocialEmbedsManager";
 import { ImagePlus, Share2, Info } from "lucide-react";
-import { Card, CardContent } from "@/components/ui/card";
-import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Card, CardContent } from "@/components/ui/Card";
+import { Alert, AlertDescription } from "@/components/ui/Alert";
 
 export default function MediaManagementPage() {
   return (

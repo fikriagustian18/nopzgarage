@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect } from "react";
-import { SocialEmbedItem } from "@/app/actions/social-embeds";
-import { Card, CardContent } from "@/components/ui/card";
+import { SocialEmbedItem } from "@/app/actions/socialEmbeds";
+import { Card, CardContent } from "@/components/ui/Card";
 import { ExternalLink, Instagram, Music, Youtube } from "lucide-react";
 
 interface SocialEmbedsDisplayProps {

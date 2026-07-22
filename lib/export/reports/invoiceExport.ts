@@ -1,6 +1,6 @@
 // lib/export/reports/invoice-export.ts
-import { PDFGenerator, formatCurrency, formatDate } from "../pdf-generator";
-import { ExcelGenerator, formatExcelCurrency, formatExcelDate } from "../excel-generator";
+import { PDFGenerator, formatCurrency, formatDate } from "../pdfGenerator";
+import { ExcelGenerator, formatExcelCurrency, formatExcelDate } from "../excelGenerator";
 import type { InvoiceExport, ExportFormat, PageOrientation } from "../types";
 
 export async function exportInvoice(

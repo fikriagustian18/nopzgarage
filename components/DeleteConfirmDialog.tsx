@@ -9,10 +9,10 @@ import {
   DialogHeader,
   DialogTitle,
   DialogFooter,
-} from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
+} from "@/components/ui/Dialog";
+import { Button } from "@/components/ui/Button";
 import { deleteOrder } from "@/app/actions/orders";
-import { toast } from "@/hooks/use-toast";
+import { toast } from "@/hooks/useToast";
 import { Loader2, AlertTriangle } from "lucide-react";
 import { notifyOrderDeleted } from "@/hooks/useNotification";
 
@@ -119,7 +119,7 @@ export function DeleteConfirmDialog({
 
         <DialogFooter className="gap-2 sm:gap-0">
           <Button
-            type="button"
+            type="Button"
             variant="outline"
             onClick={() => onOpenChange(false)}
             disabled={loading}
@@ -127,7 +127,7 @@ export function DeleteConfirmDialog({
             Batal
           </Button>
           <Button
-            type="button"
+            type="Button"
             variant="destructive"
             onClick={handleDelete}
             disabled={loading}

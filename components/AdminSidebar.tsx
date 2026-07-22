@@ -27,7 +27,7 @@ import {
   Clock,
   Wrench,
 } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/components/ui/Button";
 
 export function AdminSidebar() {
   const pathname = usePathname();

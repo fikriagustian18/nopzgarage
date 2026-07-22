@@ -4,11 +4,11 @@
 import { useState, useEffect } from "react";
 import { getUsers, createUser, updateUser, resetUserPassword, deleteUser } from "@/app/actions/auth";
 import { getEmployees } from "@/app/actions/employees";
-import { Card, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
+import { Card, CardContent } from "@/components/ui/Card";
+import { Button } from "@/components/ui/Button";
+import { Input } from "@/components/ui/Input";
+import { Label } from "@/components/ui/Label";
+import { Badge } from "@/components/ui/Badge";
 import {
   Dialog,
   DialogContent,
@@ -16,14 +16,14 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog";
+} from "@/components/ui/Dialog";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
+} from "@/components/ui/Select";
 import { toast } from "sonner";
 import { 
   Plus, 
@@ -725,7 +725,7 @@ export function UserManagementTab() {
               <Button 
                 variant="outline" 
                 size="sm" 
-                type="button" 
+                type="Button" 
                 className="w-full gap-2 text-xs h-10 rounded-xl"
                 onClick={() => {
                   setEditDialogOpen(false);

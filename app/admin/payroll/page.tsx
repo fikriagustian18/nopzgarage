@@ -13,11 +13,11 @@ import {
 } from "@/app/actions/payroll";
 import { getBankAccounts } from "@/app/actions/bank";
 import { createPayment } from "@/app/actions/payments";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/Card";
+import { Button } from "@/components/ui/Button";
+import { Input } from "@/components/ui/Input";
+import { Label } from "@/components/ui/Label";
+import { Badge } from "@/components/ui/Badge";
 import {
   Table,
   TableBody,
@@ -25,7 +25,7 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table";
+} from "@/components/ui/Table";
 import {
   Dialog,
   DialogContent,
@@ -33,15 +33,15 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog";
+} from "@/components/ui/Dialog";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
+} from "@/components/ui/Select";
+import { Textarea } from "@/components/ui/Textarea";
 import { toast } from "sonner";
 import {
   Users,
@@ -501,7 +501,7 @@ export default function PayrollPage() {
                   })),
                   totalSalary: filteredPayrolls.reduce((sum, p) => sum + Number(p.totalEarned), 0),
                 };
-                const { exportPayrollSummary } = await import("@/lib/export/reports/payroll-export");
+                const { exportPayrollSummary } = await import("@/lib/export/reports/payrollExport");
                 return await exportPayrollSummary(summaryData, format, orientation);
               }}
             />
@@ -700,7 +700,7 @@ export default function PayrollPage() {
                 </div>
               </div>
               <DialogFooter>
-                <Button type="button" variant="outline" onClick={() => setGenerateOpen(false)}>
+                <Button type="Button" variant="outline" onClick={() => setGenerateOpen(false)}>
                   Batal
                 </Button>
                 <Button type="submit" disabled={generating} className="bg-primary text-white">
@@ -758,7 +758,7 @@ export default function PayrollPage() {
                 </div>
               </div>
               <DialogFooter>
-                <Button type="button" variant="outline" onClick={() => setEditOpen(false)}>
+                <Button type="Button" variant="outline" onClick={() => setEditOpen(false)}>
                   Batal
                 </Button>
                 <Button type="submit" disabled={updating} className="bg-primary text-white">
@@ -870,7 +870,7 @@ export default function PayrollPage() {
                 </div>
               </div>
               <DialogFooter>
-                <Button type="button" variant="outline" onClick={() => setPayOpen(false)}>
+                <Button type="Button" variant="outline" onClick={() => setPayOpen(false)}>
                   Batal
                 </Button>
                 <Button type="submit" disabled={paying} className="bg-green-600 hover:bg-green-700 text-white font-bold">

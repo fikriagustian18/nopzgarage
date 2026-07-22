@@ -12,18 +12,18 @@ import {
   updateMediaItem,
   deleteMediaItem,
   MediaGalleryItem,
-} from "@/app/actions/media-gallery";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
+} from "@/app/actions/mediaGallery";
+import { Button } from "@/components/ui/Button";
+import { Input } from "@/components/ui/Input";
+import { Label } from "@/components/ui/Label";
+import { Textarea } from "@/components/ui/Textarea";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
+} from "@/components/ui/Select";
 import {
   Dialog,
   DialogContent,
@@ -31,14 +31,14 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from "@/components/ui/dialog";
+} from "@/components/ui/Dialog";
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card";
+} from "@/components/ui/Card";
 import { toast } from "sonner";
 import { 
   ImagePlus, 
@@ -280,7 +280,7 @@ export function MediaGalleryManager() {
                     onChange={handleFileChange}
                   />
                   <Button 
-                    type="button" 
+                    type="Button" 
                     variant="outline" 
                     size="icon"
                     onClick={handleFileClick}
@@ -361,7 +361,7 @@ export function MediaGalleryManager() {
 
               <div className="flex justify-end gap-2 pt-4">
                 <Button
-                  type="button"
+                  type="Button"
                   variant="outline"
                   onClick={() => handleDialogClose(false)}
                 >

@@ -4,18 +4,18 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { RoleGuard } from "@/components/RoleGuard";
 import { getFinancialReports, getGeneralLedger, getOperationalReports } from "@/app/actions/finance";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/Button";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/Card";
+import { Badge } from "@/components/ui/Badge";
+import { Input } from "@/components/ui/Input";
+import { Label } from "@/components/ui/Label";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
+} from "@/components/ui/Select";
 import {
   TrendingUp,
   TrendingDown,
@@ -35,11 +35,11 @@ import {
   Filter,
 } from "lucide-react";
 import { ExportButton } from "@/components/export/ExportButton";
-import { exportBalanceSheet } from "@/lib/export/reports/balance-sheet-export";
-import { exportIncomeStatement } from "@/lib/export/reports/financial-export";
+import { exportBalanceSheet } from "@/lib/export/reports/balanceSheetExport";
+import { exportIncomeStatement } from "@/lib/export/reports/financialExport";
 import type { BalanceSheetData, IncomeStatementData } from "@/lib/export/types";
-import { Toaster } from "@/components/ui/toaster";
-import { toast } from "@/hooks/use-toast";
+import { Toaster } from "@/components/ui/Toaster";
+import { toast } from "@/hooks/useToast";
 
 // Recharts components
 import {

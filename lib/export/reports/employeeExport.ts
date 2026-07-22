@@ -1,6 +1,6 @@
 // lib/export/reports/employee-export.ts
-import { PDFGenerator, formatShortDate } from "../pdf-generator";
-import { ExcelGenerator, formatExcelDate } from "../excel-generator";
+import { PDFGenerator, formatShortDate } from "../pdfGenerator";
+import { ExcelGenerator, formatExcelDate } from "../excelGenerator";
 import type { EmployeeExport, ExportFormat, PageOrientation } from "../types";
 
 export async function exportEmployees(

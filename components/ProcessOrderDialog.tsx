@@ -8,25 +8,25 @@ import {
   DialogHeader,
   DialogTitle,
   DialogFooter,
-} from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+} from "@/components/ui/Dialog";
+import { Button } from "@/components/ui/Button";
+import { Input } from "@/components/ui/Input";
+import { Label } from "@/components/ui/Label";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
+} from "@/components/ui/Select";
 import { OrderItem, processOrder } from "@/app/actions/orders";
 import { getEmployees } from "@/app/actions/employees";
 import { getSpareParts } from "@/app/actions/inventory";
 import { getContent } from "@/app/actions/content"; // Added import
-import { toast } from "@/hooks/use-toast";
+import { toast } from "@/hooks/useToast";
 import { Loader2, Plus, Trash2, Calculator, User, UserPlus, DollarSign, Wrench, Settings, List as ListIcon, Package } from "lucide-react";
 import { notifyOrderUpdated } from "@/hooks/useNotification";
-import { Badge } from "@/components/ui/badge";
+import { Badge } from "@/components/ui/Badge";
 
 type ProcessOrderDialogProps = {
   open: boolean;
@@ -313,7 +313,7 @@ export function ProcessOrderDialog({
               <Label>Item Barang & Jasa</Label>
               <div className="flex gap-1.5">
                 <Button
-                  type="button"
+                  type="Button"
                   size="sm"
                   variant="outline"
                   onClick={handleAddService}
@@ -322,7 +322,7 @@ export function ProcessOrderDialog({
                   <Wrench className="h-3 w-3 mr-1" /> + Jasa
                 </Button>
                 <Button
-                  type="button"
+                  type="Button"
                   size="sm"
                   variant="outline"
                   onClick={handleAddPart}
@@ -364,7 +364,7 @@ export function ProcessOrderDialog({
 
             <div className="flex justify-between items-center">
               <Label>Penerima Fee & Gaji</Label>
-              <Button type="button" size="sm" variant="outline" onClick={handleAddFee} className="h-7 text-xs border-dashed">
+              <Button type="Button" size="sm" variant="outline" onClick={handleAddFee} className="h-7 text-xs border-dashed">
                 <UserPlus className="h-3 w-3 mr-1" /> Add Person
               </Button>
             </div>
@@ -418,7 +418,7 @@ export function ProcessOrderDialog({
                       />
                    </div>
                    <Button
-                      type="button"
+                      type="Button"
                       variant="ghost"
                       size="icon"
                       onClick={() => handleRemoveFee(index)}
@@ -660,7 +660,7 @@ function ItemInput({
               />
               {servicesList && servicesList.length > 0 && (
                 <Button 
-                  type="button" 
+                  type="Button" 
                   variant="ghost" 
                   size="icon" 
                   className="absolute right-1 w-6 h-6"
@@ -705,7 +705,7 @@ function ItemInput({
       </div>
 
       <Button
-        type="button"
+        type="Button"
         variant="ghost"
         size="icon"
         onClick={() => onRemove(index)}

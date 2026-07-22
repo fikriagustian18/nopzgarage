@@ -17,8 +17,8 @@ import {
     CardHeader, 
     CardTitle, 
     CardDescription 
-} from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+} from "@/components/ui/Card";
+import { Button } from "@/components/ui/Button";
 import { 
     Dialog, 
     DialogContent, 
@@ -27,7 +27,7 @@ import {
     DialogHeader, 
     DialogTitle, 
     DialogTrigger 
-} from "@/components/ui/dialog";
+} from "@/components/ui/Dialog";
 import { 
     Table, 
     TableBody, 
@@ -35,18 +35,18 @@ import {
     TableHead, 
     TableHeader, 
     TableRow 
-} from "@/components/ui/table";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+} from "@/components/ui/Table";
+import { Input } from "@/components/ui/Input";
+import { Label } from "@/components/ui/Label";
 import { 
     Select, 
     SelectContent, 
     SelectItem, 
     SelectTrigger, 
     SelectValue 
-} from "@/components/ui/select";
+} from "@/components/ui/Select";
 import { Plus, Trash2, ArrowUpRight, Loader2, Search } from "lucide-react";
-import { toast } from "@/hooks/use-toast";
+import { toast } from "@/hooks/useToast";
 
 // ==================== Page Component ====================
 export default function ExpensesPage() {

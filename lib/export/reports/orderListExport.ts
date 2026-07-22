@@ -1,5 +1,5 @@
-import { PDFGenerator, formatCurrency, formatDate } from "../pdf-generator";
-import { ExcelGenerator, formatExcelDate, formatExcelCurrency } from "../excel-generator";
+import { PDFGenerator, formatCurrency, formatDate } from "../pdfGenerator";
+import { ExcelGenerator, formatExcelDate, formatExcelCurrency } from "../excelGenerator";
 import type { ExportFormat, PageOrientation } from "../types";
 
 export interface OrderListExport {

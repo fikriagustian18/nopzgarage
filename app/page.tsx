@@ -3,10 +3,10 @@ import Link from "next/link";
 import { BookingForm } from "@/components/BookingForm";
 import { LiveQueueList } from "@/components/LiveQueueList";
 import { ThemeToggle } from "@/components/ThemeToggle";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/components/ui/Button";
 import { getAllSettings, GeneralSettings, HolidaySettings } from "@/app/actions/settings";
-import { getMediaGallery } from "@/app/actions/media-gallery";
-import { getSocialEmbeds } from "@/app/actions/social-embeds";
+import { getMediaGallery } from "@/app/actions/mediaGallery";
+import { getSocialEmbeds } from "@/app/actions/socialEmbeds";
 import { MediaGalleryDisplay } from "@/components/MediaGalleryDisplay";
 import { SocialEmbedsDisplay } from "@/components/SocialEmbedsDisplay";
 import { 

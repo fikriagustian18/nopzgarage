@@ -27,13 +27,13 @@ import {
   Book,
   ImagePlus,
 } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/components/ui/Button";
 import {
   Sheet,
   SheetContent,
   SheetTrigger,
   SheetTitle,
-} from "@/components/ui/sheet";
+} from "@/components/ui/Sheet";
 import { useState } from "react";
 
 export function MobileSidebar() {

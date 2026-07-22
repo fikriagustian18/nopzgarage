@@ -14,9 +14,9 @@ import {
     CardHeader, 
     CardTitle, 
     CardDescription 
-} from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+} from "@/components/ui/Card";
+import { Badge } from "@/components/ui/Badge";
+import { Button } from "@/components/ui/Button";
 import { 
     DollarSign, 
     TrendingUp, 

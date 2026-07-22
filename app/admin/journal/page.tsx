@@ -11,9 +11,9 @@ import {
     CardHeader, 
     CardTitle, 
     CardDescription 
-} from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+} from "@/components/ui/Card";
+import { Button } from "@/components/ui/Button";
+import { Input } from "@/components/ui/Input";
 import { 
     Table, 
     TableBody, 
@@ -21,10 +21,10 @@ import {
     TableHead, 
     TableHeader, 
     TableRow 
-} from "@/components/ui/table";
+} from "@/components/ui/Table";
 import { Search, Loader2, BookOpen } from "lucide-react";
 import { ExportButton } from "@/components/export/ExportButton";
-import { exportJournalEntries } from "@/lib/export/reports/journal-export";
+import { exportJournalEntries } from "@/lib/export/reports/journalExport";
 import type { JournalEntryExport } from "@/lib/export/types";
 
 export default function GeneralJournalPage() {

@@ -348,12 +348,12 @@
 /* ========================================
    IMPROVED BUTTON STATES
    ======================================== */
-button, a[role="button"] {
+button, a[role="Button"] {
   @apply transition-all duration-300 ease-out;
   -webkit-tap-highlight-color: transparent;
 }
 
-button:active, a[role="button"]:active {
+button:active, a[role="Button"]:active {
   @apply scale-[0.97];
 }
 

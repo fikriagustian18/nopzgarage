@@ -1,6 +1,6 @@
 // lib/export/reports/financial-export.ts
-import { PDFGenerator, formatCurrency, formatDate } from "../pdf-generator";
-import { ExcelGenerator, formatExcelCurrency, formatExcelDate } from "../excel-generator";
+import { PDFGenerator, formatCurrency, formatDate } from "../pdfGenerator";
+import { ExcelGenerator, formatExcelCurrency, formatExcelDate } from "../excelGenerator";
 import type { ExportFormat, PageOrientation, IncomeStatementData } from "../types";
 
 export async function exportIncomeStatement(

@@ -1,7 +1,7 @@
 import { AdminSidebar } from "@/components/AdminSidebar";
 import { AdminHeader } from "@/components/AdminHeader";
 import { Toaster } from "sonner";
-import { requireRole } from "@/lib/auth-check";
+import { requireRole } from "@/lib/authCheck";
 
 export default async function AdminLayout({
   children,

@@ -3,8 +3,8 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { getPublicKanbanOrders } from "@/app/actions/orders";
-import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/Badge";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Clock, Wrench, CheckCircle2, Shield } from "lucide-react";
 
 type OrderCard = {

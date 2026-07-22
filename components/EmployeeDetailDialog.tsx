@@ -7,8 +7,8 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog";
-import { Badge } from "@/components/ui/badge";
+} from "@/components/ui/Dialog";
+import { Badge } from "@/components/ui/Badge";
 import { 
   Briefcase, 
   Phone, 

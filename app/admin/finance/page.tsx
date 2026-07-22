@@ -12,12 +12,12 @@ import {
   Calendar,
   FileText,
 } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
+import { Button } from "@/components/ui/Button";
 import { getFinancialReports, getGeneralLedger } from "@/app/actions/finance";
 import { BankAccountsManager } from "@/components/admin/BankAccountsManager";
 import { ExportButton } from "@/components/export/ExportButton";
-import { exportJournalEntries } from "@/lib/export/reports/journal-export";
+import { exportJournalEntries } from "@/lib/export/reports/journalExport";
 import type { JournalEntryExport } from "@/lib/export/types";
 
 interface JournalEntry {

@@ -7,13 +7,13 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
+} from "@/components/ui/Dialog";
+import { Button } from "@/components/ui/Button";
+import { Input } from "@/components/ui/Input";
+import { Label } from "@/components/ui/Label";
+import { Textarea } from "@/components/ui/Textarea";
 import { createPayment } from "@/app/actions/payments";
-import { toast } from "@/hooks/use-toast";
+import { toast } from "@/hooks/useToast";
 import { Loader2, DollarSign } from "lucide-react";
 import { formatCurrency } from "@/lib/utils"; 
 import { notifyPaymentReceived } from "@/hooks/useNotification"; 
@@ -216,7 +216,7 @@ export function PaymentDialog({
                 <Label className="text-foreground">Metode Bayar</Label>
                 <div className="grid grid-cols-4 bg-muted rounded-md p-1 gap-1">
                     <button
-                        type="button"
+                        type="Button"
                         onClick={() => setMethod("CASH")}
                         className={`text-xs font-semibold py-2 rounded-sm transition-all ${
                             method === "CASH" ? "bg-background shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"
@@ -225,7 +225,7 @@ export function PaymentDialog({
                         Tunai
                     </button>
                     <button
-                        type="button"
+                        type="Button"
                         onClick={() => setMethod("TRANSFER")}
                         className={`text-xs font-semibold py-2 rounded-sm transition-all ${
                             method === "TRANSFER" ? "bg-background shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"
@@ -234,7 +234,7 @@ export function PaymentDialog({
                         Transfer
                     </button>
                     <button
-                        type="button"
+                        type="Button"
                         onClick={() => setMethod("QRIS")}
                         className={`text-xs font-semibold py-2 rounded-sm transition-all ${
                             method === "QRIS" ? "bg-background shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"
@@ -243,7 +243,7 @@ export function PaymentDialog({
                         QRIS
                     </button>
                     <button
-                        type="button"
+                        type="Button"
                         onClick={() => setMethod("CARD")}
                         className={`text-xs font-semibold py-2 rounded-sm transition-all ${
                             method === "CARD" ? "bg-background shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"
@@ -358,7 +358,7 @@ export function PaymentDialog({
 
           <div className="flex gap-3 pt-4">
             <Button
-              type="button"
+              type="Button"
               variant="outline"
               onClick={() => onOpenChange(false)}
               disabled={loading}

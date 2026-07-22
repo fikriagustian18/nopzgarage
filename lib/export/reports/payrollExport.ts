@@ -1,6 +1,6 @@
 // lib/export/reports/payroll-export.ts
-import { PDFGenerator, formatCurrency, formatShortDate } from "../pdf-generator";
-import { ExcelGenerator, formatExcelCurrency, formatExcelDate } from "../excel-generator";
+import { PDFGenerator, formatCurrency, formatShortDate } from "../pdfGenerator";
+import { ExcelGenerator, formatExcelCurrency, formatExcelDate } from "../excelGenerator";
 import type { PayrollSummary, ExportFormat, PageOrientation } from "../types";
 
 export async function exportPayrollSummary(

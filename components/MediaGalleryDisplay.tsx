@@ -1,9 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { MediaGalleryItem } from "@/app/actions/media-gallery";
+import { MediaGalleryItem } from "@/app/actions/mediaGallery";
 import Image from "next/image";
-import { Card } from "@/components/ui/card";
+import { Card } from "@/components/ui/Card";
 import { Loader2 } from "lucide-react";
 
 interface MediaGalleryDisplayProps {

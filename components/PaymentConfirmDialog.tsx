@@ -8,10 +8,10 @@ import {
   DialogHeader,
   DialogTitle,
   DialogFooter,
-} from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
+} from "@/components/ui/Dialog";
+import { Button } from "@/components/ui/Button";
 import { Wallet, Loader2 } from "lucide-react";
-import { toast } from "@/hooks/use-toast";
+import { toast } from "@/hooks/useToast";
 
 type PaymentConfirmDialogProps = {
     open: boolean;
@@ -75,7 +75,7 @@ export function PaymentConfirmDialog({
 
                 <DialogFooter className="gap-2 sm:gap-0 mt-4">
                     <Button
-                        type="button"
+                        type="Button"
                         variant="outline"
                         onClick={() => onOpenChange(false)}
                         disabled={loading}
@@ -83,7 +83,7 @@ export function PaymentConfirmDialog({
                         Batal
                     </Button>
                     <Button
-                        type="button"
+                        type="Button"
                         onClick={handleConfirm}
                         disabled={loading}
                         className="bg-green-600 hover:bg-green-700 text-white gap-2"

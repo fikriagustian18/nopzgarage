@@ -18,11 +18,11 @@ import {
   RefreshCw,
   CheckCircle,
 } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
+import { Button } from "@/components/ui/Button";
+import { Input } from "@/components/ui/Input";
+import { Badge } from "@/components/ui/Badge";
+import { Avatar, AvatarFallback } from "@/components/ui/Avatar";
 import {
   Dialog,
   DialogContent,
@@ -30,12 +30,12 @@ import {
   DialogTitle,
   DialogDescription,
   DialogFooter,
-} from "@/components/ui/dialog";
+} from "@/components/ui/Dialog";
 import { getEmployees, reactivateEmployee, getEmployeeStats } from "@/app/actions/employees";
 import { EmployeeDialog } from "@/components/EmployeeDialog";
 import { EmployeeDeleteDialog } from "@/components/EmployeeDeleteDialog";
 import { EmployeeDetailDialog } from "@/components/EmployeeDetailDialog";
-import { Toaster } from "@/components/ui/toaster";
+import { Toaster } from "@/components/ui/Toaster";
 import { toast } from "sonner";
 import { 
   useNotification, 
@@ -44,7 +44,7 @@ import {
   notifyEmployeeDeleted 
 } from "@/hooks/useNotification";
 import { ExportButton } from "@/components/export/ExportButton";
-import { exportEmployees } from "@/lib/export/reports/employee-export";
+import { exportEmployees } from "@/lib/export/reports/employeeExport";
 import type { EmployeeExport } from "@/lib/export/types";
 
 type Employee = {

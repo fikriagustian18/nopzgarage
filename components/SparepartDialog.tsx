@@ -7,12 +7,12 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+} from "@/components/ui/Dialog";
+import { Button } from "@/components/ui/Button";
+import { Input } from "@/components/ui/Input";
+import { Label } from "@/components/ui/Label";
 import { createSparePart, updateSparePart, CreateSparePartInput } from "@/app/actions/inventory";
-import { toast } from "@/hooks/use-toast";
+import { toast } from "@/hooks/useToast";
 import { Loader2 } from "lucide-react";
 import { notifySparepartAdded, notifySparepartUpdated } from "@/hooks/useNotification";
 
@@ -253,7 +253,7 @@ export function SparepartDialog({
 
           <div className="flex gap-3 pt-4 border-t mt-4">
             <Button
-              type="button"
+              type="Button"
               variant="outline"
               onClick={() => onOpenChange(false)}
               disabled={loading}

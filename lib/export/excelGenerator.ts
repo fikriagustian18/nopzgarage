@@ -1,6 +1,6 @@
 // lib/export/excel-generator.ts
 import ExcelJS from "exceljs";
-import { COMPANY_INFO } from "../config/company-info";
+import { COMPANY_INFO } from "../config/companyInfo";
 import type { LetterheadConfig } from "./types";
 
 export class ExcelGenerator {

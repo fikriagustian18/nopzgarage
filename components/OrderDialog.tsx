@@ -8,22 +8,22 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+} from "@/components/ui/Dialog";
+import { Button } from "@/components/ui/Button";
+import { Input } from "@/components/ui/Input";
+import { Label } from "@/components/ui/Label";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
+} from "@/components/ui/Select";
+import { Textarea } from "@/components/ui/Textarea";
 import { ServiceType } from "@prisma/client";
 import { createOrder, updateOrder } from "@/app/actions/orders";
 import { getContent } from "@/app/actions/content"; // Added import
-import { toast } from "@/hooks/use-toast";
+import { toast } from "@/hooks/useToast";
 import { Loader2 } from "lucide-react";
 import { notifyOrderCreated, notifyOrderUpdated } from "@/hooks/useNotification";
 
@@ -339,7 +339,7 @@ export function OrderDialog({
           {!isReadOnly && (
             <div className="flex gap-3 pt-4 border-t">
               <Button
-                type="button"
+                type="Button"
                 variant="outline"
                 onClick={() => onOpenChange(false)}
                 disabled={loading}

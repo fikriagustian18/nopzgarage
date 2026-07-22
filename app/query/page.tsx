@@ -20,14 +20,14 @@ import {
   Layers,
   History
 } from "lucide-react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/Card";
+import { Button } from "@/components/ui/Button";
+import { Input } from "@/components/ui/Input";
+import { Label } from "@/components/ui/Label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/Select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/Tabs";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/Table";
+import { Badge } from "@/components/ui/Badge";
 import { toast } from "sonner";
 import { RoleGuard } from "@/components/RoleGuard";
 
@@ -164,7 +164,7 @@ interface QueryHistoryItem {
 
 export default function DatabaseConsolePublic() {
   const [activeQueryTab, setActiveQueryTab] = useState<string>("prisma");
-  const [activeResultTab, setActiveResultTab] = useState<string>("table");
+  const [activeResultTab, setActiveResultTab] = useState<string>("Table");
   
   // State for Prisma Builder
   const [selectedModel, setSelectedModel] = useState<string>("User");
@@ -267,7 +267,7 @@ export default function DatabaseConsolePublic() {
         if (!Array.isArray(res.result)) {
           setActiveResultTab("json");
         } else {
-          setActiveResultTab("table");
+          setActiveResultTab("Table");
         }
         toast.success("Kueri berhasil dieksekusi!");
       } else {
@@ -752,7 +752,7 @@ export default function DatabaseConsolePublic() {
                   <div className="flex items-center gap-2">
                     <Tabs value={activeResultTab} onValueChange={setActiveResultTab} className="w-[180px]">
                       <TabsList className="grid grid-cols-2 h-8">
-                        <TabsTrigger value="table" disabled={!Array.isArray(resultData) || resultData.length === 0} className="text-xs">Grid</TabsTrigger>
+                        <TabsTrigger value="Table" disabled={!Array.isArray(resultData) || resultData.length === 0} className="text-xs">Grid</TabsTrigger>
                         <TabsTrigger value="json" className="text-xs">JSON</TabsTrigger>
                       </TabsList>
                     </Tabs>
@@ -815,7 +815,7 @@ export default function DatabaseConsolePublic() {
               <CardContent className="p-0">
                 
                 {/* Grid View Table */}
-                {activeResultTab === "table" && Array.isArray(resultData) && resultData.length > 0 ? (
+                {activeResultTab === "Table" && Array.isArray(resultData) && resultData.length > 0 ? (
                   <div className="overflow-x-auto max-h-[500px]">
                     <Table>
                       <TableHeader className="bg-muted/30 sticky top-0 z-10">
@@ -867,7 +867,7 @@ export default function DatabaseConsolePublic() {
                       </TableBody>
                     </Table>
                   </div>
-                ) : activeResultTab === "table" ? (
+                ) : activeResultTab === "Table" ? (
                   <div className="p-8 text-center text-muted-foreground text-sm">
                     Hasil bukan merupakan list data yang dapat ditabelkan.
                   </div>

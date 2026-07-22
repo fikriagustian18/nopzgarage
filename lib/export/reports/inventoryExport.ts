@@ -1,6 +1,6 @@
 // lib/export/reports/inventory-export.ts
-import { PDFGenerator, formatCurrency } from "../pdf-generator";
-import { ExcelGenerator, formatExcelCurrency } from "../excel-generator";
+import { PDFGenerator, formatCurrency } from "../pdfGenerator";
+import { ExcelGenerator, formatExcelCurrency } from "../excelGenerator";
 import type { InventoryItemExport, ExportFormat, PageOrientation } from "../types";
 
 export async function exportInventory(

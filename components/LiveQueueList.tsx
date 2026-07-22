@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { getLiveQueueStats, QueueOrder, QueueStats } from "@/app/actions/queue";
-import { Badge } from "@/components/ui/badge";
+import { Badge } from "@/components/ui/Badge";
 import { 
     Loader2, Wrench, Clock, CheckCircle, Bike, 
     Calendar, Hourglass, 

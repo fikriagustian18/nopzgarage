@@ -11,8 +11,8 @@ import {
   Wallet,
   CreditCard
 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Button } from '@/components/ui/Button';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/Card';
 import {
   Dialog,
   DialogContent,
@@ -21,22 +21,22 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+} from '@/components/ui/Dialog';
+import { Input } from '@/components/ui/Input';
+import { Label } from '@/components/ui/Label';
 import { 
     Select, 
     SelectContent, 
     SelectItem, 
     SelectTrigger, 
     SelectValue 
-} from '@/components/ui/select';
+} from '@/components/ui/Select';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
+} from '@/components/ui/DropdownMenu';
 import { INDONESIAN_BANKS, getBankColor } from '@/lib/constants/banks';
 import { getBankAccounts, createBankAccount, deleteBankAccount, updateBankAccount } from '@/app/actions/bank';
 import { toast } from 'sonner';

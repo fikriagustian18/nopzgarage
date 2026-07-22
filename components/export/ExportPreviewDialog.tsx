@@ -8,8 +8,8 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
+} from "@/components/ui/Dialog";
+import { Button } from "@/components/ui/Button";
 import { Download, Loader2, FileText, Table, Maximize2, Minimize2 } from "lucide-react";
 import type { ExportFormat, PageOrientation } from "@/lib/export/types";
 

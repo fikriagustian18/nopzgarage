@@ -5,11 +5,11 @@ import { useState } from "react";
 import { signIn } from "next-auth/react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Card, CardContent } from "@/components/ui/card";
-import { Label } from "@/components/ui/label";
-import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Button } from "@/components/ui/Button";
+import { Input } from "@/components/ui/Input";
+import { Card, CardContent } from "@/components/ui/Card";
+import { Label } from "@/components/ui/Label";
+import { Alert, AlertDescription } from "@/components/ui/Alert";
 import { Loader2, Lock, User, Eye, EyeOff, ShieldCheck, Settings, Wrench, AlertCircle, Home } from "lucide-react";
 import { toast } from "sonner";
 import { createForgotPasswordRequest } from "@/app/actions/auth";
@@ -21,8 +21,8 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog";
-import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
+} from "@/components/ui/Dialog";
+import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/Tooltip";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -233,7 +233,7 @@ export default function LoginPage() {
                       disabled={loading}
                     />
                     <button
-                      type="button"
+                      type="Button"
                       onClick={() => setShowPassword(!showPassword)}
                       className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
                       tabIndex={-1}
@@ -258,7 +258,7 @@ export default function LoginPage() {
                     Ingat saya
                   </label>
                   <button
-                    type="button"
+                    type="Button"
                     onClick={() => setForgotPasswordOpen(true)}
                     className="text-xs font-semibold text-muted-foreground hover:text-primary transition-colors"
                   >

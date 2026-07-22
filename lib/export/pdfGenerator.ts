@@ -1,7 +1,7 @@
 // lib/export/pdf-generator.ts
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
-import { COMPANY_INFO, EXPORT_CONFIG } from "../config/company-info";
+import { COMPANY_INFO, EXPORT_CONFIG } from "../config/companyInfo";
 import type { LetterheadConfig, PageOrientation } from "./types";
 
 // Design System Colors

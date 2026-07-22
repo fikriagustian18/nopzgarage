@@ -1,13 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/components/ui/Button";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+} from "@/components/ui/DropdownMenu";
 import { Download, FileText, Table, ChevronDown } from "lucide-react";
 import { ExportPreviewDialog } from "./ExportPreviewDialog";
 import type { ExportFormat, PageOrientation } from "@/lib/export/types";
