@@ -1023,7 +1023,7 @@ export default function TransactionsPage() {
 
                 <DialogFooter className="gap-2 sm:gap-0 pt-2">
                   <Button 
-                    type="Button"
+                    type="button"
                     variant="outline" 
                     onClick={() => setCreateTransactionOpen(false)}
                     disabled={isSubmittingTx}

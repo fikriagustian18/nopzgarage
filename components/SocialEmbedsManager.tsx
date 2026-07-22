@@ -316,7 +316,7 @@ export function SocialEmbedsManager() {
 
               <div className="flex justify-end gap-2 pt-4">
                 <Button
-                  type="Button"
+                  type="button"
                   variant="outline"
                   onClick={() => handleDialogClose(false)}
                 >

@@ -233,7 +233,7 @@ export default function LoginPage() {
                       disabled={loading}
                     />
                     <button
-                      type="Button"
+                      type="button"
                       onClick={() => setShowPassword(!showPassword)}
                       className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
                       tabIndex={-1}
@@ -258,7 +258,7 @@ export default function LoginPage() {
                     Ingat saya
                   </label>
                   <button
-                    type="Button"
+                    type="button"
                     onClick={() => setForgotPasswordOpen(true)}
                     className="text-xs font-semibold text-muted-foreground hover:text-primary transition-colors"
                   >

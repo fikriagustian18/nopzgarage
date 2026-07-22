@@ -75,7 +75,7 @@ export function PaymentConfirmDialog({
 
                 <DialogFooter className="gap-2 sm:gap-0 mt-4">
                     <Button
-                        type="Button"
+                        type="button"
                         variant="outline"
                         onClick={() => onOpenChange(false)}
                         disabled={loading}
@@ -83,7 +83,7 @@ export function PaymentConfirmDialog({
                         Batal
                     </Button>
                     <Button
-                        type="Button"
+                        type="button"
                         onClick={handleConfirm}
                         disabled={loading}
                         className="bg-green-600 hover:bg-green-700 text-white gap-2"

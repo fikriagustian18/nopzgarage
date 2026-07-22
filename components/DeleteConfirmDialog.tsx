@@ -119,7 +119,7 @@ export function DeleteConfirmDialog({
 
         <DialogFooter className="gap-2 sm:gap-0">
           <Button
-            type="Button"
+            type="button"
             variant="outline"
             onClick={() => onOpenChange(false)}
             disabled={loading}
@@ -127,7 +127,7 @@ export function DeleteConfirmDialog({
             Batal
           </Button>
           <Button
-            type="Button"
+            type="button"
             variant="destructive"
             onClick={handleDelete}
             disabled={loading}

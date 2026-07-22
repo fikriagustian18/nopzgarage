@@ -162,7 +162,7 @@ export function SparepartDetailDialog({
         {/* Tab Selector */}
         <div className="flex border-b border-border gap-2 mt-2">
           <button
-            type="Button"
+            type="button"
             className={`pb-2 px-3 text-sm font-semibold border-b-2 transition-colors ${
               activeTab === "detail"
                 ? "border-primary text-primary"
@@ -173,7 +173,7 @@ export function SparepartDetailDialog({
             Rincian
           </button>
           <button
-            type="Button"
+            type="button"
             className={`pb-2 px-3 text-sm font-semibold border-b-2 transition-colors ${
               activeTab === "stockIn"
                 ? "border-emerald-600 text-emerald-600"
@@ -184,7 +184,7 @@ export function SparepartDetailDialog({
             + Stok Masuk
           </button>
           <button
-            type="Button"
+            type="button"
             className={`pb-2 px-3 text-sm font-semibold border-b-2 transition-colors ${
               activeTab === "stockOut"
                 ? "border-orange-600 text-orange-600"
@@ -309,7 +309,7 @@ export function SparepartDetailDialog({
               />
             </div>
             <div className="flex gap-2 pt-2">
-              <Button type="Button" variant="outline" className="flex-1" onClick={() => setActiveTab("detail")}>
+              <Button type="button" variant="outline" className="flex-1" onClick={() => setActiveTab("detail")}>
                 Batal
               </Button>
               <Button type="submit" disabled={loading} className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white">
@@ -361,7 +361,7 @@ export function SparepartDetailDialog({
               />
             </div>
             <div className="flex gap-2 pt-2">
-              <Button type="Button" variant="outline" className="flex-1" onClick={() => setActiveTab("detail")}>
+              <Button type="button" variant="outline" className="flex-1" onClick={() => setActiveTab("detail")}>
                 Batal
               </Button>
               <Button type="submit" disabled={loading} className="flex-1 bg-orange-600 hover:bg-orange-700 text-white">

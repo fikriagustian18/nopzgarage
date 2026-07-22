@@ -213,7 +213,7 @@ export function WebsiteContentTab() {
 
   // --- SAVE FUNCTIONS ---
 
-  async function saveHero() {
+  async function handleSaveHero() {
       const res = await updateContent("hero", {
           title: hero.title,
           subtitle: hero.subtitle,
@@ -224,7 +224,7 @@ export function WebsiteContentTab() {
       else toast.error("Gagal update");
   }
 
-  async function saveStats() {
+  async function handleSaveStats() {
       const res = await updateContent("stats", {
           title: "Stats Bar",
           subtitle: "Statistics numbers",
@@ -235,7 +235,7 @@ export function WebsiteContentTab() {
       else toast.error("Gagal update stats");
   }
 
-  async function saveServices() {
+  async function handleSaveServices() {
       const res = await updateContent("services", {
           title: servicesHeader.title,
           subtitle: servicesHeader.subtitle,
@@ -246,7 +246,7 @@ export function WebsiteContentTab() {
       else toast.error("Gagal update");
   }
 
-  async function saveFeatures() {
+  async function handleSaveFeatures() {
       const res = await updateContent("features", {
           title: "Why Choose Us",
           subtitle: "Features List",
@@ -257,7 +257,7 @@ export function WebsiteContentTab() {
       else toast.error("Gagal update");
   }
 
-  async function saveTheme() {
+  async function handleSaveTheme() {
       const res = await updateContent("theme_config", {
           title: "Theme Configuration",
           subtitle: "Color and typography settings",
@@ -269,7 +269,7 @@ export function WebsiteContentTab() {
       } else toast.error("Gagal update tema");
   }
 
-  async function saveTestimonials() {
+  async function handleSaveTestimonials() {
       const res = await updateContent("testimonials", {
           title: "Apa Kata Mereka?",
           subtitle: "Testimoni Pelanggan",
@@ -280,7 +280,7 @@ export function WebsiteContentTab() {
       else toast.error("Gagal update testimoni");
   }
 
-  async function savePromos() {
+  async function handleSavePromos() {
       const res = await updateContent("promos", {
           title: "Promo Banner",
           subtitle: "Promo yang sedang aktif",
@@ -291,7 +291,7 @@ export function WebsiteContentTab() {
       else toast.error("Gagal update promo");
   }
 
-  async function saveFooter() {
+  async function handleSaveFooter() {
       const res = await updateContent("footer", {
           title: "Footer Links",
           subtitle: "Social Media & Maps",
@@ -303,7 +303,7 @@ export function WebsiteContentTab() {
   }
 
   // --- SERVICE ITEM HANDLERS ---
-  const addServiceItem = () => {
+  const handleAddServiceItem = () => {
       setServiceItems([...serviceItems, {
           id: Date.now().toString(),
           title: "Layanan Baru",
@@ -315,27 +315,27 @@ export function WebsiteContentTab() {
       }]);
   };
 
-  const removeServiceItem = (index: number) => {
+  const handleRemoveServiceItem = (index: number) => {
       const newItems = [...serviceItems];
       newItems.splice(index, 1);
       setServiceItems(newItems);
   };
 
-  const updateServiceItem = (index: number, field: string, value: any) => {
+  const handleUpdateServiceItem = (index: number, field: string, value: any) => {
       const newItems = [...serviceItems];
       newItems[index] = { ...newItems[index], [field]: value };
       setServiceItems(newItems);
   };
 
   // --- SERVICE FEATURES HANDLERS ---
-  const addServiceFeature = (serviceIndex: number) => {
+  const handleAddServiceFeature = (serviceIndex: number) => {
       const newItems = [...serviceItems];
       if (!newItems[serviceIndex].features) newItems[serviceIndex].features = [];
       newItems[serviceIndex].features.push(""); // Empty default
       setServiceItems(newItems);
   };
 
-  const removeServiceFeature = (serviceIndex: number, featureIndex: number) => {
+  const handleRemoveServiceFeature = (serviceIndex: number, featureIndex: number) => {
       const newItems = [...serviceItems];
       if (newItems[serviceIndex].features) {
           newItems[serviceIndex].features.splice(featureIndex, 1);
@@ -343,7 +343,7 @@ export function WebsiteContentTab() {
       }
   };
 
-  const updateServiceFeatureText = (serviceIndex: number, featureIndex: number, text: string) => {
+  const handleUpdateServiceFeatureText = (serviceIndex: number, featureIndex: number, text: string) => {
       const newItems = [...serviceItems];
       if (newItems[serviceIndex].features) {
           newItems[serviceIndex].features[featureIndex] = text;
@@ -352,39 +352,39 @@ export function WebsiteContentTab() {
   };
 
   // --- FEATURE ITEM HANDLERS ---
-  const addFeatureItem = () => {
+  const handleAddFeatureItem = () => {
       setFeatureItems([...featureItems, {
           title: "Keunggulan Baru",
           desc: "Deskripsi keunggulan..."
       }]);
   };
 
-  const removeFeatureItem = (index: number) => {
+  const handleRemoveFeatureItem = (index: number) => {
       const newItems = [...featureItems];
       newItems.splice(index, 1);
       setFeatureItems(newItems);
   };
 
-  const updateFeatureItem = (index: number, field: string, value: any) => {
+  const handleUpdateFeatureItem = (index: number, field: string, value: any) => {
       const newItems = [...featureItems];
       newItems[index] = { ...newItems[index], [field]: value };
       setFeatureItems(newItems);
   };
 
   // --- NEW HANDLERS ---
-  const addTestimonial = () => setTestimonials([...testimonials, { name: "Nama", quote: "Komentar...", vehicle: "Kendaraan", rating: 5 }]);
-  const removeTestimonial = (idx: number) => {
+  const handleAddTestimonial = () => setTestimonials([...testimonials, { name: "Nama", quote: "Komentar...", vehicle: "Kendaraan", rating: 5 }]);
+  const handleRemoveTestimonial = (idx: number) => {
       const n = [...testimonials]; n.splice(idx, 1); setTestimonials(n);
   };
-  const updateTestimonial = (idx: number, field: string, val: any) => {
+  const handleUpdateTestimonial = (idx: number, field: string, val: any) => {
       const n = [...testimonials]; n[idx] = { ...n[idx], [field]: val }; setTestimonials(n);
   };
 
-  const addPromo = () => setPromos([...promos, { title: "JUDUL", desc: "Keterangan promo", isActive: false }]);
-  const removePromo = (idx: number) => {
+  const handleAddPromo = () => setPromos([...promos, { title: "JUDUL", desc: "Keterangan promo", isActive: false }]);
+  const handleRemovePromo = (idx: number) => {
       const n = [...promos]; n.splice(idx, 1); setPromos(n);
   };
-  const updatePromo = (idx: number, field: string, val: any) => {
+  const handleUpdatePromo = (idx: number, field: string, val: any) => {
       const n = [...promos]; n[idx] = { ...n[idx], [field]: val }; setPromos(n);
   };
 
@@ -456,7 +456,7 @@ export function WebsiteContentTab() {
                 </div>
 
                 <div className="flex justify-end">
-                    <Button onClick={saveHero} className="gap-2 bg-primary text-primary-foreground">
+                    <Button onClick={handleSaveHero} className="gap-2 bg-primary text-primary-foreground">
                         <Save className="h-4 w-4" /> Simpan Perubahan
                     </Button>
                 </div>
@@ -487,7 +487,7 @@ export function WebsiteContentTab() {
                      </div>
                  </div>
                  <div className="flex justify-end pt-4 border-t">
-                    <Button onClick={saveStats} className="gap-2 bg-primary text-primary-foreground">
+                    <Button onClick={handleSaveStats} className="gap-2 bg-primary text-primary-foreground">
                         <Save className="h-4 w-4" /> Simpan Stats
                     </Button>
                 </div>
@@ -523,7 +523,7 @@ export function WebsiteContentTab() {
                 <div className="space-y-4">
                     <div className="flex items-center justify-between">
                         <Label className="text-lg font-semibold">Daftar Kartu Layanan</Label>
-                        <Button size="sm" variant="outline" onClick={addServiceItem} className="gap-2">
+                        <Button size="sm" variant="outline" onClick={handleAddServiceItem} className="gap-2">
                             <Plus className="h-4 w-4" /> Tambah Layanan
                         </Button>
                     </div>
@@ -534,7 +534,7 @@ export function WebsiteContentTab() {
                             return (
                                 <Card key={index} className="relative group border border-muted-foreground/20 hover:border-primary/50 transition-all hover:shadow-md">
                                     <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity bg-background/80 backdrop-blur rounded-md p-1 shadow-sm border z-10">
-                                        <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive" onClick={() => removeServiceItem(index)}>
+                                        <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive" onClick={() => handleRemoveServiceItem(index)}>
                                             <Trash2 className="h-3 w-3" />
                                         </Button>
                                     </div>
@@ -548,13 +548,13 @@ export function WebsiteContentTab() {
                                             <div className="w-full overflow-hidden">
                                                 <Input 
                                                     value={item.title} 
-                                                    onChange={(e) => updateServiceItem(index, 'title', e.target.value)} 
+                                                    onChange={(e) => handleUpdateServiceItem(index, 'title', e.target.value)} 
                                                     className="font-bold h-7 text-sm px-1 border-transparent hover:border-input focus:border-input transition-colors mb-1 truncate"
                                                     placeholder="Nama Layanan"
                                                 />
                                                 <Input 
                                                     value={item.tag || ''} 
-                                                    onChange={(e) => updateServiceItem(index, 'tag', e.target.value)} 
+                                                    onChange={(e) => handleUpdateServiceItem(index, 'tag', e.target.value)} 
                                                     placeholder="Tag (Opsional)"
                                                     className="h-5 text-[10px] px-1 border-transparent hover:border-input focus:border-input text-primary font-medium"
                                                 />
@@ -565,7 +565,7 @@ export function WebsiteContentTab() {
                                         <div className="space-y-2">
                                             <Select 
                                                 value={item.serviceType || "LIGHT_SERVICE"} 
-                                                onValueChange={(val) => updateServiceItem(index, 'serviceType', val)}
+                                                onValueChange={(val) => handleUpdateServiceItem(index, 'serviceType', val)}
                                             >
                                                 <SelectTrigger className="h-7 text-xs">
                                                     <SelectValue />
@@ -579,7 +579,7 @@ export function WebsiteContentTab() {
 
                                             <Textarea 
                                                 value={item.description}
-                                                onChange={(e) => updateServiceItem(index, 'description', e.target.value)}
+                                                onChange={(e) => handleUpdateServiceItem(index, 'description', e.target.value)}
                                                 className="h-16 text-xs resize-none"
                                                 placeholder="Deskripsi singkat..."
                                             />
@@ -589,7 +589,7 @@ export function WebsiteContentTab() {
                                         <div className="bg-muted/30 p-2 rounded-md h-[120px] overflow-y-auto">
                                             <div className="flex justify-between items-center mb-1">
                                                 <span className="text-[10px] font-semibold text-muted-foreground uppercase">Fitur ({item.features?.length || 0})</span>
-                                                <Button variant="ghost" size="icon" className="h-4 w-4" onClick={() => addServiceFeature(index)}>
+                                                <Button variant="ghost" size="icon" className="h-4 w-4" onClick={() => handleAddServiceFeature(index)}>
                                                     <Plus className="h-3 w-3" />
                                                 </Button>
                                             </div>
@@ -599,18 +599,18 @@ export function WebsiteContentTab() {
                                                         <div className="w-1 h-1 rounded-full bg-primary shrink-0" />
                                                         <Input 
                                                             value={feat}
-                                                            onChange={(e) => updateServiceFeatureText(index, fIdx, e.target.value)}
+                                                            onChange={(e) => handleUpdateServiceFeatureText(index, fIdx, e.target.value)}
                                                             className="h-5 text-[10px] px-1 bg-transparent border-none focus:bg-background focus:ring-0"
                                                             placeholder="Fitur..."
                                                         />
-                                                        <Trash2 className="h-3 w-3 text-muted-foreground cursor-pointer hover:text-destructive shrink-0" onClick={() => removeServiceFeature(index, fIdx)} />
+                                                        <Trash2 className="h-3 w-3 text-muted-foreground cursor-pointer hover:text-destructive shrink-0" onClick={() => handleRemoveServiceFeature(index, fIdx)} />
                                                     </div>
                                                 ))}
                                             </div>
                                         </div>
 
                                         {/* Icon Selector Button */}
-                                        <Select value={item.icon} onValueChange={(val) => updateServiceItem(index, 'icon', val)}>
+                                        <Select value={item.icon} onValueChange={(val) => handleUpdateServiceItem(index, 'icon', val)}>
                                             <SelectTrigger className="w-full h-7 text-xs bg-muted/20">
                                                 <span className="flex items-center gap-2 truncate">
                                                     Ganti Icon: {ICONS.find(i => i.value === item.icon)?.label}
@@ -634,7 +634,7 @@ export function WebsiteContentTab() {
                 </div>
 
                 <div className="flex justify-end pt-4 border-t">
-                    <Button onClick={saveServices} className="gap-2 bg-primary text-primary-foreground">
+                    <Button onClick={handleSaveServices} className="gap-2 bg-primary text-primary-foreground">
                         <Save className="h-4 w-4" /> Simpan Layanan
                     </Button>
                 </div>
@@ -651,7 +651,7 @@ export function WebsiteContentTab() {
                  <div className="space-y-4">
                     <div className="flex items-center justify-between">
                         <Label className="text-lg font-semibold">Daftar Keunggulan</Label>
-                        <Button size="sm" variant="outline" onClick={addFeatureItem} className="gap-2">
+                        <Button size="sm" variant="outline" onClick={handleAddFeatureItem} className="gap-2">
                             <Plus className="h-4 w-4" /> Tambah Poin
                         </Button>
                     </div>
@@ -666,20 +666,20 @@ export function WebsiteContentTab() {
                                      <Input 
                                          value={item.title}
                                          placeholder="Judul Keunggulan"
-                                         onChange={(e) => updateFeatureItem(index, 'title', e.target.value)}
+                                         onChange={(e) => handleUpdateFeatureItem(index, 'title', e.target.value)}
                                          className="font-bold border-none h-7 px-0 focus-visible:ring-0 bg-transparent text-sm"
                                      />
                                      <Input 
                                          value={item.desc}
                                          placeholder="Penjelasan singkat..."
-                                         onChange={(e) => updateFeatureItem(index, 'desc', e.target.value)}
+                                         onChange={(e) => handleUpdateFeatureItem(index, 'desc', e.target.value)}
                                          className="text-xs border-none h-auto py-0 px-0 focus-visible:ring-0 bg-transparent text-muted-foreground"
                                      />
                                  </div>
                                  <Button 
                                      variant="ghost" 
                                      size="icon" 
-                                     onClick={() => removeFeatureItem(index)}
+                                     onClick={() => handleRemoveFeatureItem(index)}
                                      className="h-6 w-6 text-muted-foreground hover:text-destructive"
                                  >
                                      <Trash2 className="h-3 w-3" />
@@ -690,7 +690,7 @@ export function WebsiteContentTab() {
                  </div>
 
                  <div className="flex justify-end pt-4 border-t">
-                    <Button onClick={saveFeatures} className="gap-2 bg-primary text-primary-foreground">
+                    <Button onClick={handleSaveFeatures} className="gap-2 bg-primary text-primary-foreground">
                         <Save className="h-4 w-4" /> Simpan Keunggulan
                     </Button>
                 </div>
@@ -813,7 +813,7 @@ export function WebsiteContentTab() {
                  </div>
 
                  <div className="flex justify-end pt-4 border-t">
-                    <Button onClick={saveTheme} className="gap-2 bg-primary text-primary-foreground">
+                    <Button onClick={handleSaveTheme} className="gap-2 bg-primary text-primary-foreground">
                         <Save className="h-4 w-4" /> Simpan Tema
                     </Button>
                 </div>
@@ -826,36 +826,36 @@ export function WebsiteContentTab() {
                         <h4 className="font-medium">Daftar Testimoni</h4>
                         <p className="text-sm text-muted-foreground">Apa kata pelanggan tentang bengkel Anda.</p>
                     </div>
-                    <Button size="sm" onClick={addTestimonial} className="gap-2"><Plus className="h-4 w-4"/> Tambah</Button>
+                    <Button size="sm" onClick={handleAddTestimonial} className="gap-2"><Plus className="h-4 w-4"/> Tambah</Button>
                 </div>
                 
                 <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                     {testimonials.map((item, i) => (
                         <Card key={i} className="relative group">
-                            <Button variant="ghost" size="icon" className="absolute top-2 right-2 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity text-destructive" onClick={() => removeTestimonial(i)}><Trash2 className="h-3 w-3"/></Button>
+                            <Button variant="ghost" size="icon" className="absolute top-2 right-2 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity text-destructive" onClick={() => handleRemoveTestimonial(i)}><Trash2 className="h-3 w-3"/></Button>
                             <CardContent className="p-4 space-y-3">
                                 <div className="flex items-center gap-2 mb-2">
                                     {[1,2,3,4,5].map(star => (
                                         <Star key={star} className={`h-3 w-3 ${star <= (item.rating||5) ? "fill-yellow-400 text-yellow-400" : "text-slate-200"}`} 
-                                        onClick={() => updateTestimonial(i, 'rating', star)} />
+                                        onClick={() => handleUpdateTestimonial(i, 'rating', star)} />
                                     ))}
                                 </div>
                                 <Textarea 
                                     value={item.quote} 
-                                    onChange={(e) => updateTestimonial(i, 'quote', e.target.value)} 
+                                    onChange={(e) => handleUpdateTestimonial(i, 'quote', e.target.value)} 
                                     className="text-xs resize-none" 
                                     placeholder="Komentar..."
                                 />
                                 <div className="grid grid-cols-2 gap-2">
                                     <Input 
                                         value={item.name} 
-                                        onChange={(e) => updateTestimonial(i, 'name', e.target.value)} 
+                                        onChange={(e) => handleUpdateTestimonial(i, 'name', e.target.value)} 
                                         className="h-7 text-xs" 
                                         placeholder="Nama"
                                     />
                                     <Input 
                                         value={item.vehicle} 
-                                        onChange={(e) => updateTestimonial(i, 'vehicle', e.target.value)} 
+                                        onChange={(e) => handleUpdateTestimonial(i, 'vehicle', e.target.value)} 
                                         className="h-7 text-xs" 
                                         placeholder="Motor"
                                     />
@@ -865,7 +865,7 @@ export function WebsiteContentTab() {
                     ))}
                 </div>
                 <div className="flex justify-end pt-4 border-t">
-                    <Button onClick={saveTestimonials} className="gap-2 bg-primary text-primary-foreground"><Save className="h-4 w-4" /> Simpan Testimoni</Button>
+                    <Button onClick={handleSaveTestimonials} className="gap-2 bg-primary text-primary-foreground"><Save className="h-4 w-4" /> Simpan Testimoni</Button>
                 </div>
             </TabsContent>
 
@@ -876,20 +876,20 @@ export function WebsiteContentTab() {
                         <h4 className="font-medium">Promo Banner</h4>
                         <p className="text-sm text-muted-foreground">Banner berjalan di bagian atas website.</p>
                     </div>
-                    <Button size="sm" onClick={addPromo} className="gap-2"><Plus className="h-4 w-4"/> Tambah</Button>
+                    <Button size="sm" onClick={handleAddPromo} className="gap-2"><Plus className="h-4 w-4"/> Tambah</Button>
                 </div>
                 {promos.map((item, i) => (
                     <div key={i} className="flex gap-4 items-center p-3 border rounded-lg">
-                        <Switch checked={item.isActive} onCheckedChange={(c) => updatePromo(i, 'isActive', c)} />
+                        <Switch checked={item.isActive} onCheckedChange={(c) => handleUpdatePromo(i, 'isActive', c)} />
                         <div className="flex-1 space-y-2">
-                            <Input value={item.title} onChange={(e) => updatePromo(i, 'title', e.target.value)} placeholder="Judul Promo" className="font-bold" />
-                            <Input value={item.desc} onChange={(e) => updatePromo(i, 'desc', e.target.value)} placeholder="Deskripsi singkat" />
+                            <Input value={item.title} onChange={(e) => handleUpdatePromo(i, 'title', e.target.value)} placeholder="Judul Promo" className="font-bold" />
+                            <Input value={item.desc} onChange={(e) => handleUpdatePromo(i, 'desc', e.target.value)} placeholder="Deskripsi singkat" />
                         </div>
-                        <Button variant="ghost" size="icon" onClick={() => removePromo(i)} className="text-destructive"><Trash2 className="h-4 w-4"/></Button>
+                        <Button variant="ghost" size="icon" onClick={() => handleRemovePromo(i)} className="text-destructive"><Trash2 className="h-4 w-4"/></Button>
                     </div>
                 ))}
                  <div className="flex justify-end pt-4 border-t">
-                    <Button onClick={savePromos} className="gap-2 bg-primary text-primary-foreground"><Save className="h-4 w-4" /> Simpan Promo</Button>
+                    <Button onClick={handleSavePromos} className="gap-2 bg-primary text-primary-foreground"><Save className="h-4 w-4" /> Simpan Promo</Button>
                 </div>
             </TabsContent>
 
@@ -913,7 +913,7 @@ export function WebsiteContentTab() {
                      </div>
                  </div>
                  <div className="flex justify-end pt-4 border-t">
-                    <Button onClick={saveFooter} className="gap-2 bg-primary text-primary-foreground"><Save className="h-4 w-4" /> Simpan Footer</Button>
+                    <Button onClick={handleSaveFooter} className="gap-2 bg-primary text-primary-foreground"><Save className="h-4 w-4" /> Simpan Footer</Button>
                 </div>
             </TabsContent>
 

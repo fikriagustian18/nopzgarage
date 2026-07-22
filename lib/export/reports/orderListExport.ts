@@ -15,19 +15,19 @@ export interface OrderListExport {
   totalAmount: number;
 }
 
-export async function exportOrderList(
+export async function exportOrders(
   data: OrderListExport[],
   format: ExportFormat,
   orientation: PageOrientation = "landscape"
 ) {
   if (format === "pdf") {
-    return exportOrderListToPDF(data, orientation);
+    return exportOrdersToPDF(data, orientation);
   } else {
-    return exportOrderListToExcel(data);
+    return exportOrdersToExcel(data);
   }
 }
 
-function exportOrderListToPDF(data: OrderListExport[], orientation: PageOrientation): Blob {
+function exportOrdersToPDF(data: OrderListExport[], orientation: PageOrientation): Blob {
   const pdf = new PDFGenerator(orientation);
 
   pdf.addLetterhead();
@@ -71,7 +71,7 @@ function exportOrderListToPDF(data: OrderListExport[], orientation: PageOrientat
   return pdf.getBlob();
 }
 
-async function exportOrderListToExcel(data: OrderListExport[]): Promise<Blob> {
+async function exportOrdersToExcel(data: OrderListExport[]): Promise<Blob> {
   const excel = new ExcelGenerator();
   excel.createSheet("Daftar Order");
   excel.addLetterhead();

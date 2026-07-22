@@ -170,10 +170,10 @@ export class ExcelGenerator {
   }
 
   // Auto-size columns
-  autoSizeColumns(numColumns: number) {
+  autoSizeColumns(columnCount: number) {
     if (!this.currentSheet) return;
 
-    for (let i = 1; i <= numColumns; i++) {
+    for (let i = 1; i <= columnCount; i++) {
       this.currentSheet.getColumn(i).width = 15; // Default width
     }
   }

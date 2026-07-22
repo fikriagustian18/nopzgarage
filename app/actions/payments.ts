@@ -238,9 +238,9 @@ async function getRevenueBreakdown(tx: TransactionClient, orderId: string, order
     });
 
     if (order && order.items) {
-      const itemsList = typeof order.items === 'string' ? JSON.parse(order.items) : order.items;
-      if (Array.isArray(itemsList)) {
-        for (const item of itemsList) {
+      const parsedItems = typeof order.items === 'string' ? JSON.parse(order.items) : order.items;
+      if (Array.isArray(parsedItems)) {
+        for (const item of parsedItems) {
           const qty = Number(item.qty || 0);
           const price = Number(item.price || 0);
           const itemTotalPrice = qty * price;

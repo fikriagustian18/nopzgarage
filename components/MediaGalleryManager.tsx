@@ -280,7 +280,7 @@ export function MediaGalleryManager() {
                     onChange={handleFileChange}
                   />
                   <Button 
-                    type="Button" 
+                    type="button" 
                     variant="outline" 
                     size="icon"
                     onClick={handleFileClick}
@@ -361,7 +361,7 @@ export function MediaGalleryManager() {
 
               <div className="flex justify-end gap-2 pt-4">
                 <Button
-                  type="Button"
+                  type="button"
                   variant="outline"
                   onClick={() => handleDialogClose(false)}
                 >

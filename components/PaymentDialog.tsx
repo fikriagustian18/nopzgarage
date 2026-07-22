@@ -17,6 +17,7 @@ import { toast } from "@/hooks/useToast";
 import { Loader2, DollarSign } from "lucide-react";
 import { formatCurrency } from "@/lib/utils"; 
 import { notifyPaymentReceived } from "@/hooks/useNotification"; 
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/Select"; 
 
 type Order = {
   id: string;
@@ -47,7 +48,7 @@ export function PaymentDialog({
   
   // Payment Method State
   const [method, setMethod] = useState<"CASH" | "TRANSFER" | "QRIS" | "CARD">("CASH");
-  const [bankList, setBankList] = useState<any[]>([]);
+  const [banks, setBanks] = useState<any[]>([]);
   const [selectedBankId, setSelectedBankId] = useState("");
   
   // Cash Payment States
@@ -90,7 +91,7 @@ export function PaymentDialog({
       const { getBankAccounts } = await import("@/app/actions/bank");
       const res = await getBankAccounts();
       if (res.success && res.data) {
-          setBankList(res.data.filter((b: any) => b.isActive));
+          setBanks(res.data.filter((b: any) => b.isActive));
       }
   }
 
@@ -109,7 +110,7 @@ export function PaymentDialog({
         return;
       }
 
-      if (["TRANSFER", "QRIS", "CARD"].includes(method) && !selectedBankId && bankList.length > 0) {
+      if (["TRANSFER", "QRIS", "CARD"].includes(method) && !selectedBankId && banks.length > 0) {
           toast({
               variant: "destructive",
               title: "Pilih Rekening Bank",
@@ -216,7 +217,7 @@ export function PaymentDialog({
                 <Label className="text-foreground">Metode Bayar</Label>
                 <div className="grid grid-cols-4 bg-muted rounded-md p-1 gap-1">
                     <button
-                        type="Button"
+                        type="button"
                         onClick={() => setMethod("CASH")}
                         className={`text-xs font-semibold py-2 rounded-sm transition-all ${
                             method === "CASH" ? "bg-background shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"
@@ -225,7 +226,7 @@ export function PaymentDialog({
                         Tunai
                     </button>
                     <button
-                        type="Button"
+                        type="button"
                         onClick={() => setMethod("TRANSFER")}
                         className={`text-xs font-semibold py-2 rounded-sm transition-all ${
                             method === "TRANSFER" ? "bg-background shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"
@@ -234,7 +235,7 @@ export function PaymentDialog({
                         Transfer
                     </button>
                     <button
-                        type="Button"
+                        type="button"
                         onClick={() => setMethod("QRIS")}
                         className={`text-xs font-semibold py-2 rounded-sm transition-all ${
                             method === "QRIS" ? "bg-background shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"
@@ -243,7 +244,7 @@ export function PaymentDialog({
                         QRIS
                     </button>
                     <button
-                        type="Button"
+                        type="button"
                         onClick={() => setMethod("CARD")}
                         className={`text-xs font-semibold py-2 rounded-sm transition-all ${
                             method === "CARD" ? "bg-background shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"
@@ -282,21 +283,21 @@ export function PaymentDialog({
 
             {["TRANSFER", "QRIS", "CARD"].includes(method) && (
               <div className="space-y-3 border border-border p-3 rounded-lg bg-muted/20">
-                {bankList.length > 0 && (
-                  <div className="space-y-2">
-                    <Label>Rekening Bank Tujuan (EDC/QRIS/Transfer)</Label>
-                    <select 
-                        className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-                        value={selectedBankId}
-                        onChange={(e) => setSelectedBankId(e.target.value)}
-                    >
-                        <option value="">Pilih Bank...</option>
-                        {bankList.map((bank) => (
-                            <option key={bank.id} value={bank.id}>
+                {banks.length > 0 && (
+                  <div className="space-y-1.5 animate-in fade-in-50">
+                    <Label className="text-xs">Pilih Rekening Tujuan / EDC</Label>
+                    <Select value={selectedBankId} onValueChange={setSelectedBankId}>
+                      <SelectTrigger className="h-9 text-xs border-border">
+                        <SelectValue placeholder="-- Pilih Bank / Kas --" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {banks.map((bank) => (
+                            <SelectItem key={bank.id} value={bank.id}>
                                 {bank.bankName} - {bank.accountNumber}
-                            </option>
+                            </SelectItem>
                         ))}
-                    </select>
+                      </SelectContent>
+                    </Select>
                   </div>
                 )}
 
@@ -358,7 +359,7 @@ export function PaymentDialog({
 
           <div className="flex gap-3 pt-4">
             <Button
-              type="Button"
+              type="button"
               variant="outline"
               onClick={() => onOpenChange(false)}
               disabled={loading}

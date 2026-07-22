@@ -145,7 +145,7 @@ export async function createExpense(data: CreateExpenseInput) {
  * 
  * @returns {Object} Daftar transaksi pengeluaran.
  */
-export async function getExpensesList() {
+export async function getExpenses() {
     try {
       const session = await auth();
       if (!session || session.user?.role !== 'OWNER') {

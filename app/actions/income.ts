@@ -144,7 +144,7 @@ export async function createIncome(data: CreateIncomeInput) {
  * 
  * @returns {Object} List transaksi pemasukan.
  */
-export async function getIncomeList() {
+export async function getIncomeRecords() {
     try {
       const session = await auth();
       if (!session || session.user?.role !== 'OWNER') {

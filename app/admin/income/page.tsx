@@ -5,7 +5,7 @@ import { RoleGuard } from "@/components/RoleGuard";
 import { 
     getIncomeCategories, 
     createIncome, 
-    getIncomeList, 
+    getIncomeRecords, 
     deleteIncome,
     CreateIncomeInput 
 } from "@/app/actions/income";
@@ -69,7 +69,7 @@ export default function IncomePage() {
   async function loadData() {
     setLoading(true);
     const [incRes, catRes] = await Promise.all([
-        getIncomeList(),
+        getIncomeRecords(),
         getIncomeCategories()
     ]);
 

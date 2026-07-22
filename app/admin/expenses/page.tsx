@@ -5,7 +5,7 @@ import { RoleGuard } from "@/components/RoleGuard";
 import { 
     getExpenseCategories, 
     createExpense, 
-    getExpensesList, 
+    getExpenses, 
     deleteExpense,
     CreateExpenseInput 
 } from "@/app/actions/expenses";
@@ -69,7 +69,7 @@ export default function ExpensesPage() {
   async function loadData() {
     setLoading(true);
     const [expRes, catRes] = await Promise.all([
-        getExpensesList(),
+        getExpenses(),
         getExpenseCategories()
     ]);
 

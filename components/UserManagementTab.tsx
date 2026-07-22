@@ -725,7 +725,7 @@ export function UserManagementTab() {
               <Button 
                 variant="outline" 
                 size="sm" 
-                type="Button" 
+                type="button" 
                 className="w-full gap-2 text-xs h-10 rounded-xl"
                 onClick={() => {
                   setEditDialogOpen(false);

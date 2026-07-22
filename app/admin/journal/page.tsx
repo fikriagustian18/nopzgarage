@@ -208,7 +208,7 @@ export default function GeneralJournalPage() {
                                 <p className="text-sm text-muted-foreground mb-1">Total Debit</p>
                                 <p className="text-2xl font-bold text-green-600 dark:text-green-400">
                                     Rp {entries.reduce((sum, e) => 
-                                        sum + e.items?.reduce((iSum: number, i: any) => iSum + Number(i.debit || 0), 0), 0
+                                        sum + e.items?.reduce((itemSum: number, i: any) => itemSum + Number(i.debit || 0), 0), 0
                                     ).toLocaleString('id-ID')}
                                 </p>
                             </div>
@@ -216,7 +216,7 @@ export default function GeneralJournalPage() {
                                 <p className="text-sm text-muted-foreground mb-1">Total Kredit</p>
                                 <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">
                                     Rp {entries.reduce((sum, e) => 
-                                        sum + e.items?.reduce((iSum: number, i: any) => iSum + Number(i.credit || 0), 0), 0
+                                        sum + e.items?.reduce((itemSum: number, i: any) => itemSum + Number(i.credit || 0), 0), 0
                                     ).toLocaleString('id-ID')}
                                 </p>
                             </div>

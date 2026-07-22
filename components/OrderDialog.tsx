@@ -339,7 +339,7 @@ export function OrderDialog({
           {!isReadOnly && (
             <div className="flex gap-3 pt-4 border-t">
               <Button
-                type="Button"
+                type="button"
                 variant="outline"
                 onClick={() => onOpenChange(false)}
                 disabled={loading}

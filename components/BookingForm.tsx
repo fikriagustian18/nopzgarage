@@ -73,7 +73,7 @@ export function BookingForm({ serviceOptions = [], garagePhone }: BookingFormPro
     },
   });
 
-  const onSubmit = async (data: BookingFormData) => {
+  const handleSubmit = async (data: BookingFormData) => {
     setIsSubmitting(true);
 
     try {
@@ -198,7 +198,7 @@ export function BookingForm({ serviceOptions = [], garagePhone }: BookingFormPro
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+      <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
         
         {/* SECTION 1: Personal Info */}
         <div className="space-y-4">

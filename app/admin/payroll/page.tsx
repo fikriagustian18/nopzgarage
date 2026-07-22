@@ -700,7 +700,7 @@ export default function PayrollPage() {
                 </div>
               </div>
               <DialogFooter>
-                <Button type="Button" variant="outline" onClick={() => setGenerateOpen(false)}>
+                <Button type="button" variant="outline" onClick={() => setGenerateOpen(false)}>
                   Batal
                 </Button>
                 <Button type="submit" disabled={generating} className="bg-primary text-white">
@@ -758,7 +758,7 @@ export default function PayrollPage() {
                 </div>
               </div>
               <DialogFooter>
-                <Button type="Button" variant="outline" onClick={() => setEditOpen(false)}>
+                <Button type="button" variant="outline" onClick={() => setEditOpen(false)}>
                   Batal
                 </Button>
                 <Button type="submit" disabled={updating} className="bg-primary text-white">
@@ -870,7 +870,7 @@ export default function PayrollPage() {
                 </div>
               </div>
               <DialogFooter>
-                <Button type="Button" variant="outline" onClick={() => setPayOpen(false)}>
+                <Button type="button" variant="outline" onClick={() => setPayOpen(false)}>
                   Batal
                 </Button>
                 <Button type="submit" disabled={paying} className="bg-green-600 hover:bg-green-700 text-white font-bold">

@@ -72,7 +72,7 @@ export function ProcessOrderDialog({
   // Fee Allocations (Bisa banyak karyawan)
   const [fees, setFees] = useState<FeeAllocation[]>([]);
   const [spareParts, setSpareParts] = useState<any[]>([]);
-  const [servicesList, setServicesList] = useState<any[]>([]); // New state
+  const [availableServices, setAvailableServices] = useState<any[]>([]);
   const [showConfirmation, setShowConfirmation] = useState(false);
 
   async function loadData() {
@@ -89,7 +89,7 @@ export function ProcessOrderDialog({
       setSpareParts(partRes.spareParts);
     }
     if (contentRes.success && contentRes.data?.content && Array.isArray((contentRes.data.content as any).items)) {
-      setServicesList((contentRes.data.content as any).items);
+      setAvailableServices((contentRes.data.content as any).items);
     }
   }
 
@@ -313,7 +313,7 @@ export function ProcessOrderDialog({
               <Label>Item Barang & Jasa</Label>
               <div className="flex gap-1.5">
                 <Button
-                  type="Button"
+                  type="button"
                   size="sm"
                   variant="outline"
                   onClick={handleAddService}
@@ -322,7 +322,7 @@ export function ProcessOrderDialog({
                   <Wrench className="h-3 w-3 mr-1" /> + Jasa
                 </Button>
                 <Button
-                  type="Button"
+                  type="button"
                   size="sm"
                   variant="outline"
                   onClick={handleAddPart}
@@ -340,7 +340,7 @@ export function ProcessOrderDialog({
                   index={index}
                   item={item}
                   spareParts={spareParts}
-                  servicesList={servicesList}
+                  availableServices={availableServices}
                   onUpdate={handleUpdateItem}
                   onRemove={handleRemoveItem}
                 />
@@ -364,7 +364,7 @@ export function ProcessOrderDialog({
 
             <div className="flex justify-between items-center">
               <Label>Penerima Fee & Gaji</Label>
-              <Button type="Button" size="sm" variant="outline" onClick={handleAddFee} className="h-7 text-xs border-dashed">
+              <Button type="button" size="sm" variant="outline" onClick={handleAddFee} className="h-7 text-xs border-dashed">
                 <UserPlus className="h-3 w-3 mr-1" /> Add Person
               </Button>
             </div>
@@ -418,7 +418,7 @@ export function ProcessOrderDialog({
                       />
                    </div>
                    <Button
-                      type="Button"
+                      type="button"
                       variant="ghost"
                       size="icon"
                       onClick={() => handleRemoveFee(index)}
@@ -562,14 +562,14 @@ function ItemInput({
   item, 
   index, 
   spareParts, 
-  servicesList,
+  availableServices,
   onUpdate, 
   onRemove 
 }: { 
   item: OrderItem, 
   index: number, 
   spareParts: any[], 
-  servicesList?: any[],
+  availableServices?: any[],
   onUpdate: (index: number, updates: Partial<OrderItem>) => void,
   onRemove: (index: number) => void
 }) {
@@ -619,15 +619,15 @@ function ItemInput({
            </div>
          ) : (
            /* Service Selection Logic */
-           !isCustomService && servicesList && servicesList.length > 0 ? (
+           !isCustomService && availableServices && availableServices.length > 0 ? (
               <Select
-                 value={servicesList.some(s => s.title === item.name) ? item.name : ""}
+                 value={availableServices.some(s => s.title === item.name) ? item.name : ""}
                  onValueChange={(value) => {
                    if (value === "CUSTOM_INPUT") {
                      setIsCustomService(true);
                      onUpdate(index, { name: "" });
                    } else {
-                     const matchedService = servicesList.find(s => s.title === value);
+                     const matchedService = availableServices.find(s => s.title === value);
                      onUpdate(index, {
                        name: value,
                        price: matchedService?.price ? Number(matchedService.price) : item.price,
@@ -642,7 +642,7 @@ function ItemInput({
                    <SelectItem value="CUSTOM_INPUT" className="font-semibold text-primary">
                      Input Jasa Custom Manual
                    </SelectItem>
-                  {servicesList.map((service: any) => (
+                  {availableServices.map((service: any) => (
                     <SelectItem key={service.id} value={service.title}>
                       {service.title} <span className="text-muted-foreground text-[10px] ml-2">({service.serviceType === 'MODIFICATION' ? 'Modif' : 'Ringan'})</span>
                     </SelectItem>
@@ -658,9 +658,9 @@ function ItemInput({
                 className={`w-full h-10 text-xs shadow-sm ${!item.name ? 'border-destructive/50' : ''}`}
                 autoFocus={isCustomService}
               />
-              {servicesList && servicesList.length > 0 && (
+              {availableServices && availableServices.length > 0 && (
                 <Button 
-                  type="Button" 
+                  type="button" 
                   variant="ghost" 
                   size="icon" 
                   className="absolute right-1 w-6 h-6"
@@ -705,7 +705,7 @@ function ItemInput({
       </div>
 
       <Button
-        type="Button"
+        type="button"
         variant="ghost"
         size="icon"
         onClick={() => onRemove(index)}

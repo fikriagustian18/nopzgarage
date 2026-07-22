@@ -595,12 +595,12 @@ export async function getOrderDetail(orderId: string) {
       return { success: false, error: 'Order tidak ditemukan' };
     }
 
-    const sOrder = serializeOrder(order);
+    const serializedOrder = serializeOrder(order);
     // Tambahkan serialize khusus untuk Decimal di orderFees dan orderItems jika perlu
     // Tapi serializeOrder standard hanya handle top level.
     // Kita extend sedikit hasilnya:
     const detailedOrder = {
-      ...sOrder,
+      ...serializedOrder,
       orderFees: order.orderFees.map((f: any) => ({ 
         ...f, 
         amount: f.amount.toNumber(),
