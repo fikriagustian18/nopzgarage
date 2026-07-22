@@ -96,7 +96,11 @@ export function AdminHeader() {
                 <ChevronDown className="h-3.5 w-3.5 text-muted-foreground hidden md:block" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent className="w-56" align="end" forceMount>
+            <DropdownMenuContent
+              className="w-56"
+              align="end"
+              forceMount
+            >
               <DropdownMenuLabel className="font-normal">
                 <div className="flex flex-col space-y-1">
                   <p className="text-sm font-medium leading-none">{session?.user?.employeeName || "Administrator"}</p>

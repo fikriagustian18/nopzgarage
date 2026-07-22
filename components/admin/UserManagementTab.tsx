@@ -372,7 +372,11 @@ export function UserManagementTab() {
         </div>
 
         {/* Reset Filter Button */}
-        <Button variant="outline" onClick={handleResetFilters} className="gap-2 h-11 px-4 border-border rounded-xl">
+        <Button
+          variant="outline"
+          onClick={handleResetFilters}
+          className="gap-2 h-11 px-4 border-border rounded-xl"
+        >
           <RotateCcw className="h-4 w-4" />
           <span>Reset</span>
         </Button>
@@ -493,9 +497,23 @@ export function UserManagementTab() {
         {/* PAGINATION PANEL */}
         <div className="p-4 border-t border-border flex justify-end bg-muted/10">
           <div className="flex items-center gap-1.5 text-[11px] font-bold text-muted-foreground">
-            <Button variant="outline" size="sm" className="h-7 w-7 p-0 rounded" disabled>&lt;</Button>
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-7 w-7 p-0 rounded"
+              disabled
+            >
+              &lt;
+            </Button>
             <span className="h-7 w-7 flex items-center justify-center bg-primary text-primary-foreground font-black rounded">1</span>
-            <Button variant="outline" size="sm" className="h-7 w-7 p-0 rounded" disabled>&gt;</Button>
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-7 w-7 p-0 rounded"
+              disabled
+            >
+              &gt;
+            </Button>
           </div>
         </div>
       </Card>
@@ -655,7 +673,11 @@ export function UserManagementTab() {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setCreateDialogOpen(false)} className="rounded-xl">
+            <Button
+              variant="outline"
+              onClick={() => setCreateDialogOpen(false)}
+              className="rounded-xl"
+            >
               Batal
             </Button>
             <Button onClick={handleCreateUser} className="rounded-xl">Buat User</Button>
@@ -738,7 +760,11 @@ export function UserManagementTab() {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setEditDialogOpen(false)} className="rounded-xl">
+            <Button
+              variant="outline"
+              onClick={() => setEditDialogOpen(false)}
+              className="rounded-xl"
+            >
               Batal
             </Button>
             <Button onClick={handleUpdateUser} className="rounded-xl">Simpan</Button>
@@ -780,7 +806,11 @@ export function UserManagementTab() {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setResetPasswordDialogOpen(false)} className="rounded-xl">
+            <Button
+              variant="outline"
+              onClick={() => setResetPasswordDialogOpen(false)}
+              className="rounded-xl"
+            >
               Batal
             </Button>
             <Button onClick={handleResetPassword} className="rounded-xl">Reset Password</Button>
@@ -799,10 +829,18 @@ export function UserManagementTab() {
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setDeleteDialogOpen(false)} className="rounded-xl">
+            <Button
+              variant="outline"
+              onClick={() => setDeleteDialogOpen(false)}
+              className="rounded-xl"
+            >
               Batal
             </Button>
-            <Button variant="destructive" onClick={handleDeleteUser} className="rounded-xl">
+            <Button
+              variant="destructive"
+              onClick={handleDeleteUser}
+              className="rounded-xl"
+            >
               Hapus User
             </Button>
           </DialogFooter>
@@ -819,7 +857,11 @@ export function UserManagementTab() {
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setStatusDialogOpen(false)} className="rounded-xl">
+            <Button
+              variant="outline"
+              onClick={() => setStatusDialogOpen(false)}
+              className="rounded-xl"
+            >
               Batal
             </Button>
             <Button 

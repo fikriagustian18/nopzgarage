@@ -306,12 +306,31 @@ export default function Page() {
                   <ResponsiveContainer width="100%" height="100%">
                     <AreaChart data={revenueChartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
                       <defs>
-                        <linearGradient id="colorRevenueMain" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="#DE73FF" stopOpacity={0.3}/>
-                          <stop offset="95%" stopColor="#DE73FF" stopOpacity={0.02}/>
+                        <linearGradient
+                          id="colorRevenueMain"
+                          x1="0"
+                          y1="0"
+                          x2="0"
+                          y2="1"
+                        >
+                          <stop
+                            offset="5%"
+                            stopColor="#DE73FF"
+                            stopOpacity={0.3}
+                           />
+                          <stop
+                            offset="95%"
+                            stopColor="#DE73FF"
+                            stopOpacity={0.02}
+                           />
                         </linearGradient>
                       </defs>
-                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" opacity={0.5} />
+                      <CartesianGrid
+                        strokeDasharray="3 3"
+                        vertical={false}
+                        stroke="hsl(var(--border))"
+                        opacity={0.5}
+                       />
                       <XAxis 
                         dataKey="date" 
                         axisLine={false}
@@ -488,7 +507,11 @@ export default function Page() {
               </div>
               <div className="p-3 border-t border-border flex justify-center bg-muted/10">
                 <Link href="/admin/pelayanan">
-                  <Button variant="outline" size="sm" className="gap-2 text-xs">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="gap-2 text-xs"
+                  >
                     Lihat Semua Pelayanan
                   </Button>
                 </Link>
@@ -536,7 +559,11 @@ export default function Page() {
               </div>
               <div className="p-3 border-t border-border flex justify-center bg-muted/10">
                 <Link href="/admin/inventory">
-                  <Button variant="outline" size="sm" className="gap-2 text-xs">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="gap-2 text-xs"
+                  >
                     Lihat Semua Inventory
                   </Button>
                 </Link>

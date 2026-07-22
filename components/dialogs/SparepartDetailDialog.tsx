@@ -312,10 +312,19 @@ export function SparepartDetailDialog({
               />
             </div>
             <div className="flex gap-2 pt-2">
-              <Button type="button" variant="outline" className="flex-1" onClick={() => setActiveTab("detail")}>
+              <Button
+                type="button"
+                variant="outline"
+                className="flex-1"
+                onClick={() => setActiveTab("detail")}
+              >
                 Batal
               </Button>
-              <Button type="submit" disabled={loading} className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white">
+              <Button
+                type="submit"
+                disabled={loading}
+                className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white"
+              >
                 {loading && <Loader2 className="h-4 w-4 animate-spin mr-1" />}
                 Simpan Stok Masuk
               </Button>
@@ -364,10 +373,19 @@ export function SparepartDetailDialog({
               />
             </div>
             <div className="flex gap-2 pt-2">
-              <Button type="button" variant="outline" className="flex-1" onClick={() => setActiveTab("detail")}>
+              <Button
+                type="button"
+                variant="outline"
+                className="flex-1"
+                onClick={() => setActiveTab("detail")}
+              >
                 Batal
               </Button>
-              <Button type="submit" disabled={loading} className="flex-1 bg-orange-600 hover:bg-orange-700 text-white">
+              <Button
+                type="submit"
+                disabled={loading}
+                className="flex-1 bg-orange-600 hover:bg-orange-700 text-white"
+              >
                 {loading && <Loader2 className="h-4 w-4 animate-spin mr-1" />}
                 Simpan Stok Keluar
               </Button>

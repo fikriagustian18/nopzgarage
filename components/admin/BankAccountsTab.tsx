@@ -165,7 +165,12 @@ export function BankAccountsTab() {
                                 </div>
                             </div>
                             <div className="flex gap-2">
-                                <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive hover:bg-destructive/10" onClick={() => handleDelete(bank.id)}>
+                                <Button
+                                  size="icon"
+                                  variant="ghost"
+                                  className="h-8 w-8 text-destructive hover:bg-destructive/10"
+                                  onClick={() => handleDelete(bank.id)}
+                                >
                                     <Trash2 className="h-4 w-4" />
                                 </Button>
                             </div>

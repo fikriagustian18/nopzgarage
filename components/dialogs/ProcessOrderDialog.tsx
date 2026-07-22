@@ -364,7 +364,13 @@ export function ProcessOrderDialog({
 
             <div className="flex justify-between items-center">
               <Label>Penerima Fee & Gaji</Label>
-              <Button type="button" size="sm" variant="outline" onClick={handleAddFee} className="h-7 text-xs border-dashed">
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                onClick={handleAddFee}
+                className="h-7 text-xs border-dashed"
+              >
                 <UserPlus className="h-3 w-3 mr-1" /> Add Person
               </Button>
             </div>
@@ -372,7 +378,7 @@ export function ProcessOrderDialog({
             {fees.length === 0 && (
               <div className="text-center py-6 text-muted-foreground text-xs border-2 border-dashed border-muted rounded bg-muted/20">
                 Belum ada alokasi fee.
-                <br/>Klik "Add Person" untuk tambah Admin/Teknisi.
+                <br />Klik "Add Person" untuk tambah Admin/Teknisi.
               </div>
             )}
 
@@ -461,7 +467,11 @@ export function ProcessOrderDialog({
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Batal
           </Button>
-            <Button onClick={handleValidateAndConfirm} disabled={loading} className="gap-2 bg-primary hover:bg-primary/90 text-primary-foreground">
+            <Button
+              onClick={handleValidateAndConfirm}
+              disabled={loading}
+              className="gap-2 bg-primary hover:bg-primary/90 text-primary-foreground"
+            >
             {loading && <Loader2 className="h-4 w-4 animate-spin" />}
             Simpan & Kerjakan
           </Button>

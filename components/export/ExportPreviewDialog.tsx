@@ -166,7 +166,13 @@ export function ExportPreviewDialog({
 
           <div className="flex-1" />
 
-          <Button onClick={generatePreview} disabled={isGenerating} size="default" variant="secondary" className="min-w-[160px]">
+          <Button
+            onClick={generatePreview}
+            disabled={isGenerating}
+            size="default"
+            variant="secondary"
+            className="min-w-[160px]"
+          >
             {isGenerating ? (
               <>
                 <Loader2 className="h-4 w-4 mr-2 animate-spin" />
@@ -188,7 +194,11 @@ export function ExportPreviewDialog({
               </div>
             </div>
           ) : previewUrl && format === "pdf" ? (
-            <iframe src={previewUrl} className="w-full h-full" title="PDF Preview" />
+            <iframe
+              src={previewUrl}
+              className="w-full h-full"
+              title="PDF Preview"
+             />
           ) : format === "excel" ? (
             <div className="flex items-center justify-center h-full">
               <div className="text-center">

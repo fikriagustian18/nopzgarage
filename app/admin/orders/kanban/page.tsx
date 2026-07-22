@@ -132,7 +132,11 @@ export default function Page() {
       {/* Header - Compact */}
       <header className="bg-card border-b border-border px-6 py-4 flex justify-between items-center shrink-0">
         <div className="flex items-center gap-3">
-          <Button variant="ghost" size="icon" onClick={() => router.push("/admin/orders")}>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => router.push("/admin/orders")}
+          >
             <Wrench className="h-6 w-6 text-primary" />
           </Button>
           <h1 className="text-xl font-bold text-foreground">Kanban Board</h1>
@@ -189,7 +193,11 @@ export default function Page() {
                           
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="icon" className="h-6 w-6 -mr-2 text-muted-foreground hover:text-foreground">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-6 w-6 -mr-2 text-muted-foreground hover:text-foreground"
+                              >
                                 <MoreVertical className="h-4 w-4" />
                               </Button>
                             </DropdownMenuTrigger>

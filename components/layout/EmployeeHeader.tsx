@@ -39,7 +39,13 @@ export function EmployeeHeader() {
       <div className="container flex h-16 items-center justify-between">
         <div className="flex items-center gap-2">
             <div className="relative h-8 w-8">
-                <Image src="/logo.svg" alt="NopzGarage" fill sizes="32px" className="object-contain" />
+                <Image
+                  src="/logo.svg"
+                  alt="NopzGarage"
+                  fill
+                  sizes="32px"
+                  className="object-contain"
+                 />
             </div>
             <span className="font-bold text-lg hidden md:block">NopzGarage</span>
         </div>
@@ -49,7 +55,11 @@ export function EmployeeHeader() {
           
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="relative h-10 w-10 rounded-full" suppressHydrationWarning>
+              <Button
+                variant="ghost"
+                className="relative h-10 w-10 rounded-full"
+                suppressHydrationWarning
+              >
                 <Avatar className="h-10 w-10 border">
                   <AvatarFallback className="bg-primary/10 text-primary">
                     {getInitials(session?.user?.employeeName || session?.user?.email || "EM")}
@@ -57,7 +67,11 @@ export function EmployeeHeader() {
                 </Avatar>
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent className="w-56" align="end" forceMount>
+            <DropdownMenuContent
+              className="w-56"
+              align="end"
+              forceMount
+            >
               <DropdownMenuLabel className="font-normal">
                 <div className="flex flex-col space-y-1">
                   <p className="text-sm font-medium leading-none">{session?.user?.employeeName}</p>

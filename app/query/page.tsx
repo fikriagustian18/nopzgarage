@@ -613,7 +613,11 @@ export default function Page() {
                         </SelectTrigger>
                         <SelectContent>
                           {DB_MODELS.map(m => (
-                            <SelectItem key={m.name} value={m.name} className="font-mono">
+                            <SelectItem
+                              key={m.name}
+                              value={m.name}
+                              className="font-mono"
+                            >
                               {m.name}
                             </SelectItem>
                           ))}
@@ -628,7 +632,11 @@ export default function Page() {
                         </SelectTrigger>
                         <SelectContent>
                           {PRISMA_OPERATIONS.map(op => (
-                            <SelectItem key={op} value={op} className="font-mono">
+                            <SelectItem
+                              key={op}
+                              value={op}
+                              className="font-mono"
+                            >
                               {op}
                             </SelectItem>
                           ))}
@@ -670,11 +678,11 @@ export default function Page() {
                           <SelectValue placeholder="Pilih preset SQL..." />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value='SELECT * FROM "User" LIMIT 10;'>10 User Terbaru</SelectItem>
-                          <SelectItem value='SELECT * FROM "Order" ORDER BY "createdAt" DESC LIMIT 10;'>10 Order Terbaru</SelectItem>
-                          <SelectItem value='SELECT status, count(*), sum("totalPrice") FROM "Order" GROUP BY status;'>Order Berdasarkan Status</SelectItem>
-                          <SelectItem value='SELECT "paymentMethod", sum(amount) FROM "Payment" GROUP BY "paymentMethod";'>Total Pembayaran per Metode</SelectItem>
-                          <SelectItem value='SELECT name, stock, "minStock" FROM "SparePart" WHERE stock < "minStock" AND "isActive" = true;'>Stok Suku Cadang Kritis</SelectItem>
+                          <SelectItem value={`SELECT * FROM "User" LIMIT 10;`}>10 User Terbaru</SelectItem>
+                          <SelectItem value={`SELECT * FROM "Order" ORDER BY "createdAt" DESC LIMIT 10;`}>10 Order Terbaru</SelectItem>
+                          <SelectItem value={`SELECT status, count(*), sum("totalPrice") FROM "Order" GROUP BY status;`}>Order Berdasarkan Status</SelectItem>
+                          <SelectItem value={`SELECT "paymentMethod", sum(amount) FROM "Payment" GROUP BY "paymentMethod";`}>Total Pembayaran per Metode</SelectItem>
+                          <SelectItem value={`SELECT name, stock, "minStock" FROM "SparePart" WHERE stock < "minStock" AND "isActive" = true;`}>Stok Suku Cadang Kritis</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
@@ -750,9 +758,19 @@ export default function Page() {
                   
                   {/* Exports and Table/JSON triggers */}
                   <div className="flex items-center gap-2">
-                    <Tabs value={activeResultTab} onValueChange={setActiveResultTab} className="w-[180px]">
+                    <Tabs
+                      value={activeResultTab}
+                      onValueChange={setActiveResultTab}
+                      className="w-[180px]"
+                    >
                       <TabsList className="grid grid-cols-2 h-8">
-                        <TabsTrigger value="Table" disabled={!Array.isArray(resultData) || resultData.length === 0} className="text-xs">Grid</TabsTrigger>
+                        <TabsTrigger
+                          value="Table"
+                          disabled={!Array.isArray(resultData) || resultData.length === 0}
+                          className="text-xs"
+                        >
+                          Grid
+                        </TabsTrigger>
                         <TabsTrigger value="json" className="text-xs">JSON</TabsTrigger>
                       </TabsList>
                     </Tabs>

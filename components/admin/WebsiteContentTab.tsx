@@ -398,7 +398,11 @@ export function WebsiteContentTab() {
         <CardDescription>Atur konten landing page dan tema warna website Anda.</CardDescription>
       </CardHeader>
       <CardContent>
-        <Tabs value={subTab} onValueChange={setSubTab} className="w-full">
+        <Tabs
+          value={subTab}
+          onValueChange={setSubTab}
+          className="w-full"
+        >
             <TabsList className="mb-6 grid w-full grid-cols-2 md:grid-cols-4 lg:grid-cols-7 lg:w-full h-auto">
                 <TabsTrigger value="hero" className="gap-2"><Layout className="h-4 w-4" /> Hero</TabsTrigger>
                 <TabsTrigger value="stats" className="gap-2"><TrendingUp className="h-4 w-4" /> Stats</TabsTrigger>
@@ -471,19 +475,35 @@ export function WebsiteContentTab() {
                  <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
                      <div className="space-y-2">
                          <Label>Motors Handled</Label>
-                         <Input value={stats.motors} onChange={(e) => setStats({...stats, motors: e.target.value})} placeholder="5000+" />
+                         <Input
+                           value={stats.motors}
+                           onChange={(e) => setStats({...stats, motors: e.target.value})}
+                           placeholder="5000+"
+                          />
                      </div>
                      <div className="space-y-2">
                          <Label>Customer Satisfaction</Label>
-                         <Input value={stats.satisfaction} onChange={(e) => setStats({...stats, satisfaction: e.target.value})} placeholder="99%" />
+                         <Input
+                           value={stats.satisfaction}
+                           onChange={(e) => setStats({...stats, satisfaction: e.target.value})}
+                           placeholder="99%"
+                          />
                      </div>
                      <div className="space-y-2">
                          <Label>Years Experience</Label>
-                         <Input value={stats.experience} onChange={(e) => setStats({...stats, experience: e.target.value})} placeholder="15 Tahun" />
+                         <Input
+                           value={stats.experience}
+                           onChange={(e) => setStats({...stats, experience: e.target.value})}
+                           placeholder="15 Tahun"
+                          />
                      </div>
                      <div className="space-y-2">
                          <Label>Support Availability</Label>
-                         <Input value={stats.support} onChange={(e) => setStats({...stats, support: e.target.value})} placeholder="24 Jam" />
+                         <Input
+                           value={stats.support}
+                           onChange={(e) => setStats({...stats, support: e.target.value})}
+                           placeholder="24 Jam"
+                          />
                      </div>
                  </div>
                  <div className="flex justify-end pt-4 border-t">
@@ -523,7 +543,12 @@ export function WebsiteContentTab() {
                 <div className="space-y-4">
                     <div className="flex items-center justify-between">
                         <Label className="text-lg font-semibold">Daftar Kartu Layanan</Label>
-                        <Button size="sm" variant="outline" onClick={handleAddServiceItem} className="gap-2">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={handleAddServiceItem}
+                          className="gap-2"
+                        >
                             <Plus className="h-4 w-4" /> Tambah Layanan
                         </Button>
                     </div>
@@ -534,7 +559,12 @@ export function WebsiteContentTab() {
                             return (
                                 <Card key={index} className="relative group border border-muted-foreground/20 hover:border-primary/50 transition-all hover:shadow-md">
                                     <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity bg-background/80 backdrop-blur rounded-md p-1 shadow-sm border z-10">
-                                        <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive" onClick={() => handleRemoveServiceItem(index)}>
+                                        <Button
+                                          variant="ghost"
+                                          size="icon"
+                                          className="h-6 w-6 text-destructive"
+                                          onClick={() => handleRemoveServiceItem(index)}
+                                        >
                                             <Trash2 className="h-3 w-3" />
                                         </Button>
                                     </div>
@@ -589,7 +619,12 @@ export function WebsiteContentTab() {
                                         <div className="bg-muted/30 p-2 rounded-md h-[120px] overflow-y-auto">
                                             <div className="flex justify-between items-center mb-1">
                                                 <span className="text-[10px] font-semibold text-muted-foreground uppercase">Fitur ({item.features?.length || 0})</span>
-                                                <Button variant="ghost" size="icon" className="h-4 w-4" onClick={() => handleAddServiceFeature(index)}>
+                                                <Button
+                                                  variant="ghost"
+                                                  size="icon"
+                                                  className="h-4 w-4"
+                                                  onClick={() => handleAddServiceFeature(index)}
+                                                >
                                                     <Plus className="h-3 w-3" />
                                                 </Button>
                                             </div>
@@ -651,7 +686,12 @@ export function WebsiteContentTab() {
                  <div className="space-y-4">
                     <div className="flex items-center justify-between">
                         <Label className="text-lg font-semibold">Daftar Keunggulan</Label>
-                        <Button size="sm" variant="outline" onClick={handleAddFeatureItem} className="gap-2">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={handleAddFeatureItem}
+                          className="gap-2"
+                        >
                             <Plus className="h-4 w-4" /> Tambah Poin
                         </Button>
                     </div>
@@ -826,13 +866,26 @@ export function WebsiteContentTab() {
                         <h4 className="font-medium">Daftar Testimoni</h4>
                         <p className="text-sm text-muted-foreground">Apa kata pelanggan tentang bengkel Anda.</p>
                     </div>
-                    <Button size="sm" onClick={handleAddTestimonial} className="gap-2"><Plus className="h-4 w-4"/> Tambah</Button>
+                    <Button
+                      size="sm"
+                      onClick={handleAddTestimonial}
+                      className="gap-2"
+                    >
+                      <Plus className="h-4 w-4" /> Tambah
+                    </Button>
                 </div>
                 
                 <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                     {testimonials.map((item, i) => (
                         <Card key={i} className="relative group">
-                            <Button variant="ghost" size="icon" className="absolute top-2 right-2 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity text-destructive" onClick={() => handleRemoveTestimonial(i)}><Trash2 className="h-3 w-3"/></Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="absolute top-2 right-2 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity text-destructive"
+                              onClick={() => handleRemoveTestimonial(i)}
+                            >
+                              <Trash2 className="h-3 w-3" />
+                            </Button>
                             <CardContent className="p-4 space-y-3">
                                 <div className="flex items-center gap-2 mb-2">
                                     {[1,2,3,4,5].map(star => (
@@ -876,16 +929,38 @@ export function WebsiteContentTab() {
                         <h4 className="font-medium">Promo Banner</h4>
                         <p className="text-sm text-muted-foreground">Banner berjalan di bagian atas website.</p>
                     </div>
-                    <Button size="sm" onClick={handleAddPromo} className="gap-2"><Plus className="h-4 w-4"/> Tambah</Button>
+                    <Button
+                      size="sm"
+                      onClick={handleAddPromo}
+                      className="gap-2"
+                    >
+                      <Plus className="h-4 w-4" /> Tambah
+                    </Button>
                 </div>
                 {promos.map((item, i) => (
                     <div key={i} className="flex gap-4 items-center p-3 border rounded-lg">
                         <Switch checked={item.isActive} onCheckedChange={(c) => handleUpdatePromo(i, 'isActive', c)} />
                         <div className="flex-1 space-y-2">
-                            <Input value={item.title} onChange={(e) => handleUpdatePromo(i, 'title', e.target.value)} placeholder="Judul Promo" className="font-bold" />
-                            <Input value={item.desc} onChange={(e) => handleUpdatePromo(i, 'desc', e.target.value)} placeholder="Deskripsi singkat" />
+                            <Input
+                              value={item.title}
+                              onChange={(e) => handleUpdatePromo(i, 'title', e.target.value)}
+                              placeholder="Judul Promo"
+                              className="font-bold"
+                             />
+                            <Input
+                              value={item.desc}
+                              onChange={(e) => handleUpdatePromo(i, 'desc', e.target.value)}
+                              placeholder="Deskripsi singkat"
+                             />
                         </div>
-                        <Button variant="ghost" size="icon" onClick={() => handleRemovePromo(i)} className="text-destructive"><Trash2 className="h-4 w-4"/></Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleRemovePromo(i)}
+                          className="text-destructive"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
                     </div>
                 ))}
                  <div className="flex justify-end pt-4 border-t">
@@ -901,15 +976,27 @@ export function WebsiteContentTab() {
                  <div className="space-y-4">
                      <div className="space-y-2">
                          <Label>Instagram Link</Label>
-                         <Input value={footer.instagram} onChange={(e) => setFooter({...footer, instagram: e.target.value})} placeholder="https://instagram.com/..." />
+                         <Input
+                           value={footer.instagram}
+                           onChange={(e) => setFooter({...footer, instagram: e.target.value})}
+                           placeholder="https://instagram.com/..."
+                          />
                      </div>
                      <div className="space-y-2">
                          <Label>WhatsApp Link</Label>
-                         <Input value={footer.whatsapp} onChange={(e) => setFooter({...footer, whatsapp: e.target.value})} placeholder="https://wa.me/..." />
+                         <Input
+                           value={footer.whatsapp}
+                           onChange={(e) => setFooter({...footer, whatsapp: e.target.value})}
+                           placeholder="https://wa.me/..."
+                          />
                      </div>
                      <div className="space-y-2">
                          <Label>Google Maps Link</Label>
-                         <Input value={footer.maps} onChange={(e) => setFooter({...footer, maps: e.target.value})} placeholder="https://maps.google.com/..." />
+                         <Input
+                           value={footer.maps}
+                           onChange={(e) => setFooter({...footer, maps: e.target.value})}
+                           placeholder="https://maps.google.com/..."
+                          />
                      </div>
                  </div>
                  <div className="flex justify-end pt-4 border-t">

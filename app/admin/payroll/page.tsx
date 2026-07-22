@@ -389,11 +389,20 @@ export default function Page() {
             </p>
           </div>
           <div className="flex items-center gap-2 w-full md:w-auto">
-            <Button variant="outline" size="default" onClick={fetchData} className="gap-2">
+            <Button
+              variant="outline"
+              size="default"
+              onClick={fetchData}
+              className="gap-2"
+            >
               <RefreshCw className="h-4 w-4" /> Refresh Data
             </Button>
             {isOwner && (
-              <Button size="default" onClick={() => setGenerateOpen(true)} className="gap-2 bg-primary hover:bg-primary/95 text-white">
+              <Button
+                size="default"
+                onClick={() => setGenerateOpen(true)}
+                className="gap-2 bg-primary hover:bg-primary/95 text-white"
+              >
                 <Plus className="h-4 w-4" /> Generate Gaji
               </Button>
             )}
@@ -700,10 +709,18 @@ export default function Page() {
                 </div>
               </div>
               <DialogFooter>
-                <Button type="button" variant="outline" onClick={() => setGenerateOpen(false)}>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setGenerateOpen(false)}
+                >
                   Batal
                 </Button>
-                <Button type="submit" disabled={generating} className="bg-primary text-white">
+                <Button
+                  type="submit"
+                  disabled={generating}
+                  className="bg-primary text-white"
+                >
                   {generating ? (
                     <>
                       <Loader2 className="h-4 w-4 mr-2 animate-spin" /> Memproses...
@@ -758,10 +775,18 @@ export default function Page() {
                 </div>
               </div>
               <DialogFooter>
-                <Button type="button" variant="outline" onClick={() => setEditOpen(false)}>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setEditOpen(false)}
+                >
                   Batal
                 </Button>
-                <Button type="submit" disabled={updating} className="bg-primary text-white">
+                <Button
+                  type="submit"
+                  disabled={updating}
+                  className="bg-primary text-white"
+                >
                   {updating ? (
                     <>
                       <Loader2 className="h-4 w-4 mr-2 animate-spin" /> Menyimpan...
@@ -844,7 +869,11 @@ export default function Page() {
                   {payMethod === "TRANSFER" && (
                     <div className="space-y-2 animate-in fade-in slide-in-from-top-1 duration-200">
                       <Label htmlFor="pay-bank">Rekening Sumber</Label>
-                      <Select value={selectedBankId} onValueChange={setSelectedBankId} required>
+                      <Select
+                        value={selectedBankId}
+                        onValueChange={setSelectedBankId}
+                        required
+                      >
                         <SelectTrigger>
                           <SelectValue placeholder="Pilih Bank" />
                         </SelectTrigger>
@@ -870,10 +899,18 @@ export default function Page() {
                 </div>
               </div>
               <DialogFooter>
-                <Button type="button" variant="outline" onClick={() => setPayOpen(false)}>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setPayOpen(false)}
+                >
                   Batal
                 </Button>
-                <Button type="submit" disabled={paying} className="bg-green-600 hover:bg-green-700 text-white font-bold">
+                <Button
+                  type="submit"
+                  disabled={paying}
+                  className="bg-green-600 hover:bg-green-700 text-white font-bold"
+                >
                   {paying ? (
                     <>
                       <Loader2 className="h-4 w-4 mr-2 animate-spin" /> Menjurnal...
@@ -982,7 +1019,11 @@ export default function Page() {
 
                 {/* Dialog Footer Actions */}
                 <div className="flex justify-between gap-2">
-                  <Button variant="outline" onClick={handlePrintSlip} className="gap-2">
+                  <Button
+                    variant="outline"
+                    onClick={handlePrintSlip}
+                    className="gap-2"
+                  >
                     <Printer className="h-4 w-4" /> Cetak Slip Fisik
                   </Button>
                   <Button onClick={() => setDetailOpen(false)}>Selesai</Button>

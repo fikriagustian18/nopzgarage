@@ -51,7 +51,12 @@ export function ExportButton({
     <>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button variant={variant} size={size} className={`gap-2 ${className || ""}`} title={tooltip || title}>
+          <Button
+            variant={variant}
+            size={size}
+            className={`gap-2 ${className || ""}`}
+            title={tooltip || title}
+          >
             {icon ? icon : (showIcon && <Download className="h-4 w-4" />)}
             {!hideLabel && label}
             {!hideLabel && <ChevronDown className="h-4 w-4" />}

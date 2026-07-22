@@ -184,10 +184,18 @@ export function BookingForm({ serviceOptions = [], garagePhone }: BookingFormPro
                 </Button>
                 
                 <div className="grid grid-cols-2 gap-3">
-                    <Button onClick={() => window.location.href = "/status"} variant="outline" className="h-11 text-xs font-bold">
+                    <Button
+                      onClick={() => window.location.href = "/status"}
+                      variant="outline"
+                      className="h-11 text-xs font-bold"
+                    >
                         Cek Status Antrian
                     </Button>
-                    <Button onClick={() => setSuccessValues(null)} variant="ghost" className="h-11 text-xs font-bold border border-border">
+                    <Button
+                      onClick={() => setSuccessValues(null)}
+                      variant="ghost"
+                      className="h-11 text-xs font-bold border border-border"
+                    >
                         Booking Baru
                     </Button>
                 </div>

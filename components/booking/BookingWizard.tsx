@@ -641,7 +641,11 @@ export function BookingWizard({ serviceOptions = [], generalSettings = {}, sessi
                   {/* Navigation Buttons inside Form Container */}
                   <div className="flex items-center justify-between border-t border-border pt-6 mt-8">
                     {step > 1 ? (
-                      <Button variant="outline" onClick={handlePrevStep} className="gap-2 h-11 px-5 text-xs font-bold rounded-xl">
+                      <Button
+                        variant="outline"
+                        onClick={handlePrevStep}
+                        className="gap-2 h-11 px-5 text-xs font-bold rounded-xl"
+                      >
                         Kembali
                       </Button>
                     ) : (

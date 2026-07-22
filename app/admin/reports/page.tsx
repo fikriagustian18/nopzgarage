@@ -177,7 +177,11 @@ export default function Page() {
     return (
       <div className="flex flex-col items-center justify-center h-screen bg-background gap-4">
         <p className="text-destructive font-medium">{error}</p>
-        <Button onClick={fetchData} variant="outline" className="gap-2">
+        <Button
+          onClick={fetchData}
+          variant="outline"
+          className="gap-2"
+        >
           <RefreshCw className="h-4 w-4" /> Coba Lagi
         </Button>
       </div>
@@ -616,8 +620,17 @@ export default function Page() {
                 <div className="h-[300px] w-full">
                   <ResponsiveContainer width="100%" height="100%">
                     <LineChart data={cashFlowChartData} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
-                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" />
-                      <XAxis dataKey="date" stroke="#9CA3AF" fontSize={11} tickLine={false} />
+                      <CartesianGrid
+                        strokeDasharray="3 3"
+                        vertical={false}
+                        stroke="#E5E7EB"
+                       />
+                      <XAxis
+                        dataKey="date"
+                        stroke="#9CA3AF"
+                        fontSize={11}
+                        tickLine={false}
+                       />
                       <YAxis 
                         stroke="#9CA3AF" 
                         fontSize={11} 
@@ -628,9 +641,28 @@ export default function Page() {
                         formatter={(value) => [formatIDR(Number(value)), ""]}
                         contentStyle={{ borderRadius: "8px", border: "1px solid #E5E7EB", fontSize: "12px" }}
                       />
-                      <Legend verticalAlign="top" height={36} iconType="circle" iconSize={8} wrapperStyle={{ fontSize: "12px" }} />
-                      <Line type="monotone" dataKey="Pendapatan" stroke="#111827" strokeWidth={2.5} activeDot={{ r: 6 }} dot={false} />
-                      <Line type="monotone" dataKey="Pengeluaran" stroke="#9CA3AF" strokeWidth={2} dot={false} />
+                      <Legend
+                        verticalAlign="top"
+                        height={36}
+                        iconType="circle"
+                        iconSize={8}
+                        wrapperStyle={{ fontSize: "12px" }}
+                       />
+                      <Line
+                        type="monotone"
+                        dataKey="Pendapatan"
+                        stroke="#111827"
+                        strokeWidth={2.5}
+                        activeDot={{ r: 6 }}
+                        dot={false}
+                       />
+                      <Line
+                        type="monotone"
+                        dataKey="Pengeluaran"
+                        stroke="#9CA3AF"
+                        strokeWidth={2}
+                        dot={false}
+                       />
                     </LineChart>
                   </ResponsiveContainer>
                 </div>

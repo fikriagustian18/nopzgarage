@@ -429,7 +429,7 @@ export default function Page() {
             </DialogTitle>
             <DialogDescription>
                Apakah Anda yakin ingin mengaktifkan kembali karyawan <b>{employeeToReactivate?.name}</b>?
-               <br/>
+               <br />
                Karyawan akan dapat menerima pekerjaan kembali.
             </DialogDescription>
           </DialogHeader>

@@ -113,7 +113,11 @@ export function EmployeeDashboardClient({ employee, user }: EmployeeDashboardCli
       
       <main className="container max-w-5xl mx-auto px-4 py-6 space-y-6">
         
-        <Tabs defaultValue="overview" className="space-y-6" onValueChange={setActiveTab}>
+        <Tabs
+          defaultValue="overview"
+          className="space-y-6"
+          onValueChange={setActiveTab}
+        >
           <div className="flex overflow-x-auto pb-2 md:pb-0 scrollbar-hide">
             <TabsList className="bg-muted/50 p-1">
               <TabsTrigger value="overview" className="gap-2">

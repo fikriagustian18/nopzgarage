@@ -352,12 +352,12 @@ export default function Page() {
     Account ||--o{ JournalItem : "records_in"`,
 
     dfd0: `flowchart LR
-    Customer["CUSTOMER<br/>Pelanggan / Pemilik Motor"]
-    Owner["OWNER<br/>Pemilik Bengkel"]
-    Admin["ADMIN<br/>Staff Admin"]
-    Mechanic["MECHANIC<br/>Mekanik"]
+    Customer["CUSTOMER<br />Pelanggan / Pemilik Motor"]
+    Owner["OWNER<br />Pemilik Bengkel"]
+    Admin["ADMIN<br />Staff Admin"]
+    Mechanic["MECHANIC<br />Mekanik"]
     
-    System(["0<br/>SISTEM MANAJEMEN<br/>NOPZGARAGE"])
+    System(["0<br />SISTEM MANAJEMEN<br />NOPZGARAGE"])
     
     Customer -->|"Registrasi Booking & Keluhan"| System
     System -->|"Informasi Antrian & Status"| Customer
@@ -381,11 +381,11 @@ export default function Page() {
     Mekanik["MEKANIK (Mekanik)"]
     Owner["OWNER (Pemilik Bengkel)"]
 
-    P1(["1.0<br/>Manajemen Pengguna & Karyawan"])
-    P2(["2.0<br/>Manajemen Pelayanan<br/>(Booking & Servis)"])
-    P3(["3.0<br/>Manajemen Inventory (Sparepart)"])
-    P4(["4.0<br/>Transaksi & Gaji (Payment/Payroll)"])
-    P5(["5.0<br/>Laporan & Akuntansi Jurnal"])
+    P1(["1.0<br />Manajemen Pengguna & Karyawan"])
+    P2(["2.0<br />Manajemen Pelayanan<br />(Booking & Servis)"])
+    P3(["3.0<br />Manajemen Inventory (Sparepart)"])
+    P4(["4.0<br />Transaksi & Gaji (Payment/Payroll)"])
+    P5(["5.0<br />Laporan & Akuntansi Jurnal"])
 
     DS1[("DS1 User & Employee")]
     DS2[("DS2 Order & Fees")]
@@ -420,10 +420,10 @@ export default function Page() {
     Mekanik["MEKANIK (Mekanik)"]
     Owner["OWNER (Pemilik Bengkel)"]
 
-    P11(["1.1<br/>Login & Autentikasi"])
-    P12(["1.2<br/>Kelola Akun User"])
-    P13(["1.3<br/>Kelola Data Karyawan"])
-    P14(["1.4<br/>Request Reset Password"])
+    P11(["1.1<br />Login & Autentikasi"])
+    P12(["1.2<br />Kelola Akun User"])
+    P13(["1.3<br />Kelola Data Karyawan"])
+    P14(["1.4<br />Request Reset Password"])
 
     DS1_User[("DS1 User")]
     DS1_Employee[("DS1 Employee")]
@@ -450,11 +450,11 @@ export default function Page() {
     Admin["ADMIN / OWNER"]
     Mekanik["MEKANIK"]
 
-    P21(["2.1<br/>Registrasi Booking<br/>(Status: PENDING)"])
-    P22(["2.2<br/>Estimasi & Konfirmasi<br/>(Status: CONFIRMED/QUEUE)"])
-    P23(["2.3<br/>Penugasan Mekanik"])
-    P24(["2.4<br/>Pengerjaan Servis<br/>(Status: IN_PROGRESS)"])
-    P25(["2.5<br/>Penyelesaian Order<br/>(Status: READY/COMPLETED)"])
+    P21(["2.1<br />Registrasi Booking<br />(Status: PENDING)"])
+    P22(["2.2<br />Estimasi & Konfirmasi<br />(Status: CONFIRMED/QUEUE)"])
+    P23(["2.3<br />Penugasan Mekanik"])
+    P24(["2.4<br />Pengerjaan Servis<br />(Status: IN_PROGRESS)"])
+    P25(["2.5<br />Penyelesaian Order<br />(Status: READY/COMPLETED)"])
 
     DS2_Order[("DS2 Order")]
     DS2_OrderItem[("DS2 OrderItem")]
@@ -484,10 +484,10 @@ export default function Page() {
     dfd2inventory: `flowchart TB
     Admin["ADMIN / OWNER"]
 
-    P31(["3.1<br/>Tambah Produk Baru"])
-    P32(["3.2<br/>Update Info Produk"])
-    P33(["3.3<br/>Input Stok Masuk"])
-    P34(["3.4<br/>Input Stok Keluar"])
+    P31(["3.1<br />Tambah Produk Baru"])
+    P32(["3.2<br />Update Info Produk"])
+    P33(["3.3<br />Input Stok Masuk"])
+    P34(["3.4<br />Input Stok Keluar"])
 
     DS3_SparePart[("DS3 SparePart")]
     DS5_Accounting[("DS5 Accounting")]
@@ -511,9 +511,9 @@ export default function Page() {
     Admin["ADMIN / OWNER"]
     Owner["OWNER"]
 
-    P41(["4.1<br/>Pencatatan Pembayaran Order<br/>(Kasir)"])
-    P42(["4.2<br/>Auto-Journal Pendapatan<br/>(Akuntansi Jurnal)"])
-    P43(["4.3<br/>Proses Gaji & Komisi<br/>(Payroll & Payment)"])
+    P41(["4.1<br />Pencatatan Pembayaran Order<br />(Kasir)"])
+    P42(["4.2<br />Auto-Journal Pendapatan<br />(Akuntansi Jurnal)"])
+    P43(["4.3<br />Proses Gaji & Komisi<br />(Payroll & Payment)"])
 
     DS2_Order[("DS2 Order")]
     DS4_Payment_Payroll[("DS4 Payment & Payroll")]
@@ -535,11 +535,11 @@ export default function Page() {
     Owner["OWNER (Pemilik Bengkel)"]
     Admin["ADMIN (Staff Admin)"]
 
-    P51(["5.1<br/>Laporan Akuntansi & Jurnal<br/>(Laba Rugi, Buku Besar)"])
-    P52(["5.2<br/>Laporan Stok & Persediaan<br/>(Mutasi & Nilai Sparepart)"])
-    P53(["5.3<br/>Laporan Analisis Operasional<br/>(Kinerja Mekanik & Servis)"])
-    P54(["5.4<br/>Laporan Penggajian Karyawan"])
-    P55(["5.5<br/>Dashboard Overview & Grafik"])
+    P51(["5.1<br />Laporan Akuntansi & Jurnal<br />(Laba Rugi, Buku Besar)"])
+    P52(["5.2<br />Laporan Stok & Persediaan<br />(Mutasi & Nilai Sparepart)"])
+    P53(["5.3<br />Laporan Analisis Operasional<br />(Kinerja Mekanik & Servis)"])
+    P54(["5.4<br />Laporan Penggajian Karyawan"])
+    P55(["5.5<br />Dashboard Overview & Grafik"])
 
     DS5_Accounting[("DS5 Accounting")]
     DS3_SparePart[("DS3 SparePart")]
@@ -572,41 +572,41 @@ export default function Page() {
     Start([Mulai: Pelanggan Booking])
     
     %% Input Order
-    Input[Admin/Pelanggan Buat Order<br/>Status: PENDING]
+    Input[Admin/Pelanggan Buat Order<br />Status: PENDING]
     SaveOrder[(Simpan Order)]
     
     %% Estimasi
-    InputEstimate[Input Estimasi:<br/>- Jasa & Sparepart<br/>- Total Estimasi Biaya]
+    InputEstimate[Input Estimasi:<br />- Jasa & Sparepart<br />- Total Estimasi Biaya]
     UpdateEstimated[(Set Status: ESTIMATED)]
     
     %% Konfirmasi
-    CustomerApprove{Pelanggan<br/>Setuju?}
+    CustomerApprove{Pelanggan<br />Setuju?}
     Cancelled[(Set Status: CANCELLED)]
-    EndCancelled([Selesai:<br/>Order Dibatalkan])
+    EndCancelled([Selesai:<br />Order Dibatalkan])
     
     %% Scheduling / Antrian
     UpdateConfirmed[(Set Status: CONFIRMED / QUEUE)]
     
     %% Penugasan
-    AssignMechanic[Tugaskan Mekanik<br/>Set mechanicId]
+    AssignMechanic[Tugaskan Mekanik<br />Set mechanicId]
     
     %% Pengerjaan
     StartWork[Mulai Kerja]
     UpdateInProgress[(Set Status: IN_PROGRESS)]
     ReduceStock[Kurangi Stok Sparepart]
-    CreateHPPEntry[(Jurnal HPP:<br/>Dr. HPP 511<br/>Cr. Persediaan 111)]
+    CreateHPPEntry[(Jurnal HPP:<br />Dr. HPP 511<br />Cr. Persediaan 111)]
     
     Work[Proses Servis / Modifikasi]
     Complete[Pekerjaan Selesai]
     UpdateReady[(Set Status: READY)]
-    NotifyCustomer[Notif Pelanggan:<br/>Unit Siap Diambil]
+    NotifyCustomer[Notif Pelanggan:<br />Unit Siap Diambil]
     
     %% Pembayaran & Penutupan
     Payment[Pembayaran & Kasir]
     CloseOrder[(Set Status: COMPLETED)]
     GenerateInvoice[Cetak Invoice]
     
-    End([Selesai:<br/>Motor Diambil])
+    End([Selesai:<br />Motor Diambil])
     
     %% Flow
     Start --> Input
@@ -645,39 +645,39 @@ export default function Page() {
     class Start,End,EndCancelled startEndStyle`,
 
     flowPayment: `flowchart TD
-    Start([Mulai:<br/>Pencatatan Pembayaran])
+    Start([Mulai:<br />Pencatatan Pembayaran])
     
     %% Determine Payment Type
-    PaymentType{Jenis<br/>Pembayaran?}
+    PaymentType{Jenis<br />Pembayaran?}
     
     %% ORDER PAYMENT BRANCH
     OrderPayment[Pembayaran Order]
     GetOrder[(Ambil Data Order)]
     
     InputOrderAmount[Input Jumlah Bayar]
-    CheckOrderFull{Jumlah Bayar +<br/>Terbayar >= Total?}
+    CheckOrderFull{Jumlah Bayar +<br />Terbayar >= Total?}
     
-    SetOrderPaid[(Set Order:<br/>paymentStatus = PAID)]
-    SetOrderPartial[(Set Order:<br/>paymentStatus = PARTIAL)]
+    SetOrderPaid[(Set Order:<br />paymentStatus = PAID)]
+    SetOrderPartial[(Set Order:<br />paymentStatus = PARTIAL)]
     
-    CheckOrderFirst{Apakah ini<br/>Pembayaran Pertama?}
+    CheckOrderFirst{Apakah ini<br />Pembayaran Pertama?}
     
     %% Jurnal Order
-    JournalDP[(Jurnal DP:<br/>Dr. Kas/Bank 101/102<br/>Cr. Piutang Usaha 103)]
+    JournalDP[(Jurnal DP:<br />Dr. Kas/Bank 101/102<br />Cr. Piutang Usaha 103)]
     
-    JournalLunasLangsung[(Jurnal Lunas:<br/>Dr. Kas/Bank 101/102<br/>Cr. Pendapatan Jasa 401<br/>& Pendapatan Part 402)]
+    JournalLunasLangsung[(Jurnal Lunas:<br />Dr. Kas/Bank 101/102<br />Cr. Pendapatan Jasa 401<br />& Pendapatan Part 402)]
     
-    JournalPelunasan1[(Jurnal Pelunasan Kas:<br/>Dr. Kas/Bank 101/102<br/>Cr. Piutang Usaha 103)]
-    JournalPelunasan2[(Jurnal Pengakuan Pendapatan:<br/>Dr. Piutang Usaha 103<br/>Cr. Pendapatan Jasa 401<br/>& Pendapatan Part 402)]
+    JournalPelunasan1[(Jurnal Pelunasan Kas:<br />Dr. Kas/Bank 101/102<br />Cr. Piutang Usaha 103)]
+    JournalPelunasan2[(Jurnal Pengakuan Pendapatan:<br />Dr. Piutang Usaha 103<br />Cr. Pendapatan Jasa 401<br />& Pendapatan Part 402)]
     
     %% PAYROLL PAYMENT BRANCH
     PayrollPayment[Pembayaran Gaji Karyawan]
     GetPayroll[(Ambil Data Payroll)]
     
     InputPayrollAmount[Input Jumlah Gaji]
-    SetPayrollPaid[(Set Payroll:<br/>status = PAID)]
+    SetPayrollPaid[(Set Payroll:<br />status = PAID)]
     
-    JournalPayroll[(Jurnal Gaji:<br/>Dr. Utang Gaji & Komisi 202<br/>Cr. Kas/Bank 101/102)]
+    JournalPayroll[(Jurnal Gaji:<br />Dr. Utang Gaji & Komisi 202<br />Cr. Kas/Bank 101/102)]
     
     %% Common End
     LogActivity[(Catat Aktivitas)]
@@ -731,26 +731,26 @@ export default function Page() {
     flowPayroll: `flowchart TD
     Start([Mulai: Hitung Payroll])
     
-    InputPeriod[Input Periode:<br/>Tanggal Mulai & Akhir]
+    InputPeriod[Input Periode:<br />Tanggal Mulai & Akhir]
     GetEmployees[(Ambil Data Karyawan)]
     
     CheckSalaryType{Tipe Gaji?}
     
     %% DAILY
     DailyCalc[Gaji Pokok Harian]
-    CountDays[Hitung Hari Kerja<br/>- Skip Hari Minggu]
-    CalcDailyBase[Gaji Pokok =<br/>Hari Kerja x Rate Harian]
+    CountDays[Hitung Hari Kerja<br />- Skip Hari Minggu]
+    CalcDailyBase[Gaji Pokok =<br />Hari Kerja x Rate Harian]
     
     %% COMMISSION
     CommissionCalc[Gaji Pokok Komisi]
-    CountMotors[Hitung Jumlah Motor Selesai<br/>dalam Periode]
-    CalcCommissionBase[Gaji Pokok =<br/>Motor x Rate Komisi]
+    CountMotors[Hitung Jumlah Motor Selesai<br />dalam Periode]
+    CalcCommissionBase[Gaji Pokok =<br />Motor x Rate Komisi]
     
     %% Common
     InputBonus[Input Bonus & Catatan]
-    CalcTotal[Total Gaji =<br/>Gaji Pokok + Bonus]
+    CalcTotal[Total Gaji =<br />Gaji Pokok + Bonus]
     
-    CreatePayroll[(Simpan Payroll:<br/>status = UNPAID)]
+    CreatePayroll[(Simpan Payroll:<br />status = UNPAID)]
     
     End([Selesai])
     
@@ -796,11 +796,11 @@ export default function Page() {
     CheckActive{User Aktif?}
     ErrorInactive[Error: Akun dinonaktifkan]
     
-    VerifyPassword[Verifikasi Password<br/>menggunakan bcrypt]
+    VerifyPassword[Verifikasi Password<br />menggunakan bcrypt]
     PasswordMatch{Password Cocok?}
     ErrorPassword[Error: Password salah]
     
-    CreateSession[NextAuth:<br/>Buat Sesi Login]
+    CreateSession[NextAuth:<br />Buat Sesi Login]
     LogActivity[(Log: LOGIN_SUCCESS)]
     
     Success([Sukses: Masuk Dashboard])
@@ -848,9 +848,9 @@ export default function Page() {
     FindUser[(Cari User by Email)]
     
     UserExists{User Ada?}
-    ShowMessage[Tampilkan Pesan:<br/>Permintaan dikirim ke admin]
+    ShowMessage[Tampilkan Pesan:<br />Permintaan dikirim ke admin]
     
-    CreateRequest[(Buat ForgotPasswordRequest<br/>status = PENDING)]
+    CreateRequest[(Buat ForgotPasswordRequest<br />status = PENDING)]
     LogActivity[(Log: FORGOT_PASSWORD_REQUEST)]
     
     End([Selesai])
@@ -885,7 +885,7 @@ export default function Page() {
     
     HashPassword[Hash Password Baru]
     
-    UpdateUserAndPassword[(Transaction:<br/>- Update User Password<br/>- Set Request status = RESOLVED)]
+    UpdateUserAndPassword[(Transaction:<br />- Update User Password<br />- Set Request status = RESOLVED)]
     
     LogActivity[(Log: RESOLVE_FORGOT_PASSWORD)]
     
@@ -1088,20 +1088,20 @@ export default function Page() {
     Admin->>BO: Mulai Kerja (Status: IN_PROGRESS)
     BO->>INV: Kurangi Stok Sparepart
     BO->>ACC: Trigger Penjurnal HPP
-    ACC->>ACC: Debit: HPP (511)<br/>Kredit: Persediaan Sparepart (111)
+    ACC->>ACC: Debit: HPP (511)<br />Kredit: Persediaan Sparepart (111)
 
     Note over Admin, BNK: Skenario 2: Komisi Mekanik Terakru (Accrual)
     Admin->>BO: Tugaskan Mekanik & Input Komisi
     BO->>ACC: Trigger Jurnal Accrual Komisi
-    ACC->>ACC: Debit: Beban Gaji & Komisi (501)<br/>Kredit: Utang Gaji & Komisi (202)
+    ACC->>ACC: Debit: Beban Gaji & Komisi (501)<br />Kredit: Utang Gaji & Komisi (202)
 
     Note over Admin, BNK: Skenario 3: Pembayaran Order oleh Pelanggan
     Admin->>BO: Catat Pembayaran Order (DP / Lunas)
     BO->>ACC: Trigger Jurnal Pendapatan & Kas
     alt Pembayaran Lunas Langsung
-        ACC->>ACC: Debit: Kas Tunai/Bank (101/102)<br/>Kredit: Pendapatan Jasa (401) & Pendapatan Part (402)
+        ACC->>ACC: Debit: Kas Tunai/Bank (101/102)<br />Kredit: Pendapatan Jasa (401) & Pendapatan Part (402)
     else Pembayaran DP (Parsial)
-        ACC->>ACC: Debit: Kas Tunai/Bank (101/102)<br/>Kredit: Piutang Usaha (103)
+        ACC->>ACC: Debit: Kas Tunai/Bank (101/102)<br />Kredit: Piutang Usaha (103)
     end
     BO->>BNK: Update Saldo Rekening (jika transfer)`,
 
@@ -1118,19 +1118,19 @@ export default function Page() {
     
     %% Booking Path
     PathBooking[Booking Servis]
-    FormBooking[Isi Form Booking:<br/>- Nama, HP, Motor, Keluhan<br/>- Pilih Tipe Servis & Tanggal]
+    FormBooking[Isi Form Booking:<br />- Nama, HP, Motor, Keluhan<br />- Pilih Tipe Servis & Tanggal]
     Validation{Valid?}
     ErrorValid[Tampilkan Error]
     SubmitBooking[Kirim Order]
     SaveDB[(Buat Order PENDING)]
-    SuccessBooking[Tampilkan Sukses &<br/>Nomor Antrian]
+    SuccessBooking[Tampilkan Sukses &<br />Nomor Antrian]
     
     %% Tracking Path
     PathTrack[Lacak Order]
     InputTrack[Input No HP atau Plat No]
     SearchDB[(Cari Order)]
     Found{Ditemukan?}
-    ShowStatus["Tampilkan Status Order<br/>(Antrian/Proses/Selesai)"]
+    ShowStatus["Tampilkan Status Order<br />(Antrian/Proses/Selesai)"]
     ShowNotFound["Tampilkan 'Tidak Ditemukan'"]
     
     %% Kanban Path
@@ -1207,7 +1207,7 @@ export default function Page() {
     
     %% 3. Text Content
     FlowText[Bagian Teks]
-    SelectSection[Pilih Bagian:<br/>Hero/About/Contact]
+    SelectSection[Pilih Bagian:<br />Hero/About/Contact]
     EditContent[Edit Judul/Isi]
     SaveContent[(Update ContentSection)]
     
@@ -1307,7 +1307,11 @@ export default function Page() {
       <div className="min-h-screen bg-background p-4 md:p-8">
         {/* Header */}
       <div className="flex items-center gap-4 mb-8">
-        <Button variant="outline" size="icon" onClick={() => router.push("/admin")}>
+        <Button
+          variant="outline"
+          size="icon"
+          onClick={() => router.push("/admin")}
+        >
           <ArrowLeft className="h-4 w-4" />
         </Button>
         <div>
@@ -1371,7 +1375,11 @@ export default function Page() {
       </div>
 
       {/* Main Content */}
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+      <Tabs
+        value={activeTab}
+        onValueChange={setActiveTab}
+        className="space-y-6"
+      >
         <TabsList className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 w-full overflow-x-auto">
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="database">Database</TabsTrigger>
@@ -1504,7 +1512,11 @@ export default function Page() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <Accordion type="single" collapsible className="w-full">
+              <Accordion
+                type="single"
+                collapsible
+                className="w-full"
+              >
                 
                 {/* System Hierarchy Chart */}
                 <AccordionItem value="hierarchy">

@@ -226,7 +226,11 @@ export function StatusPageClient({ generalSettings = {}, session }: StatusPageCl
                         className="h-12 bg-background/50 border-input"
                         disabled={loading}
                       />
-                      <Button type="submit" disabled={loading} className="gap-2 h-12 px-5 font-bold shrink-0">
+                      <Button
+                        type="submit"
+                        disabled={loading}
+                        className="gap-2 h-12 px-5 font-bold shrink-0"
+                      >
                         {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
                         <span>Cek Sekarang</span>
                       </Button>

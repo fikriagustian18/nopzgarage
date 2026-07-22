@@ -250,7 +250,11 @@ export function EmployeeDialog({
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Batal
           </Button>
-          <Button onClick={handleSubmit} disabled={loading} className="gap-2">
+          <Button
+            onClick={handleSubmit}
+            disabled={loading}
+            className="gap-2"
+          >
             {loading && <Loader2 className="h-4 w-4 animate-spin" />}
             {mode === "create" ? "Simpan Karyawan" : "Simpan Perubahan"}
           </Button>
