@@ -46,7 +46,7 @@ type SparePart = {
   updatedAt: Date;
 };
 
-export default function InventoryPage() {
+export default function Page() {
   const [spareParts, setSpareParts] = useState<SparePart[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 

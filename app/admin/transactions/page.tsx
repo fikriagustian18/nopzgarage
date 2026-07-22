@@ -88,7 +88,7 @@ type BankAccount = {
   accountName: string;
 };
 
-export default function TransactionsPage() {
+export default function Page() {
   const router = useRouter();
   const [orders, setOrders] = useState<Order[]>([]);
   const [payments, setPayments] = useState<any[]>([]);

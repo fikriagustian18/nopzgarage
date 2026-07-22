@@ -8,7 +8,7 @@ import { ImagePlus, Share2, Info } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/Card";
 import { Alert, AlertDescription } from "@/components/ui/Alert";
 
-export default function MediaManagementPage() {
+export default function Page() {
   return (
     <RoleGuard allowedRoles={["OWNER"]}>
       <div className="p-8 space-y-6">

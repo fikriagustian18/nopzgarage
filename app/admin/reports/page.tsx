@@ -91,7 +91,7 @@ type Expense = {
   source: string;
 };
 
-export default function ReportsPage() {
+export default function Page() {
   const router = useRouter();
   const [isMounted, setIsMounted] = useState(false);
   const [loading, setLoading] = useState(true);

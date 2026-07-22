@@ -34,7 +34,7 @@ interface JournalEntry {
   }[];
 }
 
-export default function FinancePage() {
+export default function Page() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [summary, setSummary] = useState({

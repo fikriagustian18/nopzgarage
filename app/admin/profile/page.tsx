@@ -65,7 +65,7 @@ type Activity = {
   createdAt: string;
 };
 
-export default function ProfilePage() {
+export default function Page() {
   const { data: session, update: updateSession } = useSession();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [activities, setActivities] = useState<Activity[]>([]);

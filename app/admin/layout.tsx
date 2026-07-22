@@ -3,7 +3,7 @@ import { AdminHeader } from "@/components/layout/AdminHeader";
 import { Toaster } from "sonner";
 import { requireRole } from "@/lib/authCheck";
 
-export default async function AdminLayout({
+export default async function Layout({
   children,
 }: {
   children: React.ReactNode;

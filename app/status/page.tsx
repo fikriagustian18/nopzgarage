@@ -5,7 +5,7 @@ import { StatusPageClient } from "@/components/shared/StatusPageClient";
 
 export const dynamic = "force-dynamic";
 
-export default async function StatusPage() {
+export default async function Page() {
   const session = await auth();
   const settings = await getAllSettings();
   const { general } = settings;

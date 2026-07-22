@@ -88,7 +88,7 @@ type Payroll = {
   };
 };
 
-export default function PayrollPage() {
+export default function Page() {
   const { data: session } = useSession();
   const userRole = session?.user?.role;
   const isOwner = userRole === "OWNER";

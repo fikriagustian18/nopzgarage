@@ -27,7 +27,7 @@ import { ExportButton } from "@/components/export/ExportButton";
 import { exportJournalEntries } from "@/lib/export/reports/journalExport";
 import type { JournalEntryExport } from "@/lib/export/types";
 
-export default function GeneralJournalPage() {
+export default function Page() {
     const [entries, setEntries] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState("");

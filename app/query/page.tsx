@@ -162,7 +162,7 @@ interface QueryHistoryItem {
   target?: string; // Model name for prisma, etc.
 }
 
-export default function DatabaseConsolePublic() {
+export default function Page() {
   const [activeQueryTab, setActiveQueryTab] = useState<string>("prisma");
   const [activeResultTab, setActiveResultTab] = useState<string>("Table");
   

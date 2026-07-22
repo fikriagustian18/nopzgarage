@@ -41,7 +41,7 @@ export const metadata: Metadata = {
     "Booking servis motor online dengan live tracking. Fast Lane untuk servis cepat, Project Lane untuk modifikasi.",
 };
 
-export default function RootLayout({
+export default function Layout({
   children,
 }: Readonly<{
   children: React.ReactNode;

@@ -9,7 +9,7 @@ import { RoleGuard } from "@/components/shared/RoleGuard";
  *
  * @returns {JSX.Element} Elemen JSX yang merender halaman CMS.
  */
-export default function ContentPage() {
+export default function Page() {
   return (
     <RoleGuard allowedRoles={["OWNER"]}>
       <div className="p-8 space-y-6">

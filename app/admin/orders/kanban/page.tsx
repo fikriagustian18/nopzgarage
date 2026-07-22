@@ -46,7 +46,7 @@ type KanbanOrder = {
 type KanbanColumn = "PENDING" | "IN_PROGRESS" | "WAITING_FOR_PAYMENT" | "READY";
 const KANBAN_COLUMNS: KanbanColumn[] = ["PENDING", "IN_PROGRESS", "WAITING_FOR_PAYMENT", "READY"];
 
-export default function KanbanBoardPage() {
+export default function Page() {
   const router = useRouter();
   const [orders, setOrders] = useState<KanbanOrder[]>([]);
   const [isLoading, setIsLoading] = useState(true);

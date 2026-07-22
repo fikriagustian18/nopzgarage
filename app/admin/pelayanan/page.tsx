@@ -86,7 +86,7 @@ type Mechanic = {
   role: string;
 };
 
-export default function PelayananPage() {
+export default function Page() {
   const router = useRouter();
   const [orders, setOrders] = useState<Order[]>([]);
   const [mechanics, setMechanics] = useState<Mechanic[]>([]);

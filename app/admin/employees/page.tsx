@@ -62,7 +62,7 @@ type Employee = {
   unpaidAmount?: number;
 };
 
-export default function EmployeesPage() {
+export default function Page() {
   const router = useRouter();
   const { notify } = useNotification();
   

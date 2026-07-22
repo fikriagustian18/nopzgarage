@@ -61,7 +61,7 @@ import {
 } from "recharts";
 import { getBankColor } from "@/lib/constants/banks";
 
-export default function AdminDashboard() {
+export default function Page() {
   const { data: session } = useSession();
   const userRole = session?.user?.role;
   const [stats, setStats] = useState<any>(null);

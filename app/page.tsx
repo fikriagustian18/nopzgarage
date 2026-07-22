@@ -46,7 +46,7 @@ const ICON_MAP: Record<string, any> = {
   Zap, Settings, Wrench, Clock, Shield, Award, Star, Heart
 };
 
-export default async function Home() {
+export default async function Page() {
   const session = await auth();
   const settings = await getAllSettings();
   const { holiday, general, content } = settings;

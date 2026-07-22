@@ -5,7 +5,7 @@ import { BookingWizard } from "@/components/booking/BookingWizard";
 
 export const dynamic = "force-dynamic";
 
-export default async function BookingPage() {
+export default async function Page() {
   const session = await auth();
   const settings = await getAllSettings();
   const { general, content } = settings;

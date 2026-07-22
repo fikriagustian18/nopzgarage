@@ -6,7 +6,7 @@ import { EmployeeDashboardClient } from "./EmployeeDashboardClient";
 
 export const dynamic = "force-dynamic";
 
-export default async function EmployeeDashboardPage() {
+export default async function Page() {
   const session = await auth();
 
   if (!session) {

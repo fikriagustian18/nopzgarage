@@ -51,7 +51,7 @@ import {
 } from "lucide-react";
 import { MermaidDiagram } from "@/components/shared/MermaidDiagram";
 
-export default function TechnicalDocsPage() {
+export default function Page() {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState("overview");
 

@@ -49,7 +49,7 @@ import { Plus, Trash2, ArrowUpRight, Loader2, Search } from "lucide-react";
 import { toast } from "@/hooks/useToast";
 
 // ==================== Page Component ====================
-export default function ExpensesPage() {
+export default function Page() {
   const [expenses, setExpenses] = useState<any[]>([]);
   const [categories, setCategories] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);

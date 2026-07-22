@@ -3,7 +3,7 @@ import Link from "next/link";
 import { PublicKanban } from "@/components/shared/PublicKanban";
 import { ArrowLeft, Wrench } from "lucide-react";
 
-export default function KanbanPage() {
+export default function Page() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
       {/* Header */}

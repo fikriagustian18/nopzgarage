@@ -41,7 +41,7 @@ import { ForgotPasswordRequestsTab } from "@/components/admin/ForgotPasswordRequ
 
 import { BankAccountsTab } from "@/components/admin/BankAccountsTab";
 
-export default function SettingsPage() {
+export default function Page() {
   const router = useRouter();
 
   const [activeTab, setActiveTab] = useState("general");

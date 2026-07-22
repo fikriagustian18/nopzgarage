@@ -24,7 +24,7 @@ import {
 } from "@/components/ui/Dialog";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/Tooltip";
 
-export default function LoginPage() {
+export default function Page() {
   const router = useRouter();
   const [email, setEmail] = useState(""); // acts as username/email input
   const [password, setPassword] = useState("");
