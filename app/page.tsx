@@ -88,8 +88,8 @@ export default async function Page() {
   const activePromo = promos.find((p: any) => p.isActive);
 
   const themeConfig = content['theme_config']?.content || {};
-  const primaryColor = themeConfig.primaryColor || "#6E2E72"; // Default
-  const secondaryColor = themeConfig.secondaryColor || "#FE6804"; // Default
+  const primaryColor = themeConfig.primaryColor || "#6e2e72"; // Default
+  const secondaryColor = themeConfig.secondaryColor || "#fe6804"; // Default
   const fontScale = themeConfig.fontScale || 1;
 
   // Generate CSS Variables Injection
@@ -104,7 +104,7 @@ export default async function Page() {
       --secondary: ${secondaryColor};
     }
     html {
-      font-size: calc(16px * var(--temp-font-scale));
+      font-size: calc(1rem * var(--temp-font-scale));
     }
   `;
 

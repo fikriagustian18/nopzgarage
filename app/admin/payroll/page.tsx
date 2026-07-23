@@ -333,13 +333,13 @@ export default function Page() {
           <head>
             <title>Slip Gaji #${selectedPayroll.id.slice(-6).toUpperCase()}</title>
             <style>
-              body { font-family: monospace; padding: 20px; color: #000; font-size: 14px; line-height: 1.5; }
-              .header { text-align: center; margin-bottom: 20px; border-bottom: 2px dashed #000; padding-bottom: 10px; }
-              .section { margin-bottom: 15px; }
-              .row { display: flex; justify-content: space-between; margin-bottom: 5px; }
+              body { font-family: monospace; padding: 1.25rem; color: #000000; font-size: 0.875rem; line-height: 1.5; }
+              .header { text-align: center; margin-bottom: 1.25rem; border-bottom: 0.125rem dashed #000000; padding-bottom: 0.625rem; }
+              .section { margin-bottom: 0.9375rem; }
+              .row { display: flex; justify-content: space-between; margin-bottom: 0.3125rem; }
               .bold { font-weight: bold; }
-              .total-box { border-top: 1px dashed #000; border-bottom: 1px dashed #000; padding: 10px 0; margin-top: 15px; }
-              .footer { text-align: center; margin-top: 30px; border-top: 1px dashed #000; padding-top: 10px; font-size: 11px; }
+              .total-box { border-top: 0.0625rem dashed #000000; border-bottom: 0.0625rem dashed #000000; padding: 0.625rem 0; margin-top: 0.9375rem; }
+              .footer { text-align: center; margin-top: 1.875rem; border-top: 0.0625rem dashed #000000; padding-top: 0.625rem; font-size: 0.6875rem; }
               @media print { body { padding: 0; } }
             </style>
           </head>

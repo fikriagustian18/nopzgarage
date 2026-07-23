@@ -38,100 +38,100 @@
   --color-popover: var(--popover);
   --color-card-foreground: var(--card-foreground);
   --color-card: var(--card);
-  --radius-sm: calc(var(--radius) - 4px);
-  --radius-md: calc(var(--radius) - 2px);
+  --radius-sm: calc(var(--radius) - 0.25rem);
+  --radius-md: calc(var(--radius) - 0.125rem);
   --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) + 4px);
-  --radius-2xl: calc(var(--radius) + 8px);
-  --radius-3xl: calc(var(--radius) + 12px);
-  --radius-4xl: calc(var(--radius) + 16px);
+  --radius-xl: calc(var(--radius) + 0.25rem);
+  --radius-2xl: calc(var(--radius) + 0.5rem);
+  --radius-3xl: calc(var(--radius) + 0.75rem);
+  --radius-4xl: calc(var(--radius) + 1rem);
 }
 
 :root {
   --radius: 0.75rem;
   
-  /* Light Mode - Clean & Professional with Brand Accents */
-  --background: #FFFFFF;
-  --foreground: #0a0412; /* Darker for better contrast */
-  --card: #FFFFFF;
+  /* light mode - clean & professional with brand accents */
+  --background: #ffffff;
+  --foreground: #0a0412;
+  --card: #ffffff;
   --card-foreground: #0a0412;
-  --popover: #FFFFFF;
+  --popover: #ffffff;
   --popover-foreground: #0a0412;
-  --primary: #6E2E72; /* Deep Purple */
-  --primary-foreground: #FFFFFF;
-  --secondary: #FE6804; /* Vibrant Orange */
-  --secondary-foreground: #FFFFFF;
+  --primary: #6e2e72;
+  --primary-foreground: #ffffff;
+  --secondary: #fe6804;
+  --secondary-foreground: #ffffff;
   --muted: #f8f9fa;
-  --muted-foreground: #6E2E72;
-  --accent: #FAFE04; /* Bright Yellow */
+  --muted-foreground: #6e2e72;
+  --accent: #fafe04;
   --accent-foreground: #0a0412;
-  --destructive: #FF0015; /* Pure Red */
-  --destructive-foreground: #FFFFFF;
+  --destructive: #ff0015;
+  --destructive-foreground: #ffffff;
   --border: #e8e9eb;
   --input: #e8e9eb;
-  --ring: #6E2E72;
+  --ring: #6e2e72;
   
-  /* Chart colors mapped to brand palette */
-  --chart-1: #6E2E72;
-  --chart-2: #DE73FF;
-  --chart-3: #FE6804;
-  --chart-4: #FAFE04;
-  --chart-5: #FF0015;
+  /* chart colors mapped to brand palette */
+  --chart-1: #6e2e72;
+  --chart-2: #de73ff;
+  --chart-3: #fe6804;
+  --chart-4: #fafe04;
+  --chart-5: #ff0015;
 
   --sidebar: #fafbfc;
   --sidebar-foreground: #0a0412;
-  --sidebar-primary: #6E2E72;
-  --sidebar-primary-foreground: #FFFFFF;
+  --sidebar-primary: #6e2e72;
+  --sidebar-primary-foreground: #ffffff;
   --sidebar-accent: #f8f9fa;
   --sidebar-accent-foreground: #0a0412;
   --sidebar-border: #e8e9eb;
-  --sidebar-ring: #6E2E72;
+  --sidebar-ring: #6e2e72;
 }
 
 .dark {
-  /* Dark Mode - Premium Racing Aesthetic */
-  --background: #0a0412; /* Deep space black with purple tint */
-  --foreground: #FFFFFF;
+  /* dark mode - premium racing aesthetic */
+  --background: #0a0412;
+  --foreground: #ffffff;
   
-  --card: #1a0f24; /* Rich dark purple */
-  --card-foreground: #FFFFFF;
+  --card: #1a0f24;
+  --card-foreground: #ffffff;
   
   --popover: #1a0f24;
-  --popover-foreground: #FFFFFF;
+  --popover-foreground: #ffffff;
   
-  --primary: #DE73FF; /* Electric neon purple */
-  --primary-foreground: #FFFFFF;
+  --primary: #de73ff;
+  --primary-foreground: #ffffff;
   
-  --secondary: #FE6804; /* Hot orange */
-  --secondary-foreground: #FFFFFF;
+  --secondary: #fe6804;
+  --secondary-foreground: #ffffff;
   
-  --muted: #2d1a3d; /* Deep muted purple */
-  --muted-foreground: #E0E0E0; /* Soft white */
+  --muted: #2d1a3d;
+  --muted-foreground: #e0e0e0;
   
   --accent: #2d1a3d;
-  --accent-foreground: #FAFE04; /* Neon yellow */
+  --accent-foreground: #fafe04;
   
-  --destructive: #FF0015; /* Danger red */
-  --destructive-foreground: #FFFFFF;
+  --destructive: #ff0015;
+  --destructive-foreground: #ffffff;
   
-  --border: #3d2851; /* Purple-tinted border */
+  --border: #3d2851;
   --input: #2d1a3d;
-  --ring: #DE73FF;
+  --ring: #de73ff;
   
-  --chart-1: #DE73FF;
-  --chart-2: #FE6804;
-  --chart-3: #FAFE04;
-  --chart-4: #6E2E72;
-  --chart-5: #FF0015;
+  --chart-1: #de73ff;
+  --chart-2: #fe6804;
+  --chart-3: #fafe04;
+  --chart-4: #6e2e72;
+  --chart-5: #ff0015;
 
   --sidebar: #0a0412;
-  --sidebar-foreground: #FFFFFF;
-  --sidebar-primary: #DE73FF;
-  --sidebar-primary-foreground: #FFFFFF;
+  --sidebar-foreground: #ffffff;
+  --sidebar-primary: #de73ff;
+  --sidebar-primary-foreground: #ffffff;
   --sidebar-accent: #2d1a3d;
-  --sidebar-accent-foreground: #FAFE04;
+  --sidebar-accent-foreground: #fafe04;
   --sidebar-border: #3d2851;
-  --sidebar-ring: #DE73FF;
+  --sidebar-ring: #de73ff;
 }
 
 @layer base {
@@ -148,28 +148,28 @@
     text-rendering: optimizeLegibility;
   }
 
-  /* Enhanced Focus Styles */
+  /* enhanced focus styles */
   *:focus-visible {
     @apply outline-2 outline-offset-2 outline-ring;
   }
 
-  /* Better Text Selection */
+  /* better text selection */
   ::selection {
     @apply bg-primary/20 text-foreground;
   }
 
-  /* Smooth Scroll Behavior */
+  /* smooth scroll behavior */
   html {
     scroll-behavior: smooth;
   }
 }
 
 /* ========================================
-   CUSTOM SCROLLBAR - Premium Design
+   custom scrollbar - premium design
    ======================================== */
 ::-webkit-scrollbar {
-  width: 12px;
-  height: 12px;
+  width: 0.75rem;
+  height: 0.75rem;
 }
 
 ::-webkit-scrollbar-track {
@@ -180,7 +180,7 @@
 ::-webkit-scrollbar-thumb {
   @apply bg-primary/40 hover:bg-primary/60;
   border-radius: 100vh;
-  border: 3px solid transparent;
+  border: 0.1875rem solid transparent;
   background-clip: content-box;
   transition: background-color 0.3s ease;
 }
@@ -189,7 +189,7 @@
   @apply bg-primary/70;
 }
 
-/* Dark mode scrollbar */
+/* dark mode scrollbar */
 .dark ::-webkit-scrollbar-track {
   @apply bg-card/30;
 }
@@ -198,25 +198,23 @@
   @apply bg-primary/60 hover:bg-primary/80;
 }
 
-/* Firefox Scrollbar */
+/* firefox scrollbar */
 * {
   scrollbar-width: thin;
   scrollbar-color: hsl(var(--primary) / 0.4) hsl(var(--muted) / 0.3);
 }
 
 /* ========================================
-   RESPONSIVE TABLE CONTAINER
+   responsive table container (mobile first)
    ======================================== */
-@media (max-width: 640px) {
-  .table-container {
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-    scrollbar-width: thin;
-  }
+.table-container {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
 }
 
 /* ========================================
-   GRADIENT ANIMATION
+   gradient animation
    ======================================== */
 @keyframes gradient {
   0%, 100% {
@@ -233,7 +231,7 @@
 }
 
 /* ========================================
-   ENHANCED TOAST STYLING (Sonner)
+   enhanced toast styling (sonner)
    ======================================== */
 [data-sonner-toast] {
   @apply bg-card/95 backdrop-blur-xl border-2 border-border text-foreground shadow-2xl font-sans rounded-2xl;
@@ -280,14 +278,14 @@
 }
 
 /* ========================================
-   CUSTOM ANIMATIONS & UTILITIES
+   custom animations & utilities
    ======================================== */
 
-/* Fade in with slide */
-@keyframes fadeInUp {
+/* fade in with slide */
+@keyframes fade-in-up {
   from {
     opacity: 0;
-    transform: translateY(20px);
+    transform: translateY(1.25rem);
   }
   to {
     opacity: 1;
@@ -296,16 +294,16 @@
 }
 
 .animate-fade-in-up {
-  animation: fadeInUp 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+  animation: fade-in-up 0.6s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-/* Shimmer effect for loading states */
+/* shimmer effect for loading states */
 @keyframes shimmer {
   0% {
-    background-position: -1000px 0;
+    background-position: -62.5rem 0;
   }
   100% {
-    background-position: 1000px 0;
+    background-position: 62.5rem 0;
   }
 }
 
@@ -317,16 +315,16 @@
     hsl(var(--primary) / 0.1) 50%,
     transparent 100%
   );
-  background-size: 1000px 100%;
+  background-size: 62.5rem 100%;
 }
 
-/* Pulse glow effect */
+/* pulse glow effect */
 @keyframes pulse-glow {
   0%, 100% {
-    box-shadow: 0 0 20px hsl(var(--primary) / 0.2);
+    box-shadow: 0 0 1.25rem hsl(var(--primary) / 0.2);
   }
   50% {
-    box-shadow: 0 0 40px hsl(var(--primary) / 0.4);
+    box-shadow: 0 0 2.5rem hsl(var(--primary) / 0.4);
   }
 }
 
@@ -335,7 +333,7 @@
 }
 
 /* ========================================
-   GLASS MORPHISM UTILITY
+   glass morphism utility
    ======================================== */
 .glass {
   @apply bg-background/80 backdrop-blur-xl border border-border/50;
@@ -346,19 +344,20 @@
 }
 
 /* ========================================
-   IMPROVED BUTTON STATES
+   improved button states & touch targets
    ======================================== */
-button, a[role="Button"] {
+button, a[role="button"] {
   @apply transition-all duration-300 ease-out;
   -webkit-tap-highlight-color: transparent;
+  min-height: 2.75rem;
 }
 
-button:active, a[role="Button"]:active {
+button:active, a[role="button"]:active {
   @apply scale-[0.97];
 }
 
 /* ========================================
-   ENHANCED INPUT STYLES
+   enhanced input styles
    ======================================== */
 input[type="text"],
 input[type="email"],
@@ -369,6 +368,8 @@ input[type="time"],
 textarea,
 select {
   @apply transition-all duration-300;
+  min-height: 2.75rem;
+  font-size: 1rem;
 }
 
 input:focus,
@@ -378,7 +379,7 @@ select:focus {
 }
 
 /* ========================================
-   PREMIUM CARD HOVER EFFECTS
+   premium card hover effects
    ======================================== */
 .card-hover {
   @apply transition-all duration-500 ease-out;
@@ -389,7 +390,7 @@ select:focus {
 }
 
 /* ========================================
-   RESPONSIVE TYPOGRAPHY SCALES
+   responsive typography scales
    ======================================== */
 .display-text {
   @apply text-5xl md:text-6xl lg:text-7xl xl:text-8xl font-black tracking-tighter;
@@ -408,14 +409,14 @@ select:focus {
 }
 
 /* ========================================
-   LOADING STATES
+   loading states
    ======================================== */
 .skeleton {
   @apply animate-pulse bg-muted/50 rounded-lg;
 }
 
 /* ========================================
-   UTILITY CLASSES
+   utility classes
    ======================================== */
 .text-gradient {
   @apply text-transparent bg-clip-text bg-gradient-to-r from-primary to-secondary;
@@ -428,7 +429,7 @@ select:focus {
 .border-gradient {
   position: relative;
   background-clip: padding-box;
-  border: 2px solid transparent;
+  border: 0.125rem solid transparent;
 }
 
 .border-gradient::before {
@@ -436,7 +437,7 @@ select:focus {
   position: absolute;
   inset: 0;
   z-index: -1;
-  margin: -2px;
+  margin: -0.125rem;
   border-radius: inherit;
   background: linear-gradient(
     to right,
@@ -446,11 +447,11 @@ select:focus {
 }
 
 /* ========================================
-   DARK MODE ENHANCEMENTS
+   dark mode enhancements
    ======================================== */
 .dark {
-  /* Better contrast for text in dark mode */
-  --muted-foreground: #B0B0B0;
+  /* better contrast for text in dark mode */
+  --muted-foreground: #b0b0b0;
 }
 
 .dark img {
@@ -458,11 +459,11 @@ select:focus {
 }
 
 /* ========================================
-   PRINT STYLES
+   print styles
    ======================================== */
 @media print {
   .no-print {
-    display: none !important;
+    display: none;
   }
   
   body {
@@ -471,47 +472,26 @@ select:focus {
 }
 
 /* ========================================
-   ACCESSIBILITY IMPROVEMENTS
+   accessibility improvements
    ======================================== */
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
   *::after {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
-    scroll-behavior: auto !important;
+    animation-duration: 0.01ms;
+    animation-iteration-count: 1;
+    transition-duration: 0.01ms;
+    scroll-behavior: auto;
   }
 }
 
-/* High contrast mode support */
+/* high contrast mode support */
 @media (prefers-contrast: high) {
   :root {
     --border: #000000;
   }
   
   .dark {
-    --border: #FFFFFF;
-  }
-}
-
-/* ========================================
-   MOBILE OPTIMIZATIONS
-   ======================================== */
-@media (max-width: 640px) {
-  /* Better touch targets */
-  button,
-  a,
-  input,
-  select,
-  textarea {
-    min-height: 44px;
-  }
-
-  /* Prevent zoom on input focus */
-  input,
-  select,
-  textarea {
-    font-size: 16px;
+    --border: #ffffff;
   }
 }

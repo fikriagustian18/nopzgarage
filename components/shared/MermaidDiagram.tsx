@@ -74,9 +74,9 @@ export function MermaidDiagram({ chart, className }: { chart: string; className?
   return (
     <div className="relative w-full border rounded-lg bg-card shadow-sm overflow-hidden group">
       <style>{`
-        #mermaid-${id} svg {
-          max-width: none !important;
-          height: auto !important;
+        .mermaid-diagram-content svg {
+          max-width: none;
+          height: auto;
         }
       `}</style>
       {/* Controls */}
@@ -185,7 +185,7 @@ export function MermaidDiagram({ chart, className }: { chart: string; className?
           }}
           className="min-w-full flex justify-center"
         >
-        <div id={`mermaid-${id}`} className={`min-w-[100px] ${className || ""}`} />
+        <div id={`mermaid-${id}`} className={`mermaid-diagram-content min-w-[100px] ${className || ""}`} />
         </div>
       </div>
     </div>
