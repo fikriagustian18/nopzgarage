@@ -25,7 +25,8 @@ export async function searchOrderByPlate(searchQuery: string) {
       cleanQuery = cleanQuery.substring(4);
     }
 
-    // Cari order dengan ID, nomor HP, atau nomor plat yang sesuai (case insensitive)
+    // Cari order dengan ID, nomor HP, atau nomor plat yang sesuai
+    // (case insensitive)
     const orders = await prisma.order.findMany({
       where: {
         OR: [
@@ -78,7 +79,8 @@ export async function searchOrderByPlate(searchQuery: string) {
       };
     }
 
-    // Sensor nama customer untuk privacy (hanya huruf pertama) dan hitung queuePosition
+    // Sensor nama customer untuk privacy (hanya huruf pertama)
+    // dan hitung queuePosition
     const sanitizedOrders = await Promise.all(orders.map(async (order) => {
       let queuePosition = null;
       if (order.status === 'QUEUE') {

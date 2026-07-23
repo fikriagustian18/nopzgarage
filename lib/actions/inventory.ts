@@ -193,7 +193,8 @@ export async function updateSparePart(id: string, data: Partial<CreateSparePartI
  * @returns {Object} Status sukses.
  */
 export async function deleteSparePart(id: string) {
-  // Soft delete (Non-aktifkan) lebih aman daripada hard delete jika sudah ada relasi
+  // Soft delete (Non-aktifkan) lebih aman daripada hard delete
+  // jika sudah ada relasi
   try {
     const sparePart = await prisma.sparePart.update({
         where: { id },

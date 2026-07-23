@@ -347,7 +347,8 @@ export async function getEmployees(activeOnly: boolean = false) {
 
     const employeesWithUnpaid = employees.map((emp: any) => {
         const unpaidAmount = emp.orderFees.reduce((sum: number, fee: any) => sum + Number(fee.amount), 0);
-        // Remove orderFees from the object to prevent Decimal error, as we only needed it for calculation
+        // Remove orderFees from object to prevent Decimal error,
+        // as we only needed it for calculation
         const { orderFees, ...rest } = emp;
         return {
             ...rest,
@@ -524,7 +525,8 @@ export async function getEmployeeDetail(id: string) {
     const [activeOrder, queueOrders] = await Promise.all([
         prisma.order.findFirst({
             where: {
-                // Check if user is Lead Mechanic OR has a Fee/Commission entry in this order (Helper)
+                // Check if user is Lead Mechanic OR has a Fee/Commission
+                // entry in this order (Helper)
                 OR: [
                     { mechanicId: id },
                     { orderFees: { some: { employeeId: id } } }

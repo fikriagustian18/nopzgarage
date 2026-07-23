@@ -161,12 +161,23 @@ export function formatWhatsAppNumber(phone: string): string {
   return cleaned;
 }
 
-// ==================== Deep Clone Object ====================
+/**
+ * Melakukan deep clone pada objek generik.
+ * @template T
+ * @param obj Objek yang akan diduplikasi.
+ * @returns Salinan baru dari objek.
+ */
 export function deepClone<T>(obj: T): T {
   return JSON.parse(JSON.stringify(obj));
 }
 
-// ==================== Safe JSON Parse ====================
+/**
+ * Melakukan parsing JSON secara aman dengan nilai fallback.
+ * @template T
+ * @param json String JSON yang akan di-parse.
+ * @param fallback Nilai default jika parsing gagal.
+ * @returns Hasil parsing atau nilai fallback.
+ */
 export function safeJsonParse<T>(json: string, fallback: T): T {
   try {
     return JSON.parse(json);

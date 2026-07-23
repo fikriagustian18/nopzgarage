@@ -7,7 +7,8 @@ import { revalidatePath } from "next/cache";
 import { createLog } from "./logs";
 
 // ==================== Types ====================
-// Infer TransactionClient type to avoid importing 'Prisma' namespace which causes issues
+// Infer TransactionClient type to avoid importing 'Prisma'
+// namespace which causes issues
 type TransactionClient = Parameters<Parameters<typeof prisma.$transaction>[0]>[0];
 
 export type PaymentStatus = "UNPAID" | "PARTIAL" | "PAID";
