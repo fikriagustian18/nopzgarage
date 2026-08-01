@@ -19,8 +19,9 @@ import {
 import { Avatar, AvatarFallback } from "@/components/ui/Avatar";
 import { Button } from "@/components/ui/Button";
 
-import { cn } from "@/lib/utils";
-
+/**
+ * Top header component for Admin Panel with user profile menu.
+ */
 export function AdminHeader() {
   const { data: session } = useSession();
   const pathname = usePathname();
@@ -66,11 +67,8 @@ export function AdminHeader() {
     if (pathname.startsWith("/admin/income")) {
       return "Pemasukan Lain";
     }
-    if (pathname.startsWith("/admin/finance")) {
-      return "Keuangan";
-    }
     if (pathname.startsWith("/admin/reports")) {
-      return "Laporan";
+      return "Laporan Keuangan";
     }
     if (pathname.startsWith("/admin/docs")) {
       return "Documentation";

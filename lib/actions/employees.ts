@@ -9,16 +9,16 @@ import { createLog } from './logs';
 export type SalaryType = "DAILY" | "COMMISSION";
 
 // ==================== Types ====================
-export type CreateEmployeeInput = {
+export interface CreateEmployeeInput {
   name: string;
   role: string;
   phone?: string;
   salaryType: SalaryType;
   dailyRate?: number;
   commissionRate?: number;
-};
+}
 
-export type UpdateEmployeeInput = {
+export interface UpdateEmployeeInput {
   id: string;
   name?: string;
   role?: string;
@@ -27,7 +27,7 @@ export type UpdateEmployeeInput = {
   dailyRate?: number;
   commissionRate?: number;
   isActive?: boolean;
-};
+}
 
 // Infer TransactionClient strictly
 type TransactionClient = Parameters<Parameters<typeof prisma.$transaction>[0]>[0];
@@ -45,260 +45,266 @@ async function ensureAccount(tx: TransactionClient, code: string, name: string, 
 
 // Function to pay all pending commissions for an employee
 /**
- * Membayar SEMUA komisi yang belum dibayar untuk satu karyawan.
+ * Pay ALL pending commissions for a single employee.
  * 
- * Proses:
- * 1. Menghitung total komisi yang belum dibayar.
- * 2. Menandai semua fee terkait sebagai 'PAID'.
- * 3. Membuat record Payment (Pengeluaran Uang).
- * 4. Membuat record Payroll (Rekap Gaji).
- * 5. Membuat Jurnal Akuntansi (Debit Utang Gaji, Kredit Kas/Bank).
+ * Process:
+ * 1. Calculate total unpaid commissions.
+ * 2. Mark all related fees as 'PAID'.
+ * 3. Create Payment record (Money Out).
+ * 4. Create Payroll summary record.
+ * 5. Create Accounting Journal entry (Debit Salary Payable, Credit Cash/Bank).
  * 
- * @param {string} employeeId - ID karyawan.
- * @param {'CASH' | 'TRANSFER'} paymentMethod - Metode pembayaran.
- * @param {string} note - Catatan tambahan.
- * @returns {Object} Hasil pembayaran (jumlah, total).
+ * @param {string} employeeId - Employee ID.
+ * @param {'CASH' | 'TRANSFER'} paymentMethod - Payment method.
+ * @param {string} note - Additional notes.
+ * @returns {Object} Payment result (count, total amount).
  */
 export async function payAllCommissions(employeeId: string, paymentMethod: "CASH" | "TRANSFER" = "CASH", note?: string) {
-    try {
-        console.log(`[PAY_COMMISSION] Starting payment for employee ${employeeId}`);
+  try {
+    console.log(`[PAY_COMMISSION] Starting payment for employee ${employeeId}`);
 
-        const result = await prisma.$transaction(async (tx: TransactionClient) => {
-            // 1. Get Employee
-            const employee = await tx.employee.findUnique({
-                where: { id: employeeId }
-            });
-            if (!employee) throw new Error("Employee not found");
+    const result = await prisma.$transaction(async (tx: TransactionClient) => {
+      // 1. Get Employee
+      const employee = await tx.employee.findUnique({
+        where: { id: employeeId }
+      });
+      if (!employee) {
+        throw new Error("Employee not found");
+      }
 
-            // 2. Get Unpaid Fees
-            const unpaidFees = await tx.orderFee.findMany({
-                where: { 
-                    employeeId: employeeId,
-                    isPaid: false 
-                },
-                include: { order: true }
-            });
+      // 2. Get Unpaid Fees
+      const unpaidFees = await tx.orderFee.findMany({
+        where: { 
+          employeeId: employeeId,
+          isPaid: false 
+        },
+        include: { order: true }
+      });
 
-            if (unpaidFees.length === 0) {
-                return { success: false, error: "Tidak ada komisi yang perlu dibayar." };
-            }
+      if (unpaidFees.length === 0) {
+        return { success: false, error: "Tidak ada komisi yang perlu dibayar." };
+      }
 
-            const totalAmount = unpaidFees.reduce((sum: number, fee: any) => sum + Number(fee.amount), 0);
+      const totalAmount = unpaidFees.reduce((sum: number, fee: any) => sum + Number(fee.amount), 0);
 
-            console.log(`[PAY_COMMISSION] Total commission to pay: ${totalAmount}`);
+      console.log(`[PAY_COMMISSION] Total commission to pay: ${totalAmount}`);
 
-            // 3. Mark Fees as Paid
-            await tx.orderFee.updateMany({
-                where: { 
-                    id: { in: unpaidFees.map((f: any) => f.id) }
-                },
-                data: {
-                    isPaid: true,
-                    paidAt: new Date()
-                }
-            });
+      // 3. Mark Fees as Paid
+      await tx.orderFee.updateMany({
+        where: { 
+          id: { in: unpaidFees.map((f: any) => f.id) }
+        },
+        data: {
+          isPaid: true,
+          paidAt: new Date()
+        }
+      });
 
-            // 4. Create Payment Record (Money Out)
-            const payment = await tx.payment.create({
-                data: {
-                    amount: totalAmount,
-                    paymentMethod: paymentMethod,
-                    note: note || `Pencairan Komisi ${employee.name} (${unpaidFees.length} order)`,
-                    payrollId: undefined, 
-                }
-            });
+      // 4. Create Payment Record (Money Out)
+      const payment = await tx.payment.create({
+        data: {
+          amount: totalAmount,
+          paymentMethod: paymentMethod,
+          note: note || `Pencairan Komisi ${employee.name} (${unpaidFees.length} order)`,
+          payrollId: undefined, 
+        }
+      });
 
-            // 4b. Create Payroll Wrapper 
-            const payroll = await tx.payroll.create({
-                data: {
-                    startDate: new Date(), 
-                    endDate: new Date(),
-                    employeeId: employeeId,
-                    baseSalary: 0,
-                    bonus: 0,
-                    totalEarned: totalAmount,
-                    totalPaid: totalAmount,
-                    status: 'PAID',
-                    details: `Pencairan Komisi Manual via Admin Panel (${unpaidFees.length} tasks)`,
-                }
-            });
+      // 4b. Create Payroll Wrapper 
+      const payroll = await tx.payroll.create({
+        data: {
+          startDate: new Date(), 
+          endDate: new Date(),
+          employeeId: employeeId,
+          baseSalary: 0,
+          bonus: 0,
+          totalEarned: totalAmount,
+          totalPaid: totalAmount,
+          status: 'PAID',
+          details: `Pencairan Komisi Manual via Admin Panel (${unpaidFees.length} tasks)`,
+        }
+      });
 
-            // Link payment to payroll
-            await tx.payment.update({
-                where: { id: payment.id },
-                data: { payrollId: payroll.id }
-            });
+      // Link payment to payroll
+      await tx.payment.update({
+        where: { id: payment.id },
+        data: { payrollId: payroll.id }
+      });
 
-            // 5. Journaling
-            await ensureAccount(tx, "101", "Kas Tunai", "ASSET", "CURRENT_ASSET");
-            await ensureAccount(tx, "102", "Bank", "ASSET", "CURRENT_ASSET");
-            await ensureAccount(tx, "202", "Utang Gaji & Komisi", "LIABILITY", "CURRENT_LIABILITY");
+      // 5. Journaling
+      await ensureAccount(tx, "101", "Kas Tunai", "ASSET", "CURRENT_ASSET");
+      await ensureAccount(tx, "102", "Bank", "ASSET", "CURRENT_ASSET");
+      await ensureAccount(tx, "202", "Utang Gaji & Komisi", "LIABILITY", "CURRENT_LIABILITY");
 
-            const cashAccount = paymentMethod === "TRANSFER" ? "102" : "101";
+      const cashAccount = paymentMethod === "TRANSFER" ? "102" : "101";
 
-            await tx.journalEntry.create({
-                data: {
-                    description: `Pembayaran Komisi ${employee.name}`,
-                    reference: payroll.id,
-                    items: {
-                        create: [
-                            {
-                                account: { connect: { code: "202" } }, 
-                                debit: totalAmount
-                            },
-                            {
-                                account: { connect: { code: cashAccount } }, 
-                                credit: totalAmount
-                            }
-                        ]
-                    }
-                }
-            });
+      await tx.journalEntry.create({
+        data: {
+          description: `Pembayaran Komisi ${employee.name}`,
+          reference: payroll.id,
+          items: {
+            create: [
+              {
+                account: { connect: { code: "202" } }, 
+                debit: totalAmount
+              },
+              {
+                account: { connect: { code: cashAccount } }, 
+                credit: totalAmount
+              }
+            ]
+          }
+        }
+      });
 
-            return { success: true, count: unpaidFees.length, amount: totalAmount };
-        }, {
-            maxWait: 5000,
-            timeout: 15000,
-        });
+      return { success: true, count: unpaidFees.length, amount: totalAmount };
+    }, {
+      maxWait: 5000,
+      timeout: 15000,
+    });
 
-        revalidatePath('/admin/employees');
-        revalidatePath('/admin/finance');
-        
-        return result;
+    revalidatePath('/admin/employees');
+    revalidatePath('/admin/reports');
+    
+    return result;
 
-    } catch (error: any) {
-        console.error("[PAY_COMMISSION] Error:", error);
-        return { success: false, error: error.message };
-    }
+  } catch (error: any) {
+    console.error("[PAY_COMMISSION] Error:", error);
+    return { success: false, error: error.message };
+  }
 }
 
 // Function to pay specific commission (single item)
 /**
- * Membayar SATU item komisi spesifik.
- * Mirip dengan payAllCommissions tapi hanya untuk satu ID fee.
+ * Pay a specific single commission item.
+ * Similar to payAllCommissions but targets a single fee ID.
  * 
- * @param {string} feeId - ID OrderFee yang akan dibayar.
- * @param {'CASH' | 'TRANSFER'} paymentMethod - Metode pembayaran.
- * @param {string} note - Catatan.
- * @returns {Object} Data fee yang sudah dibayar.
+ * @param {string} feeId - OrderFee ID to pay.
+ * @param {'CASH' | 'TRANSFER'} paymentMethod - Payment method.
+ * @param {string} note - Notes.
+ * @returns {Object} Paid fee record.
  */
 export async function payCommission(feeId: string, paymentMethod: "CASH" | "TRANSFER" = "CASH", note?: string) {
-    try {
-        console.log(`[PAY_ONE_COMMISSION] Starting payment for fee ${feeId}`);
+  try {
+    console.log(`[PAY_ONE_COMMISSION] Starting payment for fee ${feeId}`);
 
-        const result = await prisma.$transaction(async (tx: TransactionClient) => {
-            // 1. Get Fee
-            const fee = await tx.orderFee.findUnique({
-                where: { id: feeId },
-                include: { 
-                    order: true,
-                    employee: true 
-                }
-            });
+    const result = await prisma.$transaction(async (tx: TransactionClient) => {
+      // 1. Get Fee
+      const fee = await tx.orderFee.findUnique({
+        where: { id: feeId },
+        include: { 
+          order: true,
+          employee: true 
+        }
+      });
 
-            if (!fee) throw new Error("Komisi tidak ditemukan");
-            if (fee.isPaid) throw new Error("Komisi sudah dibayar");
+      if (!fee) {
+        throw new Error("Komisi tidak ditemukan");
+      }
+      if (fee.isPaid) {
+        throw new Error("Komisi sudah dibayar");
+      }
 
-            const amount = Number(fee.amount);
+      const amount = Number(fee.amount);
 
-            // 2. Mark Fee as Paid
-            await tx.orderFee.update({
-                where: { id: feeId },
-                data: {
-                    isPaid: true,
-                    paidAt: new Date()
-                }
-            });
+      // 2. Mark Fee as Paid
+      await tx.orderFee.update({
+        where: { id: feeId },
+        data: {
+          isPaid: true,
+          paidAt: new Date()
+        }
+      });
 
-            // 3. Create Payment Record (Money Out)
-            const payment = await tx.payment.create({
-                data: {
-                    amount: amount,
-                    paymentMethod: paymentMethod,
-                    note: note || `Pencairan Komisi Order #${fee.order?.vehicle || feeId}`,
-                    payrollId: undefined, 
-                }
-            });
+      // 3. Create Payment Record (Money Out)
+      const payment = await tx.payment.create({
+        data: {
+          amount: amount,
+          paymentMethod: paymentMethod,
+          note: note || `Pencairan Komisi Order #${fee.order?.vehicle || feeId}`,
+          payrollId: undefined, 
+        }
+      });
 
-            // 3b. Create Single Payroll Record
-            const payroll = await tx.payroll.create({
-                data: {
-                    startDate: new Date(), 
-                    endDate: new Date(),
-                    employeeId: fee.employeeId,
-                    baseSalary: 0,
-                    bonus: 0,
-                    totalEarned: amount,
-                    totalPaid: amount,
-                    status: 'PAID',
-                    details: `Pencairan Komisi ${fee.order?.vehicle || ''} (${fee.order?.plateNumber || ''})`,
-                }
-            });
+      // 3b. Create Single Payroll Record
+      const payroll = await tx.payroll.create({
+        data: {
+          startDate: new Date(), 
+          endDate: new Date(),
+          employeeId: fee.employeeId,
+          baseSalary: 0,
+          bonus: 0,
+          totalEarned: amount,
+          totalPaid: amount,
+          status: 'PAID',
+          details: `Pencairan Komisi ${fee.order?.vehicle || ''} (${fee.order?.plateNumber || ''})`,
+        }
+      });
 
-            // Link payment to payroll
-            await tx.payment.update({
-                where: { id: payment.id },
-                data: { payrollId: payroll.id }
-            });
+      // Link payment to payroll
+      await tx.payment.update({
+        where: { id: payment.id },
+        data: { payrollId: payroll.id }
+      });
 
-            // 4. Journaling
-            await ensureAccount(tx, "101", "Kas Tunai", "ASSET", "CURRENT_ASSET");
-            await ensureAccount(tx, "102", "Bank", "ASSET", "CURRENT_ASSET");
-            await ensureAccount(tx, "202", "Utang Gaji & Komisi", "LIABILITY", "CURRENT_LIABILITY");
+      // 4. Journaling
+      await ensureAccount(tx, "101", "Kas Tunai", "ASSET", "CURRENT_ASSET");
+      await ensureAccount(tx, "102", "Bank", "ASSET", "CURRENT_ASSET");
+      await ensureAccount(tx, "202", "Utang Gaji & Komisi", "LIABILITY", "CURRENT_LIABILITY");
 
-            const cashAccount = paymentMethod === "TRANSFER" ? "102" : "101";
+      const cashAccount = paymentMethod === "TRANSFER" ? "102" : "101";
 
-            await tx.journalEntry.create({
-                data: {
-                    description: `Pembayaran Komisi ${fee.employee.name} - Order #${fee.order?.vehicle}`,
-                    reference: payroll.id,
-                    items: {
-                        create: [
-                            {
-                                account: { connect: { code: "202" } }, 
-                                debit: amount
-                            },
-                            {
-                                account: { connect: { code: cashAccount } }, 
-                                credit: amount
-                            }
-                        ]
-                    }
-                }
-            });
+      await tx.journalEntry.create({
+        data: {
+          description: `Pembayaran Komisi ${fee.employee.name} - Order #${fee.order?.vehicle}`,
+          reference: payroll.id,
+          items: {
+            create: [
+              {
+                account: { connect: { code: "202" } }, 
+                debit: amount
+              },
+              {
+                account: { connect: { code: cashAccount } }, 
+                credit: amount
+              }
+            ]
+          }
+        }
+      });
 
-            const serializedFee = {
-                ...fee,
-                amount: Number(fee.amount),
-                order: fee.order ? {
-                    ...fee.order,
-                    totalPrice: fee.order.totalPrice?.toNumber ? fee.order.totalPrice.toNumber() : 0,
-                    totalPaid: fee.order.totalPaid?.toNumber ? fee.order.totalPaid.toNumber() : 0,
-                } : null,
-                employee: serializeEmployee(fee.employee)
-            };
+      const serializedFee = {
+        ...fee,
+        amount: Number(fee.amount),
+        order: fee.order ? {
+          ...fee.order,
+          totalPrice: fee.order.totalPrice?.toNumber ? fee.order.totalPrice.toNumber() : 0,
+          totalPaid: fee.order.totalPaid?.toNumber ? fee.order.totalPaid.toNumber() : 0,
+        } : null,
+        employee: serializeEmployee(fee.employee)
+      };
 
-            const serializedFeeWithDates = {
-                ...serializedFee,
-                createdAt: fee.createdAt instanceof Date ? fee.createdAt.toISOString() : fee.createdAt,
-                paidAt: fee.paidAt instanceof Date ? fee.paidAt.toISOString() : fee.paidAt,
-            };
+      const serializedFeeWithDates = {
+        ...serializedFee,
+        createdAt: fee.createdAt instanceof Date ? fee.createdAt.toISOString() : fee.createdAt,
+        paidAt: fee.paidAt instanceof Date ? fee.paidAt.toISOString() : fee.paidAt,
+      };
 
-            return { success: true, fee: serializedFeeWithDates };
-        }, {
-            maxWait: 5000,
-            timeout: 15000,
-        });
+      return { success: true, fee: serializedFeeWithDates };
+    }, {
+      maxWait: 5000,
+      timeout: 15000,
+    });
 
-        revalidatePath('/admin/employees');
-        revalidatePath('/admin/finance');
-        
-        return result;
+    revalidatePath('/admin/employees');
+    revalidatePath('/admin/reports');
+    
+    return result;
 
-    } catch (error: any) {
-        console.error("[PAY_ONE_COMMISSION] Error:", error);
-        return { success: false, error: error.message };
-    }
+  } catch (error: any) {
+    console.error("[PAY_ONE_COMMISSION] Error:", error);
+    return { success: false, error: error.message };
+  }
 }
 
 // ==================== Helper: Serialize Employee ====================
@@ -315,11 +321,11 @@ function serializeEmployee(employee: any) {
 
 // ==================== Get All Employees ====================
 /**
- * Mengambil daftar semua karyawan.
- * Termasuk perhitungan jumlah order, komisi yang belum dibayar, dll.
+ * Fetch all employees list.
+ * Includes count of orders, unpaid commissions, etc.
  * 
- * @param {boolean} activeOnly - Jika true, hanya ambil karyawan aktif (default false).
- * @returns {Object} List karyawan.
+ * @param {boolean} activeOnly - If true, only fetches active employees.
+ * @returns {Object} List of employees.
  */
 export async function getEmployees(activeOnly: boolean = false) {
   try {
@@ -367,10 +373,10 @@ export async function getEmployees(activeOnly: boolean = false) {
 
 // ==================== Get Mechanics Only ====================
 /**
- * Mengambil daftar karyawan yang khusus bekerja sebagai Mekanik.
- * Digunakan untuk dropdown pemilihan mekanik saat Order.
+ * Fetch employees working specifically as Mechanics.
+ * Used for mechanic selection dropdown in Order creation.
  * 
- * @returns {Object} List mekanik (id, nama, role, rate).
+ * @returns {Object} List of mechanics.
  */
 export async function getMechanics() {
   try {
@@ -405,64 +411,63 @@ export async function getMechanics() {
 
 // ==================== Get Employee Dashboard Stats ====================
 /**
- * Statistik ringkas untuk Dashboard Karyawan (jika ada dashboard khusus).
- * Menghitung total komisi tertunggak, mekanik yang sedang bekerja vs standby.
+ * Summary stats for Employee Dashboard.
+ * Calculates total pending commissions, working vs standby mechanics.
  * 
- * @returns {Object} Statistik karyawan.
+ * @returns {Object} Employee statistics.
  */
 export async function getEmployeeStats() {
-    try {
-      const session = await auth();
-      if (!session || session.user?.role !== 'OWNER') {
-        return { success: false, error: 'Akses ditolak: Hanya Owner yang memiliki wewenang ini.' };
-      }
-        const [fees, activeOrders, totalMechanics] = await Promise.all([
-            prisma.orderFee.aggregate({
-                where: { isPaid: false },
-                _sum: { amount: true },
-                _count: { id: true }
-            }),
-            prisma.order.findMany({
-                where: { status: 'IN_PROGRESS' },
-                select: { mechanicId: true },
-                distinct: ['mechanicId']
-            }),
-            prisma.employee.count({
-                where: { 
-                    isActive: true,
-                    role: { contains: 'Mekanik', mode: 'insensitive' }
-                }
-            })
-        ]);
-
-        const workingCount = activeOrders.filter((o: any) => o.mechanicId).length;
-        const standbyCount = Math.max(0, totalMechanics - workingCount);
-        
-        return {
-            success: true,
-            stats: {
-                totalUnpaid: fees._sum.amount?.toNumber() || 0,
-                unpaidCount: fees._count.id,
-                workingMechanics: workingCount,
-                standbyMechanics: standbyCount,
-                totalMechanics
-            }
-        };
-    } catch (error) {
-         console.error('Get stats error:', error);
-         return { success: false, error: 'Gagal load statistik' };
+  try {
+    const session = await auth();
+    if (!session || session.user?.role !== 'OWNER') {
+      return { success: false, error: 'Akses ditolak: Hanya Owner yang memiliki wewenang ini.' };
     }
+    const [fees, activeOrders, totalMechanics] = await Promise.all([
+      prisma.orderFee.aggregate({
+        where: { isPaid: false },
+        _sum: { amount: true },
+        _count: { id: true }
+      }),
+      prisma.order.findMany({
+        where: { status: 'IN_PROGRESS' },
+        select: { mechanicId: true },
+        distinct: ['mechanicId']
+      }),
+      prisma.employee.count({
+        where: { 
+          isActive: true,
+          role: { contains: 'Mekanik', mode: 'insensitive' }
+        }
+      })
+    ]);
+
+    const workingCount = activeOrders.filter((o: any) => o.mechanicId).length;
+    const standbyCount = Math.max(0, totalMechanics - workingCount);
+    
+    return {
+      success: true,
+      stats: {
+        totalUnpaid: fees._sum.amount?.toNumber() || 0,
+        unpaidCount: fees._count.id,
+        workingMechanics: workingCount,
+        standbyMechanics: standbyCount,
+        totalMechanics
+      }
+    };
+  } catch (error) {
+    console.error('Get stats error:', error);
+    return { success: false, error: 'Gagal load statistik' };
+  }
 }
 
 // ==================== Get Single Employee with Wage History ====================
 // ==================== Get Single Employee with Wage History ====================
 /**
- * Mengambil detail lengkap satu karyawan.
- * Termasuk riwayat komisi, statistik pendapatan, order aktif yang sedang dikerjakan,
- * dan antrian order yang ditugaskan ke dia.
+ * Fetch detailed information for a single employee.
+ * Includes commission history, earnings stats, active order, and queue.
  * 
- * @param {string} id - ID Karyawan.
- * @returns {Object} Detail lengkap karyawan.
+ * @param {string} id - Employee ID.
+ * @returns {Object} Complete employee details.
  */
 export async function getEmployeeDetail(id: string) {
   try {
@@ -611,10 +616,10 @@ export async function getEmployeeDetail(id: string) {
 
 // ==================== Create Employee ====================
 /**
- * Menambahkan karyawan baru.
+ * Create a new employee record.
  * 
- * @param {CreateEmployeeInput} data - Data karyawan baru.
- * @returns {Object} Karyawan yang dibuat.
+ * @param {CreateEmployeeInput} data - New employee data.
+ * @returns {Object} Created employee record.
  */
 export async function createEmployee(data: CreateEmployeeInput) {
   try {
@@ -654,10 +659,10 @@ export async function createEmployee(data: CreateEmployeeInput) {
 
 // ==================== Update Employee ====================
 /**
- * Update data karyawan.
+ * Update employee record details.
  * 
- * @param {UpdateEmployeeInput} data - Data update.
- * @returns {Object} Karyawan setelah update.
+ * @param {UpdateEmployeeInput} data - Update data payload.
+ * @returns {Object} Updated employee record.
  */
 export async function updateEmployee(data: UpdateEmployeeInput) {
   try {
@@ -692,11 +697,11 @@ export async function updateEmployee(data: UpdateEmployeeInput) {
 
 // ==================== Delete/Deactivate Employee ====================
 /**
- * Nonaktifkan karyawan (Soft Delete).
- * Karyawan tidak akan muncul di opsi pilih mekanik, tapi data history tetap ada.
+ * Deactivate an employee (Soft Delete).
+ * Employee will not appear in selection dropdowns, but history is retained.
  * 
- * @param {string} id - ID Karyawan.
- * @returns {Object} Pesan sukses.
+ * @param {string} id - Employee ID.
+ * @returns {Object} Success response.
  */
 export async function deactivateEmployee(id: string) {
   try {
@@ -729,10 +734,10 @@ export async function deactivateEmployee(id: string) {
 
 // ==================== Reactivate Employee ====================
 /**
- * Mengaktifkan kembali karyawan yang sudah dinonaktifkan.
+ * Reactivate a deactivated employee.
  * 
- * @param {string} id - ID Karyawan.
- * @returns {Object} Pesan sukses.
+ * @param {string} id - Employee ID.
+ * @returns {Object} Success response.
  */
 export async function reactivateEmployee(id: string) {
   try {

@@ -17,10 +17,10 @@ export interface BankAccountData {
 }
 
 /**
- * Mengambil semua data rekening bank yang aktif.
- * Mengubah tipe Decimal ke Number untuk kompatibilitas Client Component.
+ * Fetch all active bank accounts.
+ * Converts Decimal types to Numbers for Client Component compatibility.
  * 
- * @returns {Object} Daftar rekening bank.
+ * @returns {Object} List of active bank accounts.
  */
 export async function getBankAccounts() {
   try {
@@ -48,15 +48,15 @@ export async function getBankAccounts() {
 }
 
 /**
- * Menambahkan rekening bank baru.
+ * Add a new bank account.
  * 
- * Fungsi ini melakukan beberapa hal dalam satu transaksi database:
- * 1. Membuat data BankAccount (record sistem).
- * 2. Membuat akun COA (Chart of Accounts) terkait di Akuntansi (Kode 102-XXX).
- * 3. Jika ada saldo awal, otomatis membuat Jurnal Akuntansi (Opening Balance).
+ * Performs database transaction steps:
+ * 1. Create BankAccount record.
+ * 2. Create corresponding COA Account in accounting (Code 102-XXX).
+ * 3. Create Opening Balance journal entry if initial balance > 0.
  * 
- * @param {BankAccountData} data - Data rekening bank baru.
- * @returns {Object} Data rekening yang berhasil dibuat.
+ * @param {BankAccountData} data - New bank account data.
+ * @returns {Object} Created bank account record.
  */
 export async function createBankAccount(data: BankAccountData) {
   try {
@@ -152,7 +152,6 @@ export async function createBankAccount(data: BankAccountData) {
 
       revalidatePath("/admin");
       revalidatePath("/admin/settings");
-      revalidatePath("/admin/finance");
       revalidatePath("/admin/reports");
 
       return { 
@@ -174,11 +173,11 @@ export async function createBankAccount(data: BankAccountData) {
 }
 
 /**
- * Memperbarui informasi rekening bank.
+ * Update bank account details.
  * 
- * @param {string} id - ID rekening yang akan diupdate.
- * @param {Partial<BankAccountData>} data - Data perubahan.
- * @returns {Object} Data rekening setelah update.
+ * @param {string} id - Account ID to update.
+ * @param {Partial<BankAccountData>} data - Fields to update.
+ * @returns {Object} Updated bank account record.
  */
 export async function updateBankAccount(id: string, data: Partial<BankAccountData>) {
   try {
@@ -211,13 +210,13 @@ export async function updateBankAccount(id: string, data: Partial<BankAccountDat
 }
 
 /**
- * Mengupdate saldo bank secara manual (tambah/kurang).
- * Biasanya dipanggil saat ada transaksi masuk/keluar yang melibatkan bank ini.
+ * Manually update bank balance (add/subtract).
+ * Called when incoming or outgoing transactions involve this bank.
  * 
- * @param {string} id - ID rekening.
- * @param {number} amount - Jumlah nominal.
- * @param {'add' | 'subtract'} operation - Jenis operasi (tambah/kurang).
- * @returns {Object} Data rekening dengan saldo terbaru.
+ * @param {string} id - Account ID.
+ * @param {number} amount - Transaction amount.
+ * @param {'add' | 'subtract'} operation - Operation type.
+ * @returns {Object} Account record with updated balance.
  */
 export async function updateBankBalance(id: string, amount: number, operation: 'add' | 'subtract') {
   try {
@@ -258,11 +257,11 @@ export async function updateBankBalance(id: string, amount: number, operation: '
 }
 
 /**
- * Menghapus rekening bank (Soft Delete).
- * Hanya mengubah status isActive menjadi false, tidak menghapus dari DB.
+ * Soft delete a bank account.
+ * Sets isActive to false instead of hard deleting from database.
  * 
- * @param {string} id - ID rekening.
- * @returns {Object} Pesan sukses.
+ * @param {string} id - Account ID.
+ * @returns {Object} Success message.
  */
 export async function deleteBankAccount(id: string) {
   try {
@@ -284,26 +283,27 @@ export async function deleteBankAccount(id: string) {
 }
 
 /**
- * Mengaktifkan atau menonaktifkan rekening bank.
+ * Toggle active status of a bank account.
  * 
- * @param {string} id - ID rekening.
- * @param {boolean} isActive - Status aktif baru.
- * @returns {Object} Status sukses.
+ * @param {string} id - Account ID.
+ * @param {boolean} isActive - New active status.
+ * @returns {Object} Success status.
  */
 export async function toggleBankAccount(id: string, isActive: boolean) {
-    try {
-      const session = await auth();
-      if (!session || session.user?.role !== 'OWNER') {
-        return { success: false, error: 'Akses ditolak: Hanya Owner yang dapat merubah status aktif rekening bank.' };
-      }
-        await prisma.bankAccount.update({
-            where: { id },
-            data: { isActive }
-        });
-        revalidatePath("/admin");
-        revalidatePath("/admin/settings");
-        return { success: true };
-    } catch (error) {
-        return { success: false, error: "Gagal update status" };
+  try {
+    const session = await auth();
+    if (!session || session.user?.role !== 'OWNER') {
+      return { success: false, error: 'Akses ditolak: Hanya Owner yang dapat merubah status aktif rekening bank.' };
     }
+    await prisma.bankAccount.update({
+      where: { id },
+      data: { isActive }
+    });
+    revalidatePath("/admin");
+    revalidatePath("/admin/settings");
+    return { success: true };
+  } catch (error) {
+    return { success: false, error: "Gagal update status" };
+  }
 }
+

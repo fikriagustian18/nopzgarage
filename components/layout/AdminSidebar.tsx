@@ -7,9 +7,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { signOut, useSession } from "next-auth/react";
 import {
   LayoutDashboard,
-  ClipboardList,
   Users,
-  DollarSign,
   FileText,
   Settings,
   LogOut,
@@ -36,6 +34,9 @@ interface MenuItem {
   exact?: boolean;
 }
 
+/**
+ * Desktop sidebar navigation component for Admin Panel.
+ */
 export function AdminSidebar() {
   const pathname = usePathname();
   const router = useRouter();
@@ -89,13 +90,8 @@ export function AdminSidebar() {
       icon: CreditCard,
     },
     {
-      href: "/admin/finance",
-      label: "Keuangan",
-      icon: DollarSign,
-    },
-    {
       href: "/admin/reports",
-      label: "Laporan",
+      label: "Laporan Keuangan",
       icon: FileText,
     },
     {

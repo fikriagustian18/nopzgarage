@@ -8,7 +8,6 @@ import { signOut, useSession } from "next-auth/react";
 import {
   LayoutDashboard,
   Users,
-  DollarSign,
   FileText,
   Settings,
   LogOut,
@@ -42,6 +41,9 @@ interface MenuItem {
   exact?: boolean;
 }
 
+/**
+ * Mobile navigation sidebar component with slide-over drawer menu.
+ */
 export function MobileSidebar() {
   const pathname = usePathname();
   const router = useRouter();
@@ -96,13 +98,8 @@ export function MobileSidebar() {
       icon: CreditCard,
     },
     {
-      href: "/admin/finance",
-      label: "Keuangan",
-      icon: DollarSign,
-    },
-    {
       href: "/admin/reports",
-      label: "Laporan",
+      label: "Laporan Keuangan",
       icon: FileText,
     },
     {

@@ -1,6 +1,6 @@
 "use client";
 
-// 1. Library Eksternal
+// 1. External Libraries
 import { useEffect, useState } from "react";
 import {
   TrendingUp,
@@ -27,7 +27,7 @@ import {
   Cell,
 } from "recharts";
 
-// 2. Komponen Internal
+// 2. Internal Components
 import { RoleGuard } from "@/components/shared/RoleGuard";
 import { Button } from "@/components/ui/Button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/Card";
@@ -42,12 +42,13 @@ import {
 } from "@/components/ui/Select";
 import { ExportButton } from "@/components/export/ExportButton";
 import { Toaster } from "@/components/ui/Toaster";
+import { BankAccountsManager } from "@/components/admin/BankAccountsManager";
 
-// 3. Utilitas & Logic
+// 3. Utilities & Logic
 import { getFinancialReports, getOperationalReports } from "@/lib/actions/finance";
 import { exportIncomeStatement } from "@/lib/export/reports/financialExport";
 
-// 4. Tipe
+// 4. Types
 import type { IncomeStatementData } from "@/lib/export/types";
 
 interface OrderItem {
@@ -123,8 +124,8 @@ interface FinancialReportData {
 }
 
 /**
- * Halaman Utama Laporan Keuangan & Operasional Bengkel Admin.
- * Menampilkan ringkasan arus kas, rincian pendapatan, dan pengeluaran operasional.
+ * Main Financial & Operational Reports Page for Admin Panel.
+ * Displays cash flow summary, revenue breakdown, and operational expenses.
  */
 export default function Page() {
   const [isMounted, setIsMounted] = useState(false);
@@ -837,6 +838,11 @@ export default function Page() {
 
           </div>
 
+          {/* BANK ACCOUNTS MANAGER */}
+          <div className="pt-2">
+            <BankAccountsManager />
+          </div>
+
           <Toaster />
         </div>
       </div>
@@ -844,7 +850,7 @@ export default function Page() {
   );
 }
 
-// Inline indonesian helper for date parsing
+// Helper function for Indonesian date formatting
 function formatIndonesianDate(dateString?: string | Date | null): string {
   if (!dateString) {
     return "-";

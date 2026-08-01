@@ -186,7 +186,7 @@ export default function Page() {
                 </Card>
               ))}
 
-              <Link href="/admin/finance" className="min-w-[90px] flex items-center justify-center">
+              <Link href="/admin/reports" className="min-w-[90px] flex items-center justify-center">
                 <div className="h-[108px] w-full border-2 border-dashed border-muted-foreground/20 rounded-xl flex flex-col items-center justify-center gap-2 text-muted-foreground hover:text-primary hover:border-primary/50 hover:bg-primary/5 transition-all cursor-pointer p-3 text-center">
                   <div className="p-1.5 bg-muted rounded-full">
                     <Plus className="h-4 w-4" />

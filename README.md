@@ -73,11 +73,11 @@ Halaman Expenses mengelola seluruh pengeluaran operasional bengkel seperti pembe
 
 Setiap expense yang dicatat akan otomatis menghasilkan JournalEntry dengan posting yang benar (Debit: Akun Beban sesuai kategori, Credit: Kas). Tabel pengeluaran menampilkan histori lengkap dengan kemampuan search dan delete. Dashboard expense menampilkan total pengeluaran dan breakdown per kategori.
 
-### 9. Laporan Keuangan (`/admin/finance` & `/admin/reports`)
+### 9. Laporan Keuangan (`/admin/reports`)
 
-Modul Finance dan Reports menyediakan insight keuangan komprehensif untuk pengambilan keputusan bisnis. Halaman Finance menampilkan summary arus kas dengan card untuk total pemasukan, total pengeluaran, dan profit/loss. General Ledger (Buku Besar) dapat diakses untuk melihat seluruh jurnal entry yang telah dicatat.
+Modul Laporan Keuangan menyajikan insight keuangan komprehensif untuk pengambilan keputusan bisnis, menampilkan summary arus kas dengan card untuk total pemasukan, total pengeluaran, dan profit/loss, serta manajemen rekening bank.
 
-Halaman Reports menyajikan laporan yang lebih detail termasuk: (1) Laporan Laba Rugi yang menampilkan pendapatan, beban, dan net income; (2) Neraca Saldo yang menunjukkan posisi saldo setiap akun; (3) Laporan Arus Kas yang meringkas cash in dan cash out. Setiap laporan dapat difilter berdasarkan rentang tanggal dan dapat di-export untuk keperluan arsip.
+Halaman Laporan Keuangan menyajikan laporan detail termasuk: (1) Laporan Laba Rugi yang menampilkan pendapatan, beban, dan net income; (2) Neraca Saldo yang menunjukkan posisi saldo setiap akun; (3) Laporan Arus Kas yang meringkas cash in dan cash out. Setiap laporan dapat difilter berdasarkan rentang tanggal dan dapat di-export untuk keperluan arsip.
 
 ### 10. Settings & Konfigurasi (`/admin/settings`)
 

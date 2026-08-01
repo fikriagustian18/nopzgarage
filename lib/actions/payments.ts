@@ -200,17 +200,17 @@ function serializePayment(payment: PaymentRecord | null | undefined): PaymentRec
 
 // ==================== Generic Payment Handler ====================
 /**
- * Membuat Pembayaran Baru (Generic).
- * Bisa untuk Pembayaran Order (Income) atau Pembayaran Gaji/Komisi (Expense).
+ * Create a new Payment record (Generic).
+ * Supports Order Payment (Income) or Payroll/Commission Payment (Expense).
  * 
- * Fungsi ini otomatis menghandle:
- * - Update status pembayaran Order/Payroll (Partial/Paid).
- * - Update saldo Bank (jika via transfer).
- * - Pembuatan Jurnal Akuntansi otomatis (Otomatis seimbang Debit/Kredit).
- * - Pencairan komisi otomatis jika dipilih.
+ * Handles:
+ * - Order/Payroll payment status updates (PARTIAL/PAID).
+ * - Bank account balance update (if via bank transfer/QRIS/card).
+ * - Automatic balanced Accounting Journal Entries.
+ * - Instant commission payout option.
  * 
- * @param {CreatePaymentInput} data - Data pembayaran.
- * @returns {Object} Data pembayaran yang dibuat.
+ * @param {CreatePaymentInput} data - Payment payload.
+ * @returns {Object} Created payment record.
  */
 export async function createPayment(data: CreatePaymentInput) {
   try {
@@ -270,7 +270,7 @@ export async function createPayment(data: CreatePaymentInput) {
 
     revalidatePath("/admin/orders");
     revalidatePath("/admin/payroll");
-    revalidatePath("/admin/finance");
+    revalidatePath("/admin/reports");
     revalidatePath("/admin/settings");
 
     await createLog({
@@ -361,7 +361,9 @@ async function handleOrderPayment(tx: TransactionClient, orderId: string, paymen
     where: { id: orderId },
   });
 
-  if (!order) throw new Error("Order tidak ditemukan");
+  if (!order) {
+    throw new Error("Order tidak ditemukan");
+  }
 
   // Ensure critical accounts exist
   await ensureAccount(tx, "101", "Kas Tunai", "ASSET", "CURRENT_ASSET");
@@ -578,7 +580,9 @@ async function handlePayrollPayment(tx: TransactionClient, payrollId: string, pa
     include: { employee: true },
   });
 
-  if (!payroll) throw new Error("Payroll tidak ditemukan");
+  if (!payroll) {
+    throw new Error("Payroll tidak ditemukan");
+  }
 
   const amount = Number(payment.amount);
   const newTotalPaid = Number(payroll.totalPaid) + amount;
@@ -735,10 +739,10 @@ async function createJournalEntry(data: JournalEntryInput, tx?: TransactionClien
 
 // ==================== Get Payment History ====================
 /**
- * Mengambil riwayat pembayaran berdasarkan filter.
+ * Fetch payment history based on filters.
  * 
- * @param {Object} filters - Filter orderId, payrollId, atau tanggal.
- * @returns {Object} List pembayaran.
+ * @param {Object} filters - Optional orderId, payrollId, or date range filters.
+ * @returns {Object} List of payments.
  */
 export async function getPaymentHistory(filters?: {
   orderId?: string;
@@ -807,11 +811,11 @@ export async function getPaymentHistory(filters?: {
 
 // ==================== Get Journal Entries ====================
 /**
- * Mengambil data jurnal akuntansi.
- * Digunakan untuk laporan buku besar atau jurnal akuntansi.
+ * Fetch accounting journal entries.
+ * Used for general ledger or accounting reports.
  * 
- * @param {Object} filters - Filter tanggal atau kode akun.
- * @returns {Object} List jurnal entries.
+ * @param {Object} filters - Optional date range or account code filters.
+ * @returns {Object} List of journal entries.
  */
 export async function getJournalEntries(filters?: {
   dateFrom?: Date;

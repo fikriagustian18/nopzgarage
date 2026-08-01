@@ -15,11 +15,11 @@ export interface CreateExpenseInput {
 
 // ==================== Get Accounts for Expense Dropdown ====================
 /**
- * Mengambil daftar akun Akuntansi yang valid untuk dipilih sebagai kategori pengeluaran.
- * Filter mencakup: Beban (Expense), Aset (Perlengkapan/Peralatan), Prive, dan Utang.
- * Mengecualikan akun Kas agar tidak double.
+ * Fetch list of valid accounting accounts for expense category selection.
+ * Filters include: Expense, Asset (Equipment/Supplies), Prive, and Liability.
+ * Excludes Cash account to avoid duplicate entries.
  * 
- * @returns {Object} Daftar akun kategori pengeluaran.
+ * @returns {Object} List of expense category accounts.
  */
 export async function getExpenseCategories() {
   try {
@@ -59,14 +59,14 @@ export async function getExpenseCategories() {
 
 // ==================== Create Expense (Journal Entry) ====================
 /**
- * Mencatat Pengeluaran Baru.
+ * Record a new expense.
  * 
- * Fungsi ini otomatis membuat Jurnal Akuntansi:
- * - Debit: Akun biaya/aset yang dipilih user.
- * - Kredit: Akun KAS (Kode 101).
+ * Automatically creates an Accounting Journal Entry:
+ * - Debit: Selected Expense/Asset account.
+ * - Credit: CASH Account (Code 101).
  * 
- * @param {CreateExpenseInput} data - Data pengeluaran.
- * @returns {Object} Status sukses.
+ * @param {CreateExpenseInput} data - Expense entry data.
+ * @returns {Object} Success status.
  */
 export async function createExpense(data: CreateExpenseInput) {
   try {
@@ -128,7 +128,7 @@ export async function createExpense(data: CreateExpenseInput) {
     });
 
     revalidatePath('/admin/expenses');
-    revalidatePath('/admin/finance');
+    revalidatePath('/admin/reports');
 
     return { success: true };
   } catch (error) {
@@ -139,87 +139,73 @@ export async function createExpense(data: CreateExpenseInput) {
 
 // ==================== Get Expenses List ====================
 /**
- * Mengambil daftar riwayat pengeluaran.
- * Mengambil data jurnal transaksi yang mengkredit akun Kas.
- * Max 50 transaksi terakhir.
+ * Fetch expense history list.
+ * Retrieves journal entry transactions that credit the Cash account.
+ * Limited to last 50 transactions.
  * 
- * @returns {Object} Daftar transaksi pengeluaran.
+ * @returns {Object} Expense transaction list.
  */
 export async function getExpenses() {
-    try {
-      const session = await auth();
-      if (!session || session.user?.role !== 'OWNER') {
-        return { success: false, error: 'Akses ditolak: Hanya Owner yang dapat mengambil daftar pengeluaran.' };
-      }
-        // Ambil Jurnal yang meng-Kredit KAS (101) tapi BUKAN dari source Payment Gaji/Order otomatis
-        // Cara paling aman: Ambil semua JournalEntry, include items.
-        // Filter dimana ada kredit ke Kas, dan debit ke akun Expense/Asset.
-        // Untuk simplifikasi: Kita ambil JournalEntry yang description-nya TIDAK mengandung "Order" atau "Gaji".
-        // Atau: Ambil semua, biar user filter di UI.
-        
-        // Better approach: Get JournalEntries sorted by date desc
-        const journals = await prisma.journalEntry.findMany({
-            orderBy: { date: 'desc' },
-            take: 50, // Limit 50 terakhir
-            include: {
-                items: {
-                    include: { account: true }
-                }
-            }
-        });
-
-        // Transform ke format tabel Expense UI
-        // Kita cari item yang DEBIT (itu adalah kategori pengeluaran)
-        // Dan item yang CREDIT (sumber dana, biasanya kas)
-        const expenses = journals.map(j => {
-            const debitItem = j.items.find(i => i.debit.toNumber() > 0);
-            const creditItem = j.items.find(i => i.credit.toNumber() > 0);
-            
-            return {
-                id: j.id,
-                date: j.date.toISOString(), // Convert Date to ISO string for serialization
-                description: j.description,
-                reference: j.reference,
-                amount: debitItem?.debit.toNumber() || 0,
-                category: debitItem?.account.name || 'Unknown',
-                categoryCode: debitItem?.account.code || '',
-                source: creditItem?.account.name || 'Unknown'
-            };
-        });
-        
-        // Filter: Hanya tampilkan jika Sumber = Kas (artinya pengeluaran uang)
-        // Dan abaikan jika itu pelunasan Gaji (kecuali user mau lihat gaji di sini juga? User minta "page pengeluaran").
-        // User bilang "belanja alat, sewa tempat...". Gaji juga pengeluaran. Jadi tampilkan semua cash-out.
-        const cashOutTransactions = expenses.filter(e => e.source.toLowerCase().includes('kas'));
-
-        return { success: true, expenses: cashOutTransactions };
-    } catch (error) {
-        console.error('Get expenses list error:', error);
-        return { success: false, error: 'Gagal load data pengeluaran' };
+  try {
+    const session = await auth();
+    if (!session || session.user?.role !== 'OWNER') {
+      return { success: false, error: 'Akses ditolak: Hanya Owner yang dapat mengambil daftar pengeluaran.' };
     }
+    const journals = await prisma.journalEntry.findMany({
+      orderBy: { date: 'desc' },
+      take: 50,
+      include: {
+        items: {
+          include: { account: true }
+        }
+      }
+    });
+
+    const expenses = journals.map(j => {
+      const debitItem = j.items.find(i => i.debit.toNumber() > 0);
+      const creditItem = j.items.find(i => i.credit.toNumber() > 0);
+      
+      return {
+        id: j.id,
+        date: j.date.toISOString(),
+        description: j.description,
+        reference: j.reference,
+        amount: debitItem?.debit.toNumber() || 0,
+        category: debitItem?.account.name || 'Unknown',
+        categoryCode: debitItem?.account.code || '',
+        source: creditItem?.account.name || 'Unknown'
+      };
+    });
+    
+    const cashOutTransactions = expenses.filter(e => e.source.toLowerCase().includes('kas'));
+
+    return { success: true, expenses: cashOutTransactions };
+  } catch (error) {
+    console.error('Get expenses list error:', error);
+    return { success: false, error: 'Gagal load data pengeluaran' };
+  }
 }
 
 // ==================== Delete Expense (Reverse Journal) ====================
 /**
- * Menghapus data pengeluaran.
- * Dalam sistem ini dilakukan dengan menghapus entry jurnal terkait.
+ * Delete expense record by deleting associated journal entry.
  * 
- * @param {string} journalId - ID Jurnal yang akan dihapus.
- * @returns {Object} Pesan sukses.
+ * @param {string} journalId - Journal Entry ID to delete.
+ * @returns {Object} Success status.
  */
 export async function deleteExpense(journalId: string) {
-    try {
-      const session = await auth();
-      if (!session || session.user?.role !== 'OWNER') {
-        return { success: false, error: 'Akses ditolak: Hanya Owner yang dapat menghapus pengeluaran.' };
-      }
-        await prisma.journalEntry.delete({
-            where: { id: journalId }
-        });
-        
-        revalidatePath('/admin/expenses');
-        return { success: true };
-    } catch (error) {
-         return { success: false, error: 'Gagal hapus data' };
+  try {
+    const session = await auth();
+    if (!session || session.user?.role !== 'OWNER') {
+      return { success: false, error: 'Akses ditolak: Hanya Owner yang dapat menghapus pengeluaran.' };
     }
+    await prisma.journalEntry.delete({
+      where: { id: journalId }
+    });
+    
+    revalidatePath('/admin/expenses');
+    return { success: true };
+  } catch (error) {
+    return { success: false, error: 'Gagal hapus data' };
+  }
 }

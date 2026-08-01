@@ -15,10 +15,10 @@ export interface CreateIncomeInput {
 
 // ==================== Get Categories for Income Dropdown ====================
 /**
- * Mengambil daftar akun Akuntansi yang valid untuk kategori Pemasukan.
- * Termasuk: Pendapatan Lain, Tambahan Modal (Equity), Pinjaman (Liability).
+ * Fetch valid accounting accounts for Income category selection.
+ * Includes: Other Revenue, Equity, and Liability accounts.
  * 
- * @returns {Object} List akun kategori pemasukan.
+ * @returns {Object} List of income category accounts.
  */
 export async function getIncomeCategories() {
   try {
@@ -54,16 +54,15 @@ export async function getIncomeCategories() {
 }
 
 // ==================== Create Income (Journal Entry) ====================
-// ==================== Create Income (Journal Entry) ====================
 /**
- * Mencatat Pemasukan Uang (Cash In).
+ * Record a new income (Cash In).
  * 
- * Otomatis membuat Jurnal Akuntansi:
- * - Debit: KAS (Code 101).
- * - Kredit: Akun Sumber Pemasukan (Revenue/Equity/Liability).
+ * Automatically creates an Accounting Journal Entry:
+ * - Debit: CASH Account (Code 101).
+ * - Credit: Income Source Account (Revenue/Equity/Liability).
  * 
- * @param {CreateIncomeInput} data - Data transaksi pemasukan.
- * @returns {Object} Status sukses.
+ * @param {CreateIncomeInput} data - Income transaction payload.
+ * @returns {Object} Success status.
  */
 export async function createIncome(data: CreateIncomeInput) {
   try {
@@ -88,46 +87,46 @@ export async function createIncome(data: CreateIncomeInput) {
     });
 
     if (!targetAccount) {
-        return { success: false, error: 'Kategori pemasukan tidak valid.' };
+      return { success: false, error: 'Kategori pemasukan tidak valid.' };
     }
 
     // 3. Create Journal
     const journalResult = await prisma.$transaction(async (tx) => {
-        // Create Journal Entry
-        // DEBIT: KAS (Terima Uang)
-        // KREDIT: PENDAPATAN/MODAL
-        const journal = await tx.journalEntry.create({
-            data: {
-                date: date || new Date(),
-                description: description,
-                reference: reference, 
-                items: {
-                    create: [
-                        { accountId: cashAccount.id, debit: amount, credit: 0 },    // DEBIT KAS
-                        { accountId: targetAccount.id, debit: 0, credit: amount }   // KREDIT SUMBER
-                    ]
-                }
-            }
-        });
+      // Create Journal Entry
+      // DEBIT: KAS (Terima Uang)
+      // KREDIT: PENDAPATAN/MODAL
+      const journal = await tx.journalEntry.create({
+        data: {
+          date: date || new Date(),
+          description: description,
+          reference: reference, 
+          items: {
+            create: [
+              { accountId: cashAccount.id, debit: amount, credit: 0 },    // DEBIT KAS
+              { accountId: targetAccount.id, debit: 0, credit: amount }   // KREDIT SUMBER
+            ]
+          }
+        }
+      });
 
-        // Log Activity
-        await createLog({
-            action: "CREATE_INCOME",
-            title: "Pemasukan Dicatat",
-            details: `Pemasukan Rp ${amount.toLocaleString('id-ID')} dari ${targetAccount.name} (${description})`,
-            metadata: { journalId: journal.id },
-            userName: "Admin",
-            role: "ADMIN"
-        });
-        
-        return journal;
+      // Log Activity
+      await createLog({
+        action: "CREATE_INCOME",
+        title: "Pemasukan Dicatat",
+        details: `Pemasukan Rp ${amount.toLocaleString('id-ID')} dari ${targetAccount.name} (${description})`,
+        metadata: { journalId: journal.id },
+        userName: "Admin",
+        role: "ADMIN"
+      });
+      
+      return journal;
     }, {
       maxWait: 5000,
       timeout: 15000,
     });
 
     revalidatePath('/admin/income');
-    revalidatePath('/admin/finance');
+    revalidatePath('/admin/reports');
 
     return { success: true };
   } catch (error) {
@@ -138,83 +137,76 @@ export async function createIncome(data: CreateIncomeInput) {
 
 // ==================== Get Income List ====================
 /**
- * Mengambil daftar riwayat pemasukan.
- * Default hanya menampilkan pemasukan non-order.
+ * Fetch income records history.
+ * Defaults to displaying non-order income entries.
  * 
- * @returns {Object} List transaksi pemasukan.
+ * @returns {Object} Income transactions list.
  */
 export async function getIncomeRecords() {
-    try {
-      const session = await auth();
-      if (!session || session.user?.role !== 'OWNER') {
-        return { success: false, error: 'Akses ditolak: Hanya Owner yang dapat mengambil daftar pemasukan.' };
-      }
-        // Ambil Jurnal yang men-DEBIT KAS (101)
-        // Tapi exclude pembayaran order (biasanya deskripsi "Pembayaran Order #...")
-        // User minta page khusus "Pemasukan Lain-lain". Jika mau semua, filter ini bisa dilonggarkan.
-        // Asumsikan: Page ini untuk Non-Order Income.
-        
-        const journals = await prisma.journalEntry.findMany({
-            orderBy: { date: 'desc' },
-            take: 50,
-            include: {
-                items: {
-                    include: { account: true }
-                }
-            }
-        });
-
-        const incomes = journals.map(j => {
-            const debitItem = j.items.find(i => i.debit.toNumber() > 0);
-            const creditItem = j.items.find(i => i.credit.toNumber() > 0); // Source (Pendapatan)
-            
-            return {
-                id: j.id,
-                date: j.date.toISOString(), // Convert Date to ISO string for serialization
-                description: j.description,
-                reference: j.reference,
-                amount: creditItem?.credit.toNumber() || 0,
-                category: creditItem?.account.name || 'Unknown',
-                categoryCode: creditItem?.account.code || '',
-                target: debitItem?.account.name || 'Unknown' // Harusnya Kas
-            };
-        });
-        
-        // Filter: Hanya tampilkan jika Target = Kas (Uang masuk)
-        // Dan exclude Order/Servis jika diinginkan, tapi order biasanya otomatis
-        const cashInTransactions = incomes.filter(e => 
-            e.target.toLowerCase().includes('kas') && 
-            !e.description.toLowerCase().includes('pembayaran order') // Optional, biar tidak campur aduk sama transaksi harian servis
-        );
-
-        return { success: true, expenses: cashInTransactions }; // key 'expenses' biar reusable di ui component kalau mau, tapi better 'incomes'
-    } catch (error) {
-        console.error('Get income list error:', error);
-        return { success: false, error: 'Gagal load data pemasukan' };
+  try {
+    const session = await auth();
+    if (!session || session.user?.role !== 'OWNER') {
+      return { success: false, error: 'Akses ditolak: Hanya Owner yang dapat mengambil daftar pemasukan.' };
     }
+    
+    const journals = await prisma.journalEntry.findMany({
+      orderBy: { date: 'desc' },
+      take: 50,
+      include: {
+        items: {
+          include: { account: true }
+        }
+      }
+    });
+
+    const incomes = journals.map(j => {
+      const debitItem = j.items.find(i => i.debit.toNumber() > 0);
+      const creditItem = j.items.find(i => i.credit.toNumber() > 0);
+      
+      return {
+        id: j.id,
+        date: j.date.toISOString(),
+        description: j.description,
+        reference: j.reference,
+        amount: creditItem?.credit.toNumber() || 0,
+        category: creditItem?.account.name || 'Unknown',
+        categoryCode: creditItem?.account.code || '',
+        target: debitItem?.account.name || 'Unknown'
+      };
+    });
+    
+    const cashInTransactions = incomes.filter(e => 
+      e.target.toLowerCase().includes('kas') && 
+      !e.description.toLowerCase().includes('pembayaran order')
+    );
+
+    return { success: true, expenses: cashInTransactions };
+  } catch (error) {
+    console.error('Get income list error:', error);
+    return { success: false, error: 'Gagal load data pemasukan' };
+  }
 }
 
 // ==================== Delete Income ====================
-// ==================== Delete Income ====================
 /**
- * Menghapus transaksi pemasukan (menghapus Jurnal ID).
+ * Delete income transaction by deleting associated journal entry.
  * 
- * @param {string} journalId - ID Jurnal.
- * @returns {Object} Status sukses.
+ * @param {string} journalId - Journal Entry ID.
+ * @returns {Object} Success status.
  */
 export async function deleteIncome(journalId: string) {
-    try {
-      const session = await auth();
-      if (!session || session.user?.role !== 'OWNER') {
-        return { success: false, error: 'Akses ditolak: Hanya Owner yang dapat menghapus pemasukan.' };
-      }
-        await prisma.journalEntry.delete({
-            where: { id: journalId }
-        });
-        
-        revalidatePath('/admin/income');
-        return { success: true };
-    } catch (error) {
-         return { success: false, error: 'Gagal hapus data' };
+  try {
+    const session = await auth();
+    if (!session || session.user?.role !== 'OWNER') {
+      return { success: false, error: 'Akses ditolak: Hanya Owner yang dapat menghapus pemasukan.' };
     }
+    await prisma.journalEntry.delete({
+      where: { id: journalId }
+    });
+    
+    revalidatePath('/admin/income');
+    return { success: true };
+  } catch (error) {
+    return { success: false, error: 'Gagal hapus data' };
+  }
 }
