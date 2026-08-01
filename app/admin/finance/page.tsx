@@ -17,6 +17,10 @@ interface FinanceSummary {
   balance: number;
 }
 
+/**
+ * Halaman Utama Keuangan & Akuntansi Admin Bengkel.
+ * Menampilkan ringkasan pendapatan, beban, dan laba rugi realtime.
+ */
 export default function Page() {
   const [loading, setLoading] = useState(true);
   const [summary, setSummary] = useState<FinanceSummary>({
@@ -107,7 +111,7 @@ export default function Page() {
             <Card className="border-border bg-card">
               <CardHeader className="flex flex-row items-center justify-between pb-2">
                 <CardTitle className="text-sm font-medium text-muted-foreground">
-                  Laba Bersih
+                  Laba Rugi
                 </CardTitle>
                 <Wallet className="h-4 w-4 text-blue-500" />
               </CardHeader>

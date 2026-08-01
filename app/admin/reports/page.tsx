@@ -91,8 +91,26 @@ interface IncomeStatementAccount {
   balance: number;
 }
 
+interface TrialBalanceAccount {
+  code: string;
+  name: string;
+  type: string;
+  debit: number;
+  credit: number;
+  balance: number;
+}
+
+interface BalanceSheetSection {
+  assets: IncomeStatementAccount[];
+  liabilities: IncomeStatementAccount[];
+  equity: IncomeStatementAccount[];
+  totalAsset: number;
+  totalLiability: number;
+  totalEquity: number;
+}
+
 interface FinancialReportData {
-  trialBalance?: any[];
+  trialBalance?: TrialBalanceAccount[];
   incomeStatement: {
     period?: string;
     revenues: IncomeStatementAccount[];
@@ -101,9 +119,13 @@ interface FinancialReportData {
     totalExpense: number;
     netIncome: number;
   };
-  balanceSheet?: any;
+  balanceSheet?: BalanceSheetSection;
 }
 
+/**
+ * Halaman Utama Laporan Keuangan & Operasional Bengkel Admin.
+ * Menampilkan ringkasan arus kas, rincian pendapatan, dan pengeluaran operasional.
+ */
 export default function Page() {
   const [isMounted, setIsMounted] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -163,7 +185,7 @@ export default function Page() {
   }
 
   // Formatting currency helper
-  function formatIDR(val: number) {
+  function formatIDR(val: number): string {
     return `Rp ${Number(val).toLocaleString("id-ID")}`;
   }
 
@@ -215,9 +237,13 @@ export default function Page() {
     const hasPart = order.orderItems?.some((item) => item.itemType === "part");
     
     let matchesType = true;
-    if (filterType === "SERVICE") matchesType = hasService && !hasPart;
-    else if (filterType === "PART") matchesType = hasPart && !hasService;
-    else if (filterType === "OTHER") matchesType = !hasService && !hasPart;
+    if (filterType === "SERVICE") {
+      matchesType = hasService && !hasPart;
+    } else if (filterType === "PART") {
+      matchesType = hasPart && !hasService;
+    } else if (filterType === "OTHER") {
+      matchesType = !hasService && !hasPart;
+    }
 
     // Filter by payment method
     let matchesPayment = true;
@@ -333,14 +359,16 @@ export default function Page() {
 
   const categoryTotal = serviceRevenue + partRevenue + otherRevenue;
   const getPercentage = (val: number) => {
-    if (categoryTotal === 0) return 0;
+    if (categoryTotal === 0) {
+      return 0;
+    }
     return Math.round((val / categoryTotal) * 100);
   };
 
   const donutChartData = [
     { name: "Servis", value: serviceRevenue, color: "#111827", percent: getPercentage(serviceRevenue) }, // Charcoal
-    { name: "Spare Part", value: partRevenue, color: "#4B5563", percent: getPercentage(partRevenue) }, // Gray
-    { name: "Lain-lain", value: otherRevenue, color: "#9CA3AF", percent: getPercentage(otherRevenue) }, // Light Gray
+    { name: "Spare Part", value: partRevenue, color: "#4b5563", percent: getPercentage(partRevenue) }, // Gray
+    { name: "Lain-lain", value: otherRevenue, color: "#9ca3af", percent: getPercentage(otherRevenue) }, // Light Gray
   ].filter(c => c.value > 0);
 
   // --- Expenses breakdown ---
@@ -390,7 +418,7 @@ export default function Page() {
                 Laporan Keuangan
               </h2>
               <p className="text-sm text-muted-foreground mt-1">
-                Pantau semua pemasukan, pengeluaran, dan laba bersih bengkel Anda.
+                Pantau semua pemasukan, pengeluaran, dan laba rugi bengkel Anda.
               </p>
             </div>
 
@@ -401,7 +429,9 @@ export default function Page() {
                 label="Unduh Laba Rugi"
                 variant="default"
                 onExport={async (format, orientation) => {
-                  if (!reportData) return new Blob([]);
+                  if (!reportData) {
+                    return new Blob([]);
+                  }
                   const incomeData: IncomeStatementData = {
                     period: `${formatIndonesianDate(startDate)} - ${formatIndonesianDate(endDate)}`,
                     revenues: reportData.incomeStatement.revenues.map((acc) => ({
@@ -461,11 +491,11 @@ export default function Page() {
               </CardContent>
             </Card>
 
-            {/* Card 3: Laba Bersih */}
+            {/* Card 3: Laba Rugi */}
             <Card className="border border-border/60 bg-card/40 backdrop-blur-sm shadow-sm overflow-hidden rounded-xl">
               <CardContent className="p-5 flex justify-between items-center">
                 <div>
-                  <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Laba Bersih</p>
+                  <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Laba Rugi</p>
                   <h3 className={`text-2xl font-extrabold mt-1 ${netProfit >= 0 ? "text-foreground" : "text-rose-600"}`}>
                     {formatIDR(netProfit)}
                   </h3>
@@ -587,23 +617,23 @@ export default function Page() {
                       <CartesianGrid
                         strokeDasharray="3 3"
                         vertical={false}
-                        stroke="#E5E7EB"
+                        stroke="#e5e7eb"
                        />
                       <XAxis
                         dataKey="date"
-                        stroke="#9CA3AF"
+                        stroke="#9ca3af"
                         fontSize={11}
                         tickLine={false}
                        />
                       <YAxis 
-                        stroke="#9CA3AF" 
+                        stroke="#9ca3af" 
                         fontSize={11} 
                         tickLine={false} 
-                        tickFormatter={(value) => value >= 1000000 ? `${value / 1000000}jt` : value >= 1000 ? `${value / 1000}rb` : value}
+                        tickFormatter={(value) => (value >= 1000000 ? `${value / 1000000}jt` : value >= 1000 ? `${value / 1000}rb` : value)}
                       />
                       <Tooltip 
                         formatter={(value) => [formatIDR(Number(value)), ""]}
-                        contentStyle={{ borderRadius: "8px", border: "1px solid #E5E7EB", fontSize: "12px" }}
+                        contentStyle={{ borderRadius: "8px", border: "1px solid #e5e7eb", fontSize: "12px" }}
                       />
                       <Legend
                         verticalAlign="top"
@@ -623,7 +653,7 @@ export default function Page() {
                       <Line
                         type="monotone"
                         dataKey="Pengeluaran"
-                        stroke="#9CA3AF"
+                        stroke="#9ca3af"
                         strokeWidth={2}
                         dot={false}
                        />
@@ -815,10 +845,14 @@ export default function Page() {
 }
 
 // Inline indonesian helper for date parsing
-function formatIndonesianDate(dateString?: string | Date | null) {
-  if (!dateString) return "-";
+function formatIndonesianDate(dateString?: string | Date | null): string {
+  if (!dateString) {
+    return "-";
+  }
   const date = new Date(dateString);
-  if (isNaN(date.getTime())) return "-";
+  if (isNaN(date.getTime())) {
+    return "-";
+  }
   
   const months = [
     "Januari", "Februari", "Maret", "April", "Mei", "Juni",
