@@ -3,12 +3,18 @@
 import { useState, useEffect } from "react";
 import { SocialPlatform } from "@prisma/client";
 import {
-  getSocialEmbeds,
-  createSocialEmbed,
-  updateSocialEmbed,
-  deleteSocialEmbed,
-  SocialEmbedItem,
-} from "@/lib/actions/socialEmbeds";
+  Share2,
+  Trash2,
+  Edit,
+  Eye,
+  EyeOff,
+  Loader2,
+  ExternalLink,
+  Instagram,
+  Music,
+  Youtube,
+} from "lucide-react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Label } from "@/components/ui/Label";
@@ -35,19 +41,13 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/Card";
-import { toast } from "sonner";
 import {
-  Share2,
-  Trash2,
-  Edit,
-  Eye,
-  EyeOff,
-  Loader2,
-  ExternalLink,
-  Instagram,
-  Music,
-  Youtube,
-} from "lucide-react";
+  getSocialEmbeds,
+  createSocialEmbed,
+  updateSocialEmbed,
+  deleteSocialEmbed,
+  SocialEmbedItem,
+} from "@/lib/actions/socialEmbeds";
 
 const PLATFORM_ICONS = {
   INSTAGRAM: Instagram,
@@ -79,20 +79,20 @@ export function SocialEmbedsManager() {
     displayOrder: 0,
   });
 
-  const loadItems = async () => {
+  async function loadItems() {
     setLoading(true);
     const data = await getSocialEmbeds(
       filterPlatform !== "ALL" ? filterPlatform : undefined
     );
     setItems(data);
     setLoading(false);
-  };
+  }
 
   useEffect(() => {
     loadItems();
   }, [filterPlatform]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
 
     if (!formData.embedUrl) {
@@ -100,9 +100,14 @@ export function SocialEmbedsManager() {
       return;
     }
 
+    const payload = {
+      ...formData,
+      displayOrder: Number(formData.displayOrder) || 0,
+    };
+
     const result = editingItem
-      ? await updateSocialEmbed(editingItem.id, formData)
-      : await createSocialEmbed(formData);
+      ? await updateSocialEmbed(editingItem.id, payload)
+      : await createSocialEmbed(payload);
 
     if (result.success) {
       toast.success(
@@ -116,9 +121,9 @@ export function SocialEmbedsManager() {
     } else {
       toast.error(result.error || "Gagal menyimpan embed");
     }
-  };
+  }
 
-  const handleEdit = (item: SocialEmbedItem) => {
+  function handleEdit(item: SocialEmbedItem) {
     setEditingItem(item);
     setFormData({
       platform: item.platform,
@@ -128,10 +133,12 @@ export function SocialEmbedsManager() {
       displayOrder: item.displayOrder,
     });
     setDialogOpen(true);
-  };
+  }
 
-  const handleDelete = async (id: string) => {
-    if (!confirm("Yakin ingin menghapus embed ini?")) return;
+  async function handleDelete(id: string) {
+    if (!confirm("Yakin ingin menghapus embed ini?")) {
+      return;
+    }
 
     const result = await deleteSocialEmbed(id);
     if (result.success) {
@@ -140,9 +147,9 @@ export function SocialEmbedsManager() {
     } else {
       toast.error(result.error || "Gagal menghapus embed");
     }
-  };
+  }
 
-  const handleToggleActive = async (item: SocialEmbedItem) => {
+  async function handleToggleActive(item: SocialEmbedItem) {
     const result = await updateSocialEmbed(item.id, {
       isActive: !item.isActive,
     });
@@ -155,9 +162,9 @@ export function SocialEmbedsManager() {
     } else {
       toast.error("Gagal mengubah status");
     }
-  };
+  }
 
-  const resetForm = () => {
+  function resetForm() {
     setEditingItem(null);
     setFormData({
       platform: "INSTAGRAM",
@@ -166,14 +173,14 @@ export function SocialEmbedsManager() {
       description: "",
       displayOrder: 0,
     });
-  };
+  }
 
-  const handleDialogClose = (open: boolean) => {
+  function handleDialogClose(open: boolean) {
     setDialogOpen(open);
     if (!open) {
       resetForm();
     }
-  };
+  }
 
   return (
     <div className="space-y-6">
@@ -188,7 +195,10 @@ export function SocialEmbedsManager() {
           </p>
         </div>
 
-        <Dialog open={dialogOpen} onOpenChange={handleDialogClose}>
+        <Dialog
+          open={dialogOpen}
+          onOpenChange={handleDialogClose}
+        >
           <DialogTrigger asChild>
             <Button className="flex items-center gap-2">
               <Share2 className="h-4 w-4" />
@@ -205,7 +215,10 @@ export function SocialEmbedsManager() {
               </DialogDescription>
             </DialogHeader>
 
-            <form onSubmit={handleSubmit} className="space-y-4 mt-4">
+            <form
+              onSubmit={handleSubmit}
+              className="space-y-4 mt-4"
+            >
               <div className="space-y-2">
                 <Label htmlFor="platform">Platform *</Label>
                 <Select
@@ -304,7 +317,7 @@ export function SocialEmbedsManager() {
                   onChange={(e) =>
                     setFormData({
                       ...formData,
-                      displayOrder: parseInt(e.target.value) || 0,
+                      displayOrder: e.target.value as any,
                     })
                   }
                   placeholder="0"

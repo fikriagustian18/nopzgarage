@@ -1,6 +1,7 @@
-'use client';
+"use client";
 
 import { useState, useEffect } from "react";
+import { Loader2, DollarSign } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -12,27 +13,25 @@ import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Label } from "@/components/ui/Label";
 import { Textarea } from "@/components/ui/Textarea";
-import { createPayment } from "@/lib/actions/payments";
-import { toast } from "@/hooks/useToast";
-import { Loader2, DollarSign } from "lucide-react";
-import { formatCurrency } from "@/lib/utils"; 
-import { notifyPaymentReceived } from "@/hooks/useNotification"; 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/Select"; 
+import { toast } from "@/hooks/useToast";
+import { notifyPaymentReceived } from "@/hooks/useNotification"; 
+import { createPayment } from "@/lib/actions/payments";
 
-type Order = {
+interface Order {
   id: string;
   custName: string;
   totalPrice: number;
-  totalPaid: number; // Note: Need to verify if totalPrice/totalPaid are numbers or Decimals in the frontend object
+  totalPaid: number;
   paymentStatus: string;
-};
+}
 
-type PaymentDialogProps = {
+interface PaymentDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   order: Order;
   onSuccess?: () => void;
-};
+}
 
 export function PaymentDialog({
   open,
@@ -43,7 +42,7 @@ export function PaymentDialog({
   const [loading, setLoading] = useState(false);
   const remaining = Number(order.totalPrice) - Number(order.totalPaid);
   
-  const [amount, setAmount] = useState<number>(remaining > 0 ? remaining : 0);
+  const [amount, setAmount] = useState<number | string>(remaining > 0 ? remaining : 0);
   const [note, setNote] = useState("");
   
   // Payment Method State
@@ -52,7 +51,7 @@ export function PaymentDialog({
   const [selectedBankId, setSelectedBankId] = useState("");
   
   // Cash Payment States
-  const [cashReceived, setCashReceived] = useState<number>(remaining > 0 ? remaining : 0);
+  const [cashReceived, setCashReceived] = useState<number | string>(remaining > 0 ? remaining : 0);
   
   // Pay Commission State
   const [payCommission, setPayCommission] = useState(false);
@@ -76,31 +75,30 @@ export function PaymentDialog({
     }
   }, [open, order?.id]);
 
-  // Load Bank Accounts only when dialog opens
+  // Load Bank Accounts when dialog opens
   useEffect(() => {
-      if (open) {
-          loadBanks();
-      }
+    if (open) {
+      loadBanks();
+    }
   }, [open]);
 
   async function loadBanks() {
-      // Import dynamically to avoid server action import issues in client component if not configured properly, 
-      // but here we use standard import at top level usually. Let's assume we can fetch bank list.
-      // Since getBankAccounts is a server action, let's assume we can import it.
-      // Actually we need to import it at the top. Let's add import.
-      const { getBankAccounts } = await import("@/lib/actions/bank");
-      const res = await getBankAccounts();
-      if (res.success && res.data) {
-          setBanks(res.data.filter((b: any) => b.isActive));
-      }
+    const { getBankAccounts } = await import("@/lib/actions/bank");
+    const res = await getBankAccounts();
+    if (res.success && res.data) {
+      setBanks(res.data.filter((b: any) => b.isActive));
+    }
   }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
 
+    const numAmount = Number(amount) || 0;
+    const numCashReceived = Number(cashReceived) || 0;
+
     try {
-      if (amount <= 0) {
+      if (numAmount <= 0) {
         toast({
           variant: "destructive",
           title: "❌ Invalid Amount",
@@ -111,27 +109,27 @@ export function PaymentDialog({
       }
 
       if (["TRANSFER", "QRIS", "CARD"].includes(method) && !selectedBankId && banks.length > 0) {
-          toast({
-              variant: "destructive",
-              title: "Pilih Rekening Bank",
-              description: "Harap pilih rekening bank tujuan untuk mencatat transaksi.",
-          });
-          setLoading(false);
-          return;
+        toast({
+          variant: "destructive",
+          title: "Pilih Rekening Bank",
+          description: "Harap pilih rekening bank tujuan untuk mencatat transaksi.",
+        });
+        setLoading(false);
+        return;
       }
 
-      if (method === "CASH" && cashReceived < amount) {
-          toast({
-              variant: "destructive",
-              title: "Uang Diterima Kurang",
-              description: "Jumlah uang tunai yang diterima kurang dari nominal tagihan.",
-          });
-          setLoading(false);
-          return;
+      if (method === "CASH" && numCashReceived < numAmount) {
+        toast({
+          variant: "destructive",
+          title: "Uang Diterima Kurang",
+          description: "Jumlah uang tunai yang diterima kurang dari nominal tagihan.",
+        });
+        setLoading(false);
+        return;
       }
 
       const result = await createPayment({
-        amount: amount,
+        amount: numAmount,
         note: note || "Pembayaran Order",
         orderId: order.id,
         paymentMethod: method,
@@ -142,14 +140,15 @@ export function PaymentDialog({
       if (result.success) {
         toast({
           title: "✅ Pembayaran Berhasil!",
-          description: `Pembayaran sebesar Rp ${amount.toLocaleString("id-ID")} berhasil dicatat.`,
+          description: `Pembayaran sebesar Rp ${numAmount.toLocaleString("id-ID")} berhasil dicatat.`,
         });
         
-        // Add notification
-        notifyPaymentReceived(order.custName, amount, order.id);
+        notifyPaymentReceived(order.custName, numAmount, order.id);
         
         onOpenChange(false);
-        if (onSuccess) onSuccess();
+        if (onSuccess) {
+          onSuccess();
+        }
       } else {
         toast({
           variant: "destructive",
@@ -166,10 +165,13 @@ export function PaymentDialog({
     } finally {
       setLoading(false);
     }
-  };
+  }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog
+      open={open}
+      onOpenChange={onOpenChange}
+    >
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
           <DialogTitle className="text-xl font-bold flex items-center gap-2 text-foreground">
@@ -196,7 +198,10 @@ export function PaymentDialog({
           </div>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form
+          onSubmit={handleSubmit}
+          className="space-y-4"
+        >
           <div className="space-y-2">
             <Label htmlFor="amount">Jumlah Pembayaran</Label>
             <div className="relative">
@@ -207,52 +212,52 @@ export function PaymentDialog({
                 min="0"
                 className="pl-10 text-lg font-semibold"
                 value={amount}
-                onChange={(e) => setAmount(parseFloat(e.target.value) || 0)}
+                onChange={(e) => setAmount(e.target.value)}
               />
             </div>
           </div>
           <div className="space-y-4">
             {/* Payment Method Selector */}
             <div className="space-y-2">
-                <Label className="text-foreground">Metode Bayar</Label>
-                <div className="grid grid-cols-4 bg-muted rounded-md p-1 gap-1">
-                    <button
-                        type="button"
-                        onClick={() => setMethod("CASH")}
-                        className={`text-xs font-semibold py-2 rounded-sm transition-all ${
-                            method === "CASH" ? "bg-background shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"
-                        }`}
-                    >
-                        Tunai
-                    </button>
-                    <button
-                        type="button"
-                        onClick={() => setMethod("TRANSFER")}
-                        className={`text-xs font-semibold py-2 rounded-sm transition-all ${
-                            method === "TRANSFER" ? "bg-background shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"
-                        }`}
-                    >
-                        Transfer
-                    </button>
-                    <button
-                        type="button"
-                        onClick={() => setMethod("QRIS")}
-                        className={`text-xs font-semibold py-2 rounded-sm transition-all ${
-                            method === "QRIS" ? "bg-background shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"
-                        }`}
-                    >
-                        QRIS
-                    </button>
-                    <button
-                        type="button"
-                        onClick={() => setMethod("CARD")}
-                        className={`text-xs font-semibold py-2 rounded-sm transition-all ${
-                            method === "CARD" ? "bg-background shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"
-                        }`}
-                    >
-                        Kartu
-                    </button>
-                </div>
+              <Label className="text-foreground">Metode Bayar</Label>
+              <div className="grid grid-cols-4 bg-muted rounded-md p-1 gap-1">
+                <button
+                  type="button"
+                  onClick={() => setMethod("CASH")}
+                  className={`text-xs font-semibold py-2 rounded-sm transition-all ${
+                    method === "CASH" ? "bg-background shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  Tunai
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setMethod("TRANSFER")}
+                  className={`text-xs font-semibold py-2 rounded-sm transition-all ${
+                    method === "TRANSFER" ? "bg-background shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  Transfer
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setMethod("QRIS")}
+                  className={`text-xs font-semibold py-2 rounded-sm transition-all ${
+                    method === "QRIS" ? "bg-background shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  QRIS
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setMethod("CARD")}
+                  className={`text-xs font-semibold py-2 rounded-sm transition-all ${
+                    method === "CARD" ? "bg-background shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  Kartu
+                </button>
+              </div>
             </div>
 
             {/* Conditional Input Fields */}
@@ -265,9 +270,9 @@ export function PaymentDialog({
                     <Input 
                       id="cash-received"
                       type="number"
-                      min={amount}
+                      min={Number(amount) || 0}
                       value={cashReceived}
-                      onChange={(e) => setCashReceived(parseFloat(e.target.value) || 0)}
+                      onChange={(e) => setCashReceived(e.target.value)}
                       className="pl-8 text-sm font-semibold"
                     />
                   </div>
@@ -275,7 +280,7 @@ export function PaymentDialog({
                 <div className="space-y-2 flex flex-col justify-end">
                   <span className="text-xs text-muted-foreground">Kembalian:</span>
                   <span className="text-lg font-bold text-green-600 dark:text-green-400">
-                    Rp {Math.max(0, cashReceived - amount).toLocaleString("id-ID")}
+                    Rp {Math.max(0, (Number(cashReceived) || 0) - (Number(amount) || 0)).toLocaleString("id-ID")}
                   </span>
                 </div>
               </div>
@@ -286,15 +291,21 @@ export function PaymentDialog({
                 {banks.length > 0 && (
                   <div className="space-y-1.5 animate-in fade-in-50">
                     <Label className="text-xs">Pilih Rekening Tujuan / EDC</Label>
-                    <Select value={selectedBankId} onValueChange={setSelectedBankId}>
+                    <Select
+                      value={selectedBankId}
+                      onValueChange={setSelectedBankId}
+                    >
                       <SelectTrigger className="h-9 text-xs border-border">
                         <SelectValue placeholder="-- Pilih Bank / Kas --" />
                       </SelectTrigger>
                       <SelectContent>
                         {banks.map((bank) => (
-                            <SelectItem key={bank.id} value={bank.id}>
-                                {bank.bankName} - {bank.accountNumber}
-                            </SelectItem>
+                          <SelectItem
+                            key={bank.id}
+                            value={bank.id}
+                          >
+                            {bank.bankName} - {bank.accountNumber}
+                          </SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
@@ -303,11 +314,13 @@ export function PaymentDialog({
 
                 {method === "QRIS" && (
                   <div className="flex flex-col items-center justify-center p-4 border border-dashed border-border rounded bg-background/50">
-                    {/* Simulated QRIS Code SVG */}
                     <div className="w-32 h-32 bg-foreground/10 border-4 border-foreground/20 rounded flex items-center justify-center p-2 mb-2 relative">
                       <div className="grid grid-cols-4 gap-1 w-full h-full opacity-80">
                         {Array.from({ length: 16 }).map((_, i) => (
-                          <div key={i} className={`rounded-sm ${(i * 3 + 7) % 5 === 0 || i === 0 || i === 3 || i === 12 || i === 15 ? 'bg-foreground' : 'bg-transparent'}`} />
+                          <div
+                            key={i}
+                            className={`rounded-sm ${(i * 3 + 7) % 5 === 0 || i === 0 || i === 3 || i === 12 || i === 15 ? "bg-foreground" : "bg-transparent"}`}
+                          />
                         ))}
                       </div>
                       <span className="absolute text-[8px] bg-background px-1 py-0.5 rounded font-black border border-border">QRIS MOCK</span>
@@ -339,22 +352,25 @@ export function PaymentDialog({
           </div>
           
           {/* Option: Pay Employee Commission */}
-          {remaining > 0 && amount >= remaining && (
-              <div className="flex items-center space-x-2 bg-yellow-50 dark:bg-yellow-950/20 p-3 rounded-lg border border-yellow-200 dark:border-yellow-800">
-                  <input
-                      type="checkbox"
-                      id="payslip"
-                      className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
-                      checked={payCommission}
-                      onChange={(e) => setPayCommission(e.target.checked)}
-                  />
-                  <label htmlFor="payslip" className="text-sm font-medium leading-none cursor-pointer">
-                      Cairkan komisi karyawan otomatis?
-                      <p className="text-[10px] text-muted-foreground mt-1 font-normal">
-                          Jika dicentang, status komisi karyawan untuk order ini akan berubah jadi "LUNAS". Gunakan jika uang tips/komisi langsung diberikan saat ini juga.
-                      </p>
-                  </label>
-              </div>
+          {remaining > 0 && Number(amount) >= remaining && (
+            <div className="flex items-center space-x-2 bg-yellow-50 dark:bg-yellow-950/20 p-3 rounded-lg border border-yellow-200 dark:border-yellow-800">
+              <input
+                type="checkbox"
+                id="payslip"
+                className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+                checked={payCommission}
+                onChange={(e) => setPayCommission(e.target.checked)}
+              />
+              <label
+                htmlFor="payslip"
+                className="text-sm font-medium leading-none cursor-pointer"
+              >
+                Cairkan komisi karyawan otomatis?
+                <p className="text-[10px] text-muted-foreground mt-1 font-normal">
+                  Jika dicentang, status komisi karyawan untuk order ini akan berubah jadi "LUNAS". Gunakan jika uang tips/komisi langsung diberikan saat ini juga.
+                </p>
+              </label>
+            </div>
           )}
 
           <div className="flex gap-3 pt-4">

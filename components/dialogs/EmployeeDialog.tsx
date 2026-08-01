@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { Loader2, Briefcase, User, Phone, DollarSign } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -19,18 +20,27 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/Select";
-import { createEmployee, updateEmployee } from "@/lib/actions/employees";
 import { toast } from "@/hooks/useToast";
-import { Loader2, Briefcase, User, Phone, DollarSign } from "lucide-react";
 import { notifyEmployeeCreated, notifyEmployeeUpdated } from "@/hooks/useNotification";
+import { createEmployee, updateEmployee } from "@/lib/actions/employees";
 
-type EmployeeDialogProps = {
+interface EmployeeData {
+  id: string;
+  name: string;
+  role: string;
+  phone?: string | null;
+  salaryType?: "DAILY" | "COMMISSION" | string | null;
+  dailyRate?: number | null;
+  commissionRate?: number | null;
+}
+
+interface EmployeeDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   mode: "create" | "edit";
-  employee?: any; // Menggunakan any untuk fleksibilitas tipe dari server action
+  employee?: EmployeeData | null;
   onSuccess?: () => void;
-};
+}
 
 export function EmployeeDialog({
   open,
@@ -61,7 +71,6 @@ export function EmployeeDialog({
           commissionRate: Number(employee.commissionRate) || 0,
         });
       } else {
-        // Reset form for create mode
         setFormData({
           name: "",
           role: "Mekanik",
@@ -87,33 +96,32 @@ export function EmployeeDialog({
     setLoading(true);
 
     try {
-      let result;
+      let result: any;
       
       const payload = {
         name: formData.name,
         role: formData.role,
         phone: formData.phone,
         salaryType: formData.salaryType as "DAILY" | "COMMISSION",
-        dailyRate: formData.dailyRate,
-        commissionRate: formData.commissionRate,
+        dailyRate: Number(formData.dailyRate) || 0,
+        commissionRate: Number(formData.commissionRate) || 0,
       };
 
       if (mode === "create") {
-         result = await createEmployee(payload);
-      } else {
-         result = await updateEmployee({
-           id: employee.id,
-           ...payload,
-         });
+        result = await createEmployee(payload);
+      } else if (employee) {
+        result = await updateEmployee({
+          id: employee.id,
+          ...payload,
+        });
       }
 
-      if (result.success) {
+      if (result && result.success) {
         toast({
           title: mode === "create" ? "Karyawan Ditambahkan" : "Data Diperbarui",
           description: `Data ${formData.name} berhasil disimpan.`,
         });
         
-        // Add notification
         if (mode === "create" && result.employee) {
           notifyEmployeeCreated(formData.name, result.employee.id);
         } else if (mode === "edit" && employee) {
@@ -121,12 +129,14 @@ export function EmployeeDialog({
         }
         
         onOpenChange(false);
-        if (onSuccess) onSuccess();
+        if (onSuccess) {
+          onSuccess();
+        }
       } else {
         toast({
           variant: "destructive",
           title: "Gagal",
-          description: result.error,
+          description: result?.error || "Gagal menyimpan data",
         });
       }
     } catch (error) {
@@ -134,10 +144,13 @@ export function EmployeeDialog({
     } finally {
       setLoading(false);
     }
-  };
+  }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog
+      open={open}
+      onOpenChange={onOpenChange}
+    >
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
           <DialogTitle>
@@ -214,40 +227,43 @@ export function EmployeeDialog({
             </Select>
           </div>
 
-           {/* Dynamic Rate Inputs */}
-           {formData.salaryType === "DAILY" && (
-             <div className="grid gap-2 animate-in fade-in slide-in-from-top-2">
-               <Label>Rate Harian (Rp)</Label>
-               <Input
-                 type="number"
-                 placeholder="Contoh: 150000"
-                 value={formData.dailyRate}
-                 onChange={(e) => setFormData({ ...formData, dailyRate: parseFloat(e.target.value) || 0 })}
-               />
-               <p className="text-[10px] text-gray-500">Gaji tetap per kehadiran.</p>
-             </div>
-           )}
+          {/* Dynamic Rate Inputs */}
+          {formData.salaryType === "DAILY" && (
+            <div className="grid gap-2 animate-in fade-in slide-in-from-top-2">
+              <Label>Rate Harian (Rp)</Label>
+              <Input
+                type="number"
+                placeholder="Contoh: 150000"
+                value={formData.dailyRate}
+                onChange={(e) => setFormData({ ...formData, dailyRate: e.target.value as any })}
+              />
+              <p className="text-[10px] text-gray-500">Gaji tetap per kehadiran.</p>
+            </div>
+          )}
 
-           {formData.salaryType === "COMMISSION" && (
-             <div className="grid gap-2 animate-in fade-in slide-in-from-top-2">
-               <Label>Rate Komisi (%)</Label>
-               <div className="relative">
-                 <Input
-                   type="number"
-                   placeholder="Contoh: 10" // 10%
-                   value={formData.commissionRate}
-                   onChange={(e) => setFormData({ ...formData, commissionRate: parseFloat(e.target.value) || 0 })}
-                   className="pr-8"
-                 />
-                 <span className="absolute right-3 top-2.5 text-gray-500 text-sm">%</span>
-               </div>
-               <p className="text-[10px] text-gray-500">Persentase fee administasi/mekanik dari total jasa.</p>
-             </div>
-           )}
+          {formData.salaryType === "COMMISSION" && (
+            <div className="grid gap-2 animate-in fade-in slide-in-from-top-2">
+              <Label>Rate Komisi (%)</Label>
+              <div className="relative">
+                <Input
+                  type="number"
+                  placeholder="Contoh: 10"
+                  value={formData.commissionRate}
+                  onChange={(e) => setFormData({ ...formData, commissionRate: e.target.value as any })}
+                  className="pr-8"
+                />
+                <span className="absolute right-3 top-2.5 text-gray-500 text-sm">%</span>
+              </div>
+              <p className="text-[10px] text-gray-500">Persentase fee administasi/mekanik dari total jasa.</p>
+            </div>
+          )}
         </div>
 
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
+          <Button
+            variant="outline"
+            onClick={() => onOpenChange(false)}
+          >
             Batal
           </Button>
           <Button

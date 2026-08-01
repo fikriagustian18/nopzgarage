@@ -1,18 +1,17 @@
-
 "use client";
 
-
 import { useState, useEffect, useRef } from "react";
-// import { MediaType } from "@prisma/client"; // Removed to avoid editor sync issues
-
-type MediaType = "GALLERY" | "POSTER" | "BANNER" | "CAROUSEL";
-import {
-  getMediaGallery,
-  createMediaItem,
-  updateMediaItem,
-  deleteMediaItem,
-  MediaGalleryItem,
-} from "@/lib/actions/mediaGallery";
+import Image from "next/image";
+import { 
+  ImagePlus, 
+  Trash2, 
+  Edit, 
+  Eye, 
+  EyeOff,
+  Upload,
+  Loader2,
+} from "lucide-react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Label } from "@/components/ui/Label";
@@ -39,17 +38,15 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/Card";
-import { toast } from "sonner";
-import { 
-  ImagePlus, 
-  Trash2, 
-  Edit, 
-  Eye, 
-  EyeOff,
-  Upload,
-  Loader2,
-} from "lucide-react";
-import Image from "next/image";
+import {
+  getMediaGallery,
+  createMediaItem,
+  updateMediaItem,
+  deleteMediaItem,
+  MediaGalleryItem,
+} from "@/lib/actions/mediaGallery";
+
+type MediaType = "GALLERY" | "POSTER" | "BANNER" | "CAROUSEL";
 
 export function MediaGalleryManager() {
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -70,20 +67,20 @@ export function MediaGalleryManager() {
     displayOrder: 0,
   });
 
-  const loadItems = async () => {
+  async function loadItems() {
     setLoading(true);
     const data = await getMediaGallery(
       filterType !== "ALL" ? filterType : undefined
     );
     setItems(data);
     setLoading(false);
-  };
+  }
 
   useEffect(() => {
     loadItems();
   }, [filterType]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
 
     if (!formData.title || !formData.imageUrl) {
@@ -91,9 +88,14 @@ export function MediaGalleryManager() {
       return;
     }
 
+    const payload = {
+      ...formData,
+      displayOrder: Number(formData.displayOrder) || 0,
+    };
+
     const result = editingItem
-      ? await updateMediaItem(editingItem.id, formData)
-      : await createMediaItem(formData);
+      ? await updateMediaItem(editingItem.id, payload)
+      : await createMediaItem(payload);
 
     if (result.success) {
       toast.success(
@@ -107,9 +109,9 @@ export function MediaGalleryManager() {
     } else {
       toast.error(result.error || "Gagal menyimpan media");
     }
-  };
+  }
 
-  const handleEdit = (item: MediaGalleryItem) => {
+  function handleEdit(item: MediaGalleryItem) {
     setEditingItem(item);
     setFormData({
       title: item.title,
@@ -120,10 +122,12 @@ export function MediaGalleryManager() {
       displayOrder: item.displayOrder,
     });
     setDialogOpen(true);
-  };
+  }
 
-  const handleDelete = async (id: string) => {
-    if (!confirm("Yakin ingin menghapus media ini?")) return;
+  async function handleDelete(id: string) {
+    if (!confirm("Yakin ingin menghapus media ini?")) {
+      return;
+    }
 
     const result = await deleteMediaItem(id);
     if (result.success) {
@@ -132,9 +136,9 @@ export function MediaGalleryManager() {
     } else {
       toast.error(result.error || "Gagal menghapus media");
     }
-  };
+  }
 
-  const handleToggleActive = async (item: MediaGalleryItem) => {
+  async function handleToggleActive(item: MediaGalleryItem) {
     const result = await updateMediaItem(item.id, {
       isActive: !item.isActive,
     });
@@ -147,9 +151,9 @@ export function MediaGalleryManager() {
     } else {
       toast.error("Gagal mengubah status");
     }
-  };
+  }
 
-  const resetForm = () => {
+  function resetForm() {
     setEditingItem(null);
     setFormData({
       title: "",
@@ -159,22 +163,24 @@ export function MediaGalleryManager() {
       category: "",
       displayOrder: 0,
     });
-  };
+  }
 
-  const handleDialogClose = (open: boolean) => {
+  function handleDialogClose(open: boolean) {
     setDialogOpen(open);
     if (!open) {
       resetForm();
     }
-  };
+  }
 
-  const handleFileClick = () => {
+  function handleFileClick() {
     fileInputRef.current?.click();
-  };
+  }
 
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
-    if (!file) return;
+    if (!file) {
+      return;
+    }
 
     if (file.size > 5 * 1024 * 1024) {
       toast.error("Ukuran file maksimal 5MB");
@@ -191,7 +197,9 @@ export function MediaGalleryManager() {
         body: formDataUpload,
       });
 
-      if (!res.ok) throw new Error("Upload gagal");
+      if (!res.ok) {
+        throw new Error("Upload gagal");
+      }
 
       const data = await res.json();
       setFormData(prev => ({ ...prev, imageUrl: data.url }));
@@ -201,9 +209,11 @@ export function MediaGalleryManager() {
       toast.error("Gagal mengupload file");
     } finally {
       setIsUploading(false);
-      if (fileInputRef.current) fileInputRef.current.value = "";
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
     }
-  };
+  }
 
   return (
     <div className="space-y-6">
@@ -216,7 +226,10 @@ export function MediaGalleryManager() {
           </p>
         </div>
 
-        <Dialog open={dialogOpen} onOpenChange={handleDialogClose}>
+        <Dialog
+          open={dialogOpen}
+          onOpenChange={handleDialogClose}
+        >
           <DialogTrigger asChild>
             <Button className="flex items-center gap-2">
               <ImagePlus className="h-4 w-4" />
@@ -233,7 +246,10 @@ export function MediaGalleryManager() {
               </DialogDescription>
             </DialogHeader>
 
-            <form onSubmit={handleSubmit} className="space-y-4 mt-4">
+            <form
+              onSubmit={handleSubmit}
+              className="space-y-4 mt-4"
+            >
               <div className="space-y-2">
                 <Label htmlFor="title">Judul *</Label>
                 <Input
@@ -349,7 +365,7 @@ export function MediaGalleryManager() {
                   onChange={(e) =>
                     setFormData({
                       ...formData,
-                      displayOrder: parseInt(e.target.value) || 0,
+                      displayOrder: e.target.value as any,
                     })
                   }
                   placeholder="0"

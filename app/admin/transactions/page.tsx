@@ -2,13 +2,12 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { RoleGuard } from "@/components/shared/RoleGuard";
+import { OrderStatus as PrismaOrderStatus, ServiceType } from "@prisma/client";
 import {
   Search,
   CheckCircle,
   Clock,
   Wrench,
-  FileText,
   ClipboardList,
   Printer,
   ChevronLeft,
@@ -21,10 +20,9 @@ import {
   TrendingUp,
   DollarSign,
   Wallet,
-  Eye,
-  MoreVertical,
   Download,
 } from "lucide-react";
+import { RoleGuard } from "@/components/shared/RoleGuard";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
@@ -45,18 +43,17 @@ import {
   SelectValue,
 } from "@/components/ui/Select";
 import { Label } from "@/components/ui/Label";
-import { getAdminOrders, getOrderDetail } from "@/lib/actions/orders";
-import { getPaymentHistory, createPayment } from "@/lib/actions/payments";
-import { getBankAccounts } from "@/lib/actions/bank";
-import { OrderStatus as PrismaOrderStatus, ServiceType } from "@prisma/client";
 import { PaymentDialog } from "@/components/dialogs/PaymentDialog"; 
 import { Toaster } from "@/components/ui/Toaster";
 import { toast } from "@/hooks/useToast";
 import { ExportButton } from "@/components/export/ExportButton";
+import { getAdminOrders, getOrderDetail } from "@/lib/actions/orders";
+import { getPaymentHistory, createPayment } from "@/lib/actions/payments";
+import { getBankAccounts } from "@/lib/actions/bank";
 import { exportInvoice } from "@/lib/export/reports/invoiceExport";
 import type { InvoiceExport } from "@/lib/export/types";
 
-type Order = {
+interface Order {
   id: string;
   custName: string;
   custPhone: string;
@@ -79,14 +76,14 @@ type Order = {
   payments: any[];
   paymentStatus: string;
   queueNumber?: string;
-};
+}
 
-type BankAccount = {
+interface BankAccount {
   id: string;
   bankName: string;
   accountNumber: string;
   accountName: string;
-};
+}
 
 export default function Page() {
   const router = useRouter();
@@ -113,7 +110,7 @@ export default function Page() {
 
   // Form States for New Transaction Dialog
   const [newTxOrderId, setNewTxOrderId] = useState("");
-  const [newTxAmount, setNewTxAmount] = useState(0);
+  const [newTxAmount, setNewTxAmount] = useState<number | string>(0);
   const [newTxMethod, setNewTxMethod] = useState<"CASH" | "TRANSFER" | "QRIS" | "CARD">("CASH");
   const [newTxBankId, setNewTxBankId] = useState("");
   const [newTxNote, setNewTxNote] = useState("");
@@ -158,18 +155,22 @@ export default function Page() {
   }
 
   // Handle Reset Filters
-  const handleResetFilters = () => {
+  function handleResetFilters() {
     setSearchQuery("");
     setFilterType("ALL");
     setFilterStatus("ALL");
     setCurrentPage(1);
-  };
+  }
 
   // Helper formatting dates
-  const formatIndonesianDate = (dateString?: string | Date | null, includeTime: boolean = false) => {
-    if (!dateString) return "-";
+  function formatIndonesianDate(dateString?: string | Date | null, includeTime: boolean = false) {
+    if (!dateString) {
+      return "-";
+    }
     const date = new Date(dateString);
-    if (isNaN(date.getTime())) return "-";
+    if (isNaN(date.getTime())) {
+      return "-";
+    }
     
     const months = [
       "Januari", "Februari", "Maret", "April", "Mei", "Juni",
@@ -186,33 +187,47 @@ export default function Page() {
       return `${day} ${month} ${year}, ${hours}:${minutes}`;
     }
     return `${day} ${month} ${year}`;
-  };
+  }
 
   // Helper payment methods translating
-  const getMethodLabel = (method: string) => {
+  function getMethodLabel(method: string) {
     switch (method) {
-      case "CASH": return "Tunai";
-      case "TRANSFER": return "Transfer Bank";
-      case "QRIS": return "QRIS";
-      case "CARD": return "Kartu Kredit/Debit";
-      default: return method;
+      case "CASH": {
+        return "Tunai";
+      }
+      case "TRANSFER": {
+        return "Transfer Bank";
+      }
+      case "QRIS": {
+        return "QRIS";
+      }
+      case "CARD": {
+        return "Kartu Kredit/Debit";
+      }
+      default: {
+        return method;
+      }
     }
-  };
+  }
 
   // Calculate Order Type: Servis, Part, or Servis + Part
-  const getOrderType = (order: Order) => {
+  function getOrderType(order: Order) {
     const hasService = order.items?.some((i: any) => i.type === "service");
     const hasPart = order.items?.some((i: any) => i.type === "part");
     
-    if (hasService && hasPart) return "Servis + Part";
-    if (hasPart) return "Part";
+    if (hasService && hasPart) {
+      return "Servis + Part";
+    }
+    if (hasPart) {
+      return "Part";
+    }
     return "Servis";
-  };
+  }
 
   // Metrics Calculations
   const totalCount = orders.length;
 
-  // Monthly revenue: sum payment amount of order payments in the current month
+  // Monthly revenue calculation
   const currentMonth = new Date().getMonth();
   const currentYear = new Date().getFullYear();
   const monthlyRevenue = payments
@@ -235,13 +250,20 @@ export default function Page() {
 
     const oType = getOrderType(order);
     let matchesType = true;
-    if (filterType === "SERVICE") matchesType = oType === "Servis";
-    else if (filterType === "PART") matchesType = oType === "Part";
-    else if (filterType === "BOTH") matchesType = oType === "Servis + Part";
+    if (filterType === "SERVICE") {
+      matchesType = oType === "Servis";
+    } else if (filterType === "PART") {
+      matchesType = oType === "Part";
+    } else if (filterType === "BOTH") {
+      matchesType = oType === "Servis + Part";
+    }
 
     let matchesStatus = true;
-    if (filterStatus === "PAID") matchesStatus = order.paymentStatus === "PAID";
-    else if (filterStatus === "UNPAID") matchesStatus = order.paymentStatus !== "PAID";
+    if (filterStatus === "PAID") {
+      matchesStatus = order.paymentStatus === "PAID";
+    } else if (filterStatus === "UNPAID") {
+      matchesStatus = order.paymentStatus !== "PAID";
+    }
 
     return matchesSearch && matchesType && matchesStatus;
   });
@@ -259,19 +281,20 @@ export default function Page() {
   const indexOfFirstItem = indexOfLastItem - itemsPerPage;
   const currentItems = filteredOrders.slice(indexOfFirstItem, indexOfLastItem);
 
-  // Handle Select Order from Buat Transaksi Baru Form
-  const handleNewTxOrderChange = (orderId: string) => {
+  // Handle Select Order from New Transaction Dialog
+  function handleNewTxOrderChange(orderId: string) {
     setNewTxOrderId(orderId);
     const orderObj = orders.find((o) => o.id === orderId);
     if (orderObj) {
       setNewTxAmount(Number(orderObj.totalPrice) - Number(orderObj.totalPaid));
     }
-  };
+  }
 
   // Submit New Transaction
-  const handleSaveTransaction = async (e: React.FormEvent) => {
+  async function handleSaveTransaction(e: React.FormEvent) {
     e.preventDefault();
-    if (!newTxOrderId || newTxAmount <= 0) {
+    const txAmountNum = Number(newTxAmount) || 0;
+    if (!newTxOrderId || txAmountNum <= 0) {
       toast({ variant: "destructive", title: "Gagal", description: "Pilih order dan isi jumlah pembayaran dengan benar" });
       return;
     }
@@ -280,16 +303,15 @@ export default function Page() {
     try {
       const res = await createPayment({
         orderId: newTxOrderId,
-        amount: newTxAmount,
+        amount: txAmountNum,
         paymentMethod: newTxMethod,
         bankAccountId: ["TRANSFER", "QRIS", "CARD"].includes(newTxMethod) && newTxBankId ? newTxBankId : undefined,
         note: newTxNote || "Pembayaran dari halaman Transaksi & Pembayaran"
       });
 
       if (res.success) {
-        toast({ title: "✅ Transaksi Berhasil", description: `Pembayaran Rp ${newTxAmount.toLocaleString('id-ID')} berhasil dicatat.` });
+        toast({ title: "✅ Transaksi Berhasil", description: `Pembayaran Rp ${txAmountNum.toLocaleString("id-ID")} berhasil dicatat.` });
         setCreateTransactionOpen(false);
-        // Reset states
         setNewTxOrderId("");
         setNewTxAmount(0);
         setNewTxMethod("CASH");
@@ -305,7 +327,7 @@ export default function Page() {
     } finally {
       setIsSubmittingTx(false);
     }
-  };
+  }
 
   return (
     <RoleGuard allowedRoles={["ADMIN", "OWNER"]}>
@@ -331,7 +353,6 @@ export default function Page() {
             <Button
               className="bg-primary hover:bg-primary/95 text-primary-foreground font-semibold flex items-center gap-2 shadow-sm rounded-lg"
               onClick={() => {
-                // Populate default outstanding values
                 const unpaid = orders.find(o => o.paymentStatus !== "PAID" && (o.status === "READY" || o.status === "COMPLETED"));
                 if (unpaid) {
                   setNewTxOrderId(unpaid.id);
@@ -854,7 +875,7 @@ export default function Page() {
                               tax: 0,
                               discount: 0,
                               total: fullOrder.totalPrice,
-                              notes: `Kendaraan: ${fullOrder.vehicle} (${fullOrder.plateNumber || '-'})`
+                              notes: `Kendaraan: ${fullOrder.vehicle} (${fullOrder.plateNumber || "-"})`
                             };
                             return await exportInvoice(invoiceData, format, orientation);
                           }}
@@ -891,7 +912,7 @@ export default function Page() {
                               tax: 0,
                               discount: 0,
                               total: fullOrder.totalPrice,
-                              notes: `Kendaraan: ${fullOrder.vehicle} (${fullOrder.plateNumber || '-'})`
+                              notes: `Kendaraan: ${fullOrder.vehicle} (${fullOrder.plateNumber || "-"})`
                             };
                             return await exportInvoice(invoiceData, "pdf", orientation);
                           }}
@@ -908,8 +929,11 @@ export default function Page() {
             </div>
           </div>
 
-          {/* Create Transaction Dialog (Buat Transaksi Baru) */}
-          <Dialog open={createTransactionOpen} onOpenChange={setCreateTransactionOpen}>
+          {/* Create Transaction Dialog */}
+          <Dialog
+            open={createTransactionOpen}
+            onOpenChange={setCreateTransactionOpen}
+          >
             <DialogContent className="max-w-md">
               <DialogHeader>
                 <DialogTitle className="flex items-center gap-2 font-bold text-foreground">
@@ -939,7 +963,7 @@ export default function Page() {
                           const outstanding = Number(o.totalPrice) - Number(o.totalPaid);
                           return (
                             <SelectItem key={o.id} value={o.id}>
-                              {`ORD-${o.id.slice(-6).toUpperCase()} - ${o.custName} (${o.vehicle}) - Kurang: Rp ${outstanding.toLocaleString('id-ID')}`}
+                              {`ORD-${o.id.slice(-6).toUpperCase()} - ${o.custName} (${o.vehicle}) - Kurang: Rp ${outstanding.toLocaleString("id-ID")}`}
                             </SelectItem>
                           );
                         })}
@@ -957,7 +981,7 @@ export default function Page() {
                     id="amount-input"
                     type="number"
                     value={newTxAmount}
-                    onChange={(e) => setNewTxAmount(Number(e.target.value))}
+                    onChange={(e) => setNewTxAmount(e.target.value)}
                     placeholder="Masukkan nominal bayar..."
                     className="bg-card border-input h-10 rounded-lg text-foreground font-semibold"
                     required
@@ -983,7 +1007,7 @@ export default function Page() {
                   </Select>
                 </div>
 
-                {/* Bank Account Selection (Only for Transfer/QRIS/Card) */}
+                {/* Bank Account Selection */}
                 {["TRANSFER", "QRIS", "CARD"].includes(newTxMethod) && (
                   <div className="space-y-2">
                     <Label htmlFor="bank-select" className="font-semibold">Rekening Bank Tujuan</Label>
@@ -1044,7 +1068,7 @@ export default function Page() {
             </DialogContent>
           </Dialog>
 
-          {/* Payment Dialog for detailed record payments */}
+          {/* Payment Dialog */}
           {selectedOrder && (
             <PaymentDialog
               open={paymentDialogOpen}

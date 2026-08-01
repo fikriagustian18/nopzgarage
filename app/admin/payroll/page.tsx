@@ -1,19 +1,25 @@
-// app/admin/payroll/page.tsx - Gaji & Payroll Management
 "use client";
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
-import { RoleGuard } from "@/components/shared/RoleGuard";
+import { toast } from "sonner";
 import {
-  getPayrolls,
-  bulkGeneratePayroll,
-  updatePayroll,
-  deletePayroll,
-} from "@/lib/actions/payroll";
-import { getBankAccounts } from "@/lib/actions/bank";
-import { createPayment } from "@/lib/actions/payments";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/Card";
+  Users,
+  DollarSign,
+  Wallet,
+  Plus,
+  Search,
+  Edit,
+  Trash2,
+  Loader2,
+  RefreshCw,
+  CheckCircle,
+  Printer,
+  Eye,
+} from "lucide-react";
+import { RoleGuard } from "@/components/shared/RoleGuard";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Label } from "@/components/ui/Label";
@@ -42,28 +48,18 @@ import {
   SelectValue,
 } from "@/components/ui/Select";
 import { Textarea } from "@/components/ui/Textarea";
-import { toast } from "sonner";
-import {
-  Users,
-  DollarSign,
-  Wallet,
-  CreditCard,
-  Plus,
-  Search,
-  Edit,
-  Trash2,
-  Loader2,
-  RefreshCw,
-  CheckCircle,
-  FileText,
-  Printer,
-  Calendar,
-  Eye,
-} from "lucide-react";
 import { ExportButton } from "@/components/export/ExportButton";
-import type { PayrollSummary, PayrollEntry } from "@/lib/export/types";
+import {
+  getPayrolls,
+  bulkGeneratePayroll,
+  updatePayroll,
+  deletePayroll,
+} from "@/lib/actions/payroll";
+import { getBankAccounts } from "@/lib/actions/bank";
+import { createPayment } from "@/lib/actions/payments";
+import type { PayrollSummary } from "@/lib/export/types";
 
-type Payroll = {
+interface Payroll {
   id: string;
   startDate: string;
   endDate: string;
@@ -86,7 +82,7 @@ type Payroll = {
     role: string;
     salaryType: "DAILY" | "COMMISSION";
   };
-};
+}
 
 export default function Page() {
   const { data: session } = useSession();
@@ -108,13 +104,13 @@ export default function Page() {
   // Form states for Edit Bonus
   const [editOpen, setEditOpen] = useState(false);
   const [selectedPayroll, setSelectedPayroll] = useState<Payroll | null>(null);
-  const [bonusAmount, setBonusAmount] = useState<number>(0);
+  const [bonusAmount, setBonusAmount] = useState<number | string>(0);
   const [bonusNote, setBonusNote] = useState<string>("");
   const [updating, setUpdating] = useState(false);
 
   // Form states for Payment
   const [payOpen, setPayOpen] = useState(false);
-  const [payAmount, setPayAmount] = useState<number>(0);
+  const [payAmount, setPayAmount] = useState<number | string>(0);
   const [payMethod, setPayMethod] = useState<"CASH" | "TRANSFER">("CASH");
   const [selectedBankId, setSelectedBankId] = useState<string>("");
   const [payNote, setPayNote] = useState<string>("");
@@ -136,7 +132,6 @@ export default function Page() {
       ]);
 
       if (payrollRes.success && payrollRes.payrolls) {
-        // Parse details for each payroll
         const formatted = payrollRes.payrolls.map((p: any) => {
           let detailsParsed = p.detailsParsed || null;
           if (!detailsParsed && p.details) {
@@ -158,32 +153,33 @@ export default function Page() {
         setBanks(bankRes.data.filter((b: any) => b.isActive));
       }
     } catch (error) {
-      console.error("Gagal memuat data payroll", error);
+      console.error("Failed to load payroll data", error);
       toast.error("Gagal memuat data payroll");
-    } finally {
+    } fontally: {
       setLoading(false);
     }
   }
 
   // Format currency helper
-  const formatMoney = (val: number) =>
-    new Intl.NumberFormat("id-ID", {
+  function formatMoney(val: number) {
+    return new Intl.NumberFormat("id-ID", {
       style: "currency",
       currency: "IDR",
       maximumFractionDigits: 0,
     }).format(val);
+  }
 
   // Date format helper
-  const formatDateStr = (dateStr: string) => {
+  function formatDateStr(dateStr: string) {
     return new Date(dateStr).toLocaleDateString("id-ID", {
       day: "numeric",
       month: "short",
       year: "numeric",
     });
-  };
+  }
 
   // Bulk Generate handler
-  const handleBulkGenerate = async (e: React.FormEvent) => {
+  async function handleBulkGenerate(e: React.FormEvent) {
     e.preventDefault();
     if (!genStartDate || !genEndDate) {
       toast.error("Pilih tanggal mulai dan akhir periode");
@@ -209,21 +205,23 @@ export default function Page() {
     } finally {
       setGenerating(false);
     }
-  };
+  }
 
   // Open Edit Dialog
-  const openEdit = (p: Payroll) => {
+  function openEdit(p: Payroll) {
     setSelectedPayroll(p);
     setBonusAmount(Number(p.bonus));
     const parsed = p.detailsParsed;
     setBonusNote(parsed?.bonusNote || "");
     setEditOpen(true);
-  };
+  }
 
   // Handle Edit Bonus
-  const handleEditBonus = async (e: React.FormEvent) => {
+  async function handleEditBonus(e: React.FormEvent) {
     e.preventDefault();
-    if (!selectedPayroll) return;
+    if (!selectedPayroll) {
+      return;
+    }
 
     setUpdating(true);
     try {
@@ -244,10 +242,10 @@ export default function Page() {
     } finally {
       setUpdating(false);
     }
-  };
+  }
 
   // Open Pay Dialog
-  const openPay = (p: Payroll) => {
+  function openPay(p: Payroll) {
     setSelectedPayroll(p);
     const unpaid = Number(p.totalEarned) - Number(p.totalPaid);
     setPayAmount(unpaid > 0 ? unpaid : 0);
@@ -255,13 +253,16 @@ export default function Page() {
     setSelectedBankId("");
     setPayNote(`Pencairan Gaji/Komisi Periode ${formatDateStr(p.startDate)} - ${formatDateStr(p.endDate)}`);
     setPayOpen(true);
-  };
+  }
 
-  // Handle Payroll Payment (Approval Gaji)
-  const handlePayPayroll = async (e: React.FormEvent) => {
+  // Handle Payroll Payment
+  async function handlePayPayroll(e: React.FormEvent) {
     e.preventDefault();
-    if (!selectedPayroll) return;
-    if (payAmount <= 0) {
+    if (!selectedPayroll) {
+      return;
+    }
+    const payAmountNum = Number(payAmount) || 0;
+    if (payAmountNum <= 0) {
       toast.error("Jumlah pembayaran harus lebih besar dari 0");
       return;
     }
@@ -272,7 +273,7 @@ export default function Page() {
     }
 
     const unpaid = Number(selectedPayroll.totalEarned) - Number(selectedPayroll.totalPaid);
-    if (payAmount > unpaid) {
+    if (payAmountNum > unpaid) {
       toast.error(`Jumlah pembayaran melebihi sisa gaji terhutang (Maksimal: ${formatMoney(unpaid)})`);
       return;
     }
@@ -280,7 +281,7 @@ export default function Page() {
     setPaying(true);
     try {
       const res = await createPayment({
-        amount: Number(payAmount),
+        amount: payAmountNum,
         note: payNote,
         payrollId: selectedPayroll.id,
         paymentMethod: payMethod,
@@ -288,7 +289,7 @@ export default function Page() {
       });
 
       if (res.success) {
-        toast.success(`Berhasil mencairkan gaji sebesar ${formatMoney(payAmount)}`);
+        toast.success(`Berhasil mencairkan gaji sebesar ${formatMoney(payAmountNum)}`);
         setPayOpen(false);
         fetchData();
       } else {
@@ -299,10 +300,10 @@ export default function Page() {
     } finally {
       setPaying(false);
     }
-  };
+  }
 
   // Handle Delete Payroll
-  const handleDelete = async (id: string) => {
+  async function handleDelete(id: string) {
     if (!confirm("Apakah Anda yakin ingin menghapus slip gaji ini? Fitur ini hanya berlaku jika belum ada transaksi pembayaran pada slip ini.")) {
       return;
     }
@@ -318,13 +319,17 @@ export default function Page() {
     } catch (error: any) {
       toast.error("Terjadi kesalahan: " + error.message);
     }
-  };
+  }
 
   // Print slip gaji via browser printer
-  const handlePrintSlip = () => {
-    if (!selectedPayroll) return;
+  function handlePrintSlip() {
+    if (!selectedPayroll) {
+      return;
+    }
     const printContent = document.getElementById("payroll-slip-printable");
-    if (!printContent) return;
+    if (!printContent) {
+      return;
+    }
 
     const printWindow = window.open("", "", "width=800,height=600");
     if (printWindow) {
@@ -356,7 +361,7 @@ export default function Page() {
       `);
       printWindow.document.close();
     }
-  };
+  }
 
   // Filters logic
   const filteredPayrolls = payrolls.filter((p) => {
@@ -477,7 +482,10 @@ export default function Page() {
               />
             </div>
             <div className="w-full md:w-48">
-              <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <Select
+                value={statusFilter}
+                onValueChange={setStatusFilter}
+              >
                 <SelectTrigger>
                   <SelectValue placeholder="Status Pembayaran" />
                 </SelectTrigger>
@@ -551,13 +559,18 @@ export default function Page() {
                   </TableHeader>
                   <TableBody className="divide-y">
                     {filteredPayrolls.map((p) => {
-                      const unpaid = Number(p.totalEarned) - Number(p.totalPaid);
                       return (
-                        <TableRow key={p.id} className="hover:bg-muted/20 transition-colors">
+                        <TableRow
+                          key={p.id}
+                          className="hover:bg-muted/20 transition-colors"
+                        >
                           <TableCell className="font-semibold text-foreground py-4">
                             <div>
                               <p className="font-bold">{p.employee.name}</p>
-                              <Badge variant="outline" className="text-[10px] uppercase font-mono mt-0.5">
+                              <Badge
+                                variant="outline"
+                                className="text-[10px] uppercase font-mono mt-0.5"
+                              >
                                 {p.employee.salaryType === "DAILY" ? "Gaji Harian" : "Komisi / Hasil"}
                               </Badge>
                             </div>
@@ -670,7 +683,10 @@ export default function Page() {
         </Card>
 
         {/* Generate Payroll Dialog */}
-        <Dialog open={generateOpen} onOpenChange={setGenerateOpen}>
+        <Dialog
+          open={generateOpen}
+          onOpenChange={setGenerateOpen}
+        >
           <DialogContent className="sm:max-w-[425px]">
             <form onSubmit={handleBulkGenerate}>
               <DialogHeader>
@@ -703,9 +719,9 @@ export default function Page() {
                   </div>
                 </div>
                 <div className="rounded-lg bg-muted/50 p-3 text-xs text-muted-foreground border">
-                  💡 **DAILY (Harian)** akan dihitung berdasarkan jumlah hari kerja (selain hari Minggu) dikali rate harian.
+                  DAILY (Harian) akan dihitung berdasarkan jumlah hari kerja dikali rate harian.
                   <br />
-                  💡 **COMMISSION (Komisi)** dihitung berdasarkan total unit sepeda motor selesai dikerjakan dalam periode ini dikali rate bagi hasil.
+                  COMMISSION (Komisi) dihitung berdasarkan total unit sepeda motor selesai dikerjakan dikali rate bagi hasil.
                 </div>
               </div>
               <DialogFooter>
@@ -735,7 +751,10 @@ export default function Page() {
         </Dialog>
 
         {/* Edit Bonus Dialog */}
-        <Dialog open={editOpen} onOpenChange={setEditOpen}>
+        <Dialog
+          open={editOpen}
+          onOpenChange={setEditOpen}
+        >
           <DialogContent className="sm:max-w-[425px]">
             <form onSubmit={handleEditBonus}>
               <DialogHeader>
@@ -759,7 +778,7 @@ export default function Page() {
                     id="bonus-amount"
                     type="number"
                     value={bonusAmount}
-                    onChange={(e) => setBonusAmount(Number(e.target.value))}
+                    onChange={(e) => setBonusAmount(e.target.value)}
                     min={0}
                     required
                   />
@@ -800,8 +819,11 @@ export default function Page() {
           </DialogContent>
         </Dialog>
 
-        {/* Pay Dialog (Approval Gaji & Pencairan) */}
-        <Dialog open={payOpen} onOpenChange={setPayOpen}>
+        {/* Pay Dialog */}
+        <Dialog
+          open={payOpen}
+          onOpenChange={setPayOpen}
+        >
           <DialogContent className="sm:max-w-[450px]">
             <form onSubmit={handlePayPayroll}>
               <DialogHeader>
@@ -840,7 +862,7 @@ export default function Page() {
                     id="pay-amount"
                     type="number"
                     value={payAmount}
-                    onChange={(e) => setPayAmount(Number(e.target.value))}
+                    onChange={(e) => setPayAmount(e.target.value)}
                     min={1}
                     required
                   />
@@ -853,7 +875,9 @@ export default function Page() {
                       value={payMethod}
                       onValueChange={(val: "CASH" | "TRANSFER") => {
                         setPayMethod(val);
-                        if (val === "CASH") setSelectedBankId("");
+                        if (val === "CASH") {
+                          setSelectedBankId("");
+                        }
                       }}
                     >
                       <SelectTrigger>
@@ -879,7 +903,10 @@ export default function Page() {
                         </SelectTrigger>
                         <SelectContent>
                           {banks.map((bank) => (
-                            <SelectItem key={bank.id} value={bank.id}>
+                            <SelectItem
+                              key={bank.id}
+                              value={bank.id}
+                            >
                               {bank.bankName} ({bank.accountNumber.slice(-4)})
                             </SelectItem>
                           ))}
@@ -925,7 +952,10 @@ export default function Page() {
         </Dialog>
 
         {/* Detail Slip Gaji View Dialog */}
-        <Dialog open={detailOpen} onOpenChange={setDetailOpen}>
+        <Dialog
+          open={detailOpen}
+          onOpenChange={setDetailOpen}
+        >
           <DialogContent className="sm:max-w-[550px]">
             <DialogHeader>
               <DialogTitle>Tinjau Slip Gaji</DialogTitle>
@@ -935,8 +965,14 @@ export default function Page() {
             {selectedPayroll && (
               <div className="space-y-6">
                 {/* Printable Area */}
-                <div id="payroll-slip-printable" className="p-6 border border-dashed rounded-lg bg-muted/10 space-y-4">
-                  <div className="header" style={{ textAlign: "center", borderBottom: "2px dashed #333", paddingBottom: "12px", marginBottom: "15px" }}>
+                <div
+                  id="payroll-slip-printable"
+                  className="p-6 border border-dashed rounded-lg bg-muted/10 space-y-4"
+                >
+                  <div
+                    className="header"
+                    style={{ textAlign: "center", borderBottom: "2px dashed #333", paddingBottom: "12px", marginBottom: "15px" }}
+                  >
                     <h2 style={{ margin: 0, fontSize: "18px", fontWeight: "bold" }}>NOPZ GARAGE</h2>
                     <p style={{ margin: "2px 0 0", fontSize: "11px", color: "#666" }}>
                       Sistem Manajemen Antrian & Keuangan Bengkel
@@ -996,7 +1032,10 @@ export default function Page() {
                     </div>
                   </div>
 
-                  <div className="total-box" style={{ borderTop: "2px dashed #333", borderBottom: "2px dashed #333", padding: "10px 0", marginTop: "15px" }}>
+                  <div
+                    className="total-box"
+                    style={{ borderTop: "2px dashed #333", borderBottom: "2px dashed #333", padding: "10px 0", marginTop: "15px" }}
+                  >
                     <div className="flex justify-between font-bold text-base">
                       <span>Total Gaji Bersih (Net):</span>
                       <span className="text-primary">{formatMoney(selectedPayroll.totalEarned)}</span>
@@ -1011,7 +1050,10 @@ export default function Page() {
                     </div>
                   </div>
 
-                  <div className="footer" style={{ textAlign: "center", marginTop: "25px", fontSize: "10px", color: "#888", borderTop: "1px dashed #ccc", paddingTop: "8px" }}>
+                  <div
+                    className="footer"
+                    style={{ textAlign: "center", marginTop: "25px", fontSize: "10px", color: "#888", borderTop: "1px dashed #ccc", paddingTop: "8px" }}
+                  >
                     Tanda bukti pembayaran sah yang dikeluarkan oleh NopzGarage secara digital.<br />
                     Dicetak pada: {new Date().toLocaleString("id-ID")}
                   </div>

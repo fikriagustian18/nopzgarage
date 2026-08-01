@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { Loader2, Package, ArrowUpRight, ArrowDownLeft } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -12,11 +13,10 @@ import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { Input } from "@/components/ui/Input";
 import { Label } from "@/components/ui/Label";
-import { addStock, reduceStock } from "@/lib/actions/inventory";
 import { toast } from "@/hooks/useToast";
-import { Loader2, Package, ArrowUpRight, ArrowDownLeft } from "lucide-react";
+import { addStock, reduceStock } from "@/lib/actions/inventory";
 
-type SparePart = {
+interface SparePart {
   id: string;
   code: string;
   name: string;
@@ -27,14 +27,14 @@ type SparePart = {
   buyPrice: number;
   sellPrice: number;
   isActive: boolean;
-};
+}
 
-type SparepartDetailDialogProps = {
+interface SparepartDetailDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  sparepart?: SparePart;
+  sparepart?: SparePart | null;
   onSuccess?: () => void;
-};
+}
 
 export function SparepartDetailDialog({
   open,
@@ -58,28 +58,36 @@ export function SparepartDetailDialog({
     date: new Date().toISOString().split("T")[0],
   });
 
-  if (!sparepart) return null;
+  if (!sparepart) {
+    return null;
+  }
 
   async function handleStockInSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!sparepart) return;
+    if (!sparepart) {
+      return;
+    }
     setLoading(true);
     try {
+      const qtyNum = Number(stockInForm.qty) || 1;
+      const buyPriceNum = Number(stockInForm.buyPrice) || Number(sparepart.buyPrice);
       const res = await addStock(
         sparepart.id,
-        stockInForm.qty,
+        qtyNum,
         stockInForm.supplier,
-        stockInForm.buyPrice || Number(sparepart.buyPrice),
+        buyPriceNum,
         stockInForm.date
       );
 
       if (res.success) {
         toast({
           title: "✅ Stok Masuk Berhasil!",
-          description: `Berhasil menambahkan ${stockInForm.qty} ${sparepart.unit}.`,
+          description: `Berhasil menambahkan ${qtyNum} ${sparepart.unit}.`,
         });
         setActiveTab("detail");
-        if (onSuccess) onSuccess();
+        if (onSuccess) {
+          onSuccess();
+        }
       } else {
         toast({
           variant: "destructive",
@@ -100,12 +108,15 @@ export function SparepartDetailDialog({
 
   async function handleStockOutSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!sparepart) return;
+    if (!sparepart) {
+      return;
+    }
     setLoading(true);
     try {
+      const qtyNum = Number(stockOutForm.qty) || 1;
       const res = await reduceStock(
         sparepart.id,
-        stockOutForm.qty,
+        qtyNum,
         stockOutForm.description,
         stockOutForm.date
       );
@@ -113,10 +124,12 @@ export function SparepartDetailDialog({
       if (res.success) {
         toast({
           title: "✅ Stok Keluar Berhasil!",
-          description: `Berhasil mencatat pengeluaran ${stockOutForm.qty} ${sparepart.unit}.`,
+          description: `Berhasil mencatat pengeluaran ${qtyNum} ${sparepart.unit}.`,
         });
         setActiveTab("detail");
-        if (onSuccess) onSuccess();
+        if (onSuccess) {
+          onSuccess();
+        }
       } else {
         toast({
           variant: "destructive",
@@ -136,7 +149,9 @@ export function SparepartDetailDialog({
   }
 
   function getStatusBadge() {
-    if (!sparepart) return null;
+    if (!sparepart) {
+      return null;
+    }
     if (sparepart.stock === 0) {
       return <Badge className="bg-red-100 text-red-700 hover:bg-red-100 border-red-200">Stok Habis</Badge>;
     }
@@ -147,7 +162,10 @@ export function SparepartDetailDialog({
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog
+      open={open}
+      onOpenChange={onOpenChange}
+    >
       <DialogContent className="sm:max-w-[550px]">
         <DialogHeader>
           <div className="flex items-center justify-between">
@@ -274,7 +292,10 @@ export function SparepartDetailDialog({
 
         {/* Content: Stok Masuk */}
         {activeTab === "stockIn" && (
-          <form onSubmit={handleStockInSubmit} className="space-y-4 py-3">
+          <form
+            onSubmit={handleStockInSubmit}
+            className="space-y-4 py-3"
+          >
             <div className="p-3 bg-emerald-50 text-emerald-900 rounded-md text-xs">
               Mencatat barang masuk dari supplier / restock. Jurnal otomatis akan dibuat.
             </div>
@@ -286,7 +307,7 @@ export function SparepartDetailDialog({
                   type="number"
                   min="1"
                   value={stockInForm.qty}
-                  onChange={(e) => setStockInForm({ ...stockInForm, qty: parseInt(e.target.value) || 1 })}
+                  onChange={(e) => setStockInForm({ ...stockInForm, qty: e.target.value as any })}
                   required
                 />
               </div>
@@ -297,7 +318,7 @@ export function SparepartDetailDialog({
                   type="number"
                   min="0"
                   value={stockInForm.buyPrice}
-                  onChange={(e) => setStockInForm({ ...stockInForm, buyPrice: parseFloat(e.target.value) || 0 })}
+                  onChange={(e) => setStockInForm({ ...stockInForm, buyPrice: e.target.value as any })}
                   required
                 />
               </div>
@@ -334,7 +355,10 @@ export function SparepartDetailDialog({
 
         {/* Content: Stok Keluar */}
         {activeTab === "stockOut" && (
-          <form onSubmit={handleStockOutSubmit} className="space-y-4 py-3">
+          <form
+            onSubmit={handleStockOutSubmit}
+            className="space-y-4 py-3"
+          >
             <div className="p-3 bg-orange-50 text-orange-900 rounded-md text-xs">
               Mencatat pengeluaran barang untuk kebutuhan bengkel / barang rusak.
             </div>
@@ -347,7 +371,7 @@ export function SparepartDetailDialog({
                   min="1"
                   max={sparepart.stock}
                   value={stockOutForm.qty}
-                  onChange={(e) => setStockOutForm({ ...stockOutForm, qty: parseInt(e.target.value) || 1 })}
+                  onChange={(e) => setStockOutForm({ ...stockOutForm, qty: e.target.value as any })}
                   required
                 />
               </div>

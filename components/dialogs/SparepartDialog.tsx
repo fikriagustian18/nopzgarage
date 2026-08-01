@@ -1,6 +1,7 @@
-'use client';
+"use client";
 
 import { useState, useEffect } from "react";
+import { Loader2 } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -11,12 +12,11 @@ import {
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Label } from "@/components/ui/Label";
-import { createSparePart, updateSparePart, CreateSparePartInput } from "@/lib/actions/inventory";
 import { toast } from "@/hooks/useToast";
-import { Loader2 } from "lucide-react";
 import { notifySparepartAdded, notifySparepartUpdated } from "@/hooks/useNotification";
+import { createSparePart, updateSparePart, CreateSparePartInput } from "@/lib/actions/inventory";
 
-type SparePart = {
+interface SparePart {
   id: string;
   code: string;
   name: string;
@@ -26,15 +26,15 @@ type SparePart = {
   unit: string;
   buyPrice: number;
   sellPrice: number;
-};
+}
 
-type SparepartDialogProps = {
+interface SparepartDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   mode: "create" | "edit";
-  sparepart?: SparePart;
+  sparepart?: SparePart | null;
   onSuccess?: () => void;
-};
+}
 
 export function SparepartDialog({
   open,
@@ -87,14 +87,21 @@ export function SparepartDialog({
 
     try {
       let result;
+      const payload = {
+        ...formData,
+        stock: Number(formData.stock) || 0,
+        minStock: Number(formData.minStock) || 0,
+        buyPrice: Number(formData.buyPrice) || 0,
+        sellPrice: Number(formData.sellPrice) || 0,
+      };
       
       if (mode === "create") {
-        result = await createSparePart(formData);
-      } else {
-        result = await updateSparePart(sparepart!.id, formData);
+        result = await createSparePart(payload);
+      } else if (sparepart) {
+        result = await updateSparePart(sparepart.id, payload);
       }
 
-      if (result.success) {
+      if (result && result.success) {
         toast({
           title: "✅ Berhasil!",
           description: mode === "create" 
@@ -102,7 +109,6 @@ export function SparepartDialog({
             : "Produk berhasil diupdate",
         });
         
-        // Add notification
         if (mode === "create" && result.sparePart) {
           notifySparepartAdded(formData.name, result.sparePart.id);
         } else if (mode === "edit" && sparepart) {
@@ -110,12 +116,14 @@ export function SparepartDialog({
         }
 
         onOpenChange(false);
-        if (onSuccess) onSuccess();
+        if (onSuccess) {
+          onSuccess();
+        }
       } else {
         toast({
           variant: "destructive",
           title: "❌ Gagal",
-          description: result.error || "Terjadi kesalahan",
+          description: result?.error || "Terjadi kesalahan",
         });
       }
     } catch (error) {
@@ -127,10 +135,13 @@ export function SparepartDialog({
     } finally {
       setLoading(false);
     }
-  };
+  }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog
+      open={open}
+      onOpenChange={onOpenChange}
+    >
       <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="text-2xl font-bold">
@@ -143,7 +154,10 @@ export function SparepartDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-6 mt-4">
+        <form
+          onSubmit={handleSubmit}
+          className="space-y-6 mt-4"
+        >
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="code">Kode Barang <span className="text-red-500">*</span></Label>
@@ -209,7 +223,7 @@ export function SparepartDialog({
                 type="number"
                 min="0"
                 value={formData.stock}
-                onChange={(e) => setFormData({ ...formData, stock: parseInt(e.target.value) || 0 })}
+                onChange={(e) => setFormData({ ...formData, stock: e.target.value as any })}
                 required
               />
             </div>
@@ -220,7 +234,7 @@ export function SparepartDialog({
                 type="number"
                 min="0"
                 value={formData.minStock}
-                onChange={(e) => setFormData({ ...formData, minStock: parseInt(e.target.value) || 0 })}
+                onChange={(e) => setFormData({ ...formData, minStock: e.target.value as any })}
                 required
               />
             </div>
@@ -234,7 +248,7 @@ export function SparepartDialog({
                 type="number"
                 min="0"
                 value={formData.buyPrice}
-                onChange={(e) => setFormData({ ...formData, buyPrice: parseFloat(e.target.value) || 0 })}
+                onChange={(e) => setFormData({ ...formData, buyPrice: e.target.value as any })}
                 required
               />
             </div>
@@ -245,7 +259,7 @@ export function SparepartDialog({
                 type="number"
                 min="0"
                 value={formData.sellPrice}
-                onChange={(e) => setFormData({ ...formData, sellPrice: parseFloat(e.target.value) || 0 })}
+                onChange={(e) => setFormData({ ...formData, sellPrice: e.target.value as any })}
                 required
               />
             </div>
