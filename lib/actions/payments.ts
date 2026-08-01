@@ -1,9 +1,11 @@
-// app/actions/payments.ts
 "use server";
 
+// 1. Library Eksternal
+import { revalidatePath } from "next/cache";
+
+// 2. Utilitas & Logic Internal
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
-import { revalidatePath } from "next/cache";
 import { createLog } from "./logs";
 
 // ==================== Types ====================
@@ -34,6 +36,82 @@ export interface JournalEntryInput {
   reference?: string;
 }
 
+interface AccountRecord {
+  id?: string;
+  code: string;
+  name?: string;
+  createdAt?: Date | string;
+  [key: string]: unknown;
+}
+
+interface JournalItemRecord {
+  debit?: unknown;
+  credit?: unknown;
+  account?: AccountRecord | null;
+  [key: string]: unknown;
+}
+
+interface JournalEntryRecord {
+  date?: Date | string;
+  createdAt?: Date | string;
+  items?: JournalItemRecord[];
+  payment?: PaymentRecord | null;
+  [key: string]: unknown;
+}
+
+interface OrderRecord {
+  totalPrice?: unknown;
+  totalPaid?: unknown;
+  createdAt?: Date | string;
+  updatedAt?: Date | string;
+  scheduledAt?: Date | string;
+  [key: string]: unknown;
+}
+
+interface PayrollRecord {
+  totalEarned?: unknown;
+  totalPaid?: unknown;
+  baseSalary?: unknown;
+  bonus?: unknown;
+  startDate?: Date | string;
+  endDate?: Date | string;
+  createdAt?: Date | string;
+  updatedAt?: Date | string;
+  [key: string]: unknown;
+}
+
+interface PaymentRecord {
+  id?: string;
+  amount?: unknown;
+  date?: Date | string;
+  createdAt?: Date | string;
+  updatedAt?: Date | string;
+  order?: OrderRecord | null;
+  payroll?: PayrollRecord | null;
+  journal?: JournalEntryRecord | null;
+  paymentMethod?: string;
+  bankAccountId?: string | null;
+  [key: string]: unknown;
+}
+
+interface OrderHeader {
+  id?: string;
+  items?: unknown;
+  [key: string]: unknown;
+}
+
+interface OrderFeeRecord {
+  amount?: unknown;
+  [key: string]: unknown;
+}
+
+interface ParsedOrderItem {
+  qty?: number;
+  price?: number;
+  type?: string;
+  [key: string]: unknown;
+}
+
 // ==================== Helper: Serialize Decimal ====================
 function toNumber(val: unknown): number {
   if (typeof val === 'number') {
@@ -45,11 +123,8 @@ function toNumber(val: unknown): number {
   return 0;
 }
 
-function serializeJournalItem(item: any) {
-  if (!item) {
-    return null;
-  }
-  const serialized = {
+function serializeJournalItem(item: JournalItemRecord): JournalItemRecord {
+  const serialized: JournalItemRecord = {
     ...item,
     debit: toNumber(item.debit),
     credit: toNumber(item.credit),
@@ -57,21 +132,21 @@ function serializeJournalItem(item: any) {
   if (serialized.account) {
     serialized.account = {
       ...serialized.account,
-      createdAt: serialized.account.createdAt instanceof Date ? serialized.account.createdAt.toISOString() : serialized.account.createdAt,
+      createdAt: serialized.account.createdAt instanceof Date ? serialized.account.createdAt.toISOString() : (serialized.account.createdAt as string | undefined),
     };
   }
   return serialized;
 }
 
-function serializeJournalEntry(entry: any) {
+function serializeJournalEntry(entry: JournalEntryRecord | null | undefined): JournalEntryRecord | null {
   if (!entry) {
     return null;
   }
-  const serialized = {
+  const serialized: JournalEntryRecord = {
     ...entry,
-    date: entry.date instanceof Date ? entry.date.toISOString() : entry.date,
-    createdAt: entry.createdAt instanceof Date ? entry.createdAt.toISOString() : entry.createdAt,
-    items: entry.items?.map(serializeJournalItem) ?? [],
+    date: entry.date instanceof Date ? entry.date.toISOString() : (entry.date as string | undefined),
+    createdAt: entry.createdAt instanceof Date ? entry.createdAt.toISOString() : (entry.createdAt as string | undefined),
+    items: entry.items ? entry.items.filter((item): item is JournalItemRecord => Boolean(item)).map(serializeJournalItem) : [],
   };
   if (serialized.payment) {
     serialized.payment = serializePayment(serialized.payment);
@@ -79,16 +154,16 @@ function serializeJournalEntry(entry: any) {
   return serialized;
 }
 
-function serializePayment(payment: any) {
+function serializePayment(payment: PaymentRecord | null | undefined): PaymentRecord | null {
   if (!payment) {
     return null;
   }
-  const p = {
+  const p: PaymentRecord = {
     ...payment,
     amount: toNumber(payment.amount),
-    date: payment.date instanceof Date ? payment.date.toISOString() : payment.date,
-    createdAt: payment.createdAt instanceof Date ? payment.createdAt.toISOString() : payment.createdAt,
-    updatedAt: payment.updatedAt instanceof Date ? payment.updatedAt.toISOString() : payment.updatedAt,
+    date: payment.date instanceof Date ? payment.date.toISOString() : (payment.date as string | undefined),
+    createdAt: payment.createdAt instanceof Date ? payment.createdAt.toISOString() : (payment.createdAt as string | undefined),
+    updatedAt: payment.updatedAt instanceof Date ? payment.updatedAt.toISOString() : (payment.updatedAt as string | undefined),
   };
 
   if (p.order) {
@@ -96,9 +171,9 @@ function serializePayment(payment: any) {
       ...p.order,
       totalPrice: toNumber(p.order.totalPrice),
       totalPaid: toNumber(p.order.totalPaid),
-      createdAt: p.order.createdAt instanceof Date ? p.order.createdAt.toISOString() : p.order.createdAt,
-      updatedAt: p.order.updatedAt instanceof Date ? p.order.updatedAt.toISOString() : p.order.updatedAt,
-      scheduledAt: p.order.scheduledAt instanceof Date ? p.order.scheduledAt.toISOString() : p.order.scheduledAt,
+      createdAt: p.order.createdAt instanceof Date ? p.order.createdAt.toISOString() : (p.order.createdAt as string | undefined),
+      updatedAt: p.order.updatedAt instanceof Date ? p.order.updatedAt.toISOString() : (p.order.updatedAt as string | undefined),
+      scheduledAt: p.order.scheduledAt instanceof Date ? p.order.scheduledAt.toISOString() : (p.order.scheduledAt as string | undefined),
     };
   }
 
@@ -109,10 +184,10 @@ function serializePayment(payment: any) {
       totalPaid: toNumber(p.payroll.totalPaid),
       baseSalary: toNumber(p.payroll.baseSalary),
       bonus: toNumber(p.payroll.bonus),
-      startDate: p.payroll.startDate instanceof Date ? p.payroll.startDate.toISOString() : p.payroll.startDate,
-      endDate: p.payroll.endDate instanceof Date ? p.payroll.endDate.toISOString() : p.payroll.endDate,
-      createdAt: p.payroll.createdAt instanceof Date ? p.payroll.createdAt.toISOString() : p.payroll.createdAt,
-      updatedAt: p.payroll.updatedAt instanceof Date ? p.payroll.updatedAt.toISOString() : p.payroll.updatedAt,
+      startDate: p.payroll.startDate instanceof Date ? p.payroll.startDate.toISOString() : (p.payroll.startDate as string | undefined),
+      endDate: p.payroll.endDate instanceof Date ? p.payroll.endDate.toISOString() : (p.payroll.endDate as string | undefined),
+      createdAt: p.payroll.createdAt instanceof Date ? p.payroll.createdAt.toISOString() : (p.payroll.createdAt as string | undefined),
+      updatedAt: p.payroll.updatedAt instanceof Date ? p.payroll.updatedAt.toISOString() : (p.payroll.updatedAt as string | undefined),
     };
   }
 
@@ -216,14 +291,15 @@ export async function createPayment(data: CreatePaymentInput) {
     const serializedResult = result ? JSON.parse(JSON.stringify(serializePayment(result))) : result;
     
     return { success: true, payment: serializedResult };
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const errorMsg = error instanceof Error ? error.message : String(error);
     console.error("Create payment error:", error);
-    return { success: false, error: `Gagal: ${error.message}` };
+    return { success: false, error: `Gagal: ${errorMsg}` };
   }
 }
 
 // ==================== Helper: Calculate Revenue Breakdown ====================
-async function getRevenueBreakdown(tx: TransactionClient, orderId: string, orderHeader?: any) {
+async function getRevenueBreakdown(tx: TransactionClient, orderId: string, orderHeader?: OrderHeader | null) {
   // Ambil detail item order
   const orderItems = await tx.orderItem.findMany({
     where: { orderId },
@@ -237,8 +313,7 @@ async function getRevenueBreakdown(tx: TransactionClient, orderId: string, order
       const totalPrice = Number(item.totalPrice);
       if (item.itemType === 'service') {
         serviceRevenue += totalPrice;
-      }
-      if (item.itemType === 'part') {
+      } else if (item.itemType === 'part') {
         partRevenue += totalPrice;
       }
     });
@@ -252,14 +327,13 @@ async function getRevenueBreakdown(tx: TransactionClient, orderId: string, order
     if (order && order.items) {
       const parsedItems = typeof order.items === 'string' ? JSON.parse(order.items) : order.items;
       if (Array.isArray(parsedItems)) {
-        parsedItems.forEach((item: any) => {
+        parsedItems.forEach((item: ParsedOrderItem) => {
           const qty = Number(item.qty || 0);
           const price = Number(item.price || 0);
           const itemTotalPrice = qty * price;
           if (item.type === 'service') {
             serviceRevenue += itemTotalPrice;
-          }
-          if (item.type === 'part') {
+          } else if (item.type === 'part') {
             partRevenue += itemTotalPrice;
           }
         });
@@ -281,7 +355,7 @@ async function ensureAccount(tx: TransactionClient, code: string, name: string, 
   }
 }
 
-async function handleOrderPayment(tx: TransactionClient, orderId: string, payment: any, payCommissionNow?: boolean) {
+async function handleOrderPayment(tx: TransactionClient, orderId: string, payment: PaymentRecord, payCommissionNow?: boolean) {
   // 1. Ambil order data
   const order = await tx.order.findUnique({
     where: { id: orderId },
@@ -302,7 +376,7 @@ async function handleOrderPayment(tx: TransactionClient, orderId: string, paymen
   const totalPrice = Number(order.totalPrice);
 
   // Update saldo bank jika pembayaran via transfer/qris/card
-  if (["TRANSFER", "QRIS", "CARD"].includes(payment.paymentMethod) && payment.bankAccountId) {
+  if (payment.paymentMethod && ["TRANSFER", "QRIS", "CARD"].includes(payment.paymentMethod) && payment.bankAccountId) {
     // Get bank account info using raw query
     const bankAccounts = await tx.$queryRaw<Array<{
       id: string;
@@ -358,7 +432,7 @@ async function handleOrderPayment(tx: TransactionClient, orderId: string, paymen
   // Tentukan akun kas/bank yang akan digunakan
   let cashAccountCode = "101"; // Default: Kas Tunai
   
-  if (["TRANSFER", "QRIS", "CARD"].includes(payment.paymentMethod) && payment.bankAccountId) {
+  if (payment.paymentMethod && ["TRANSFER", "QRIS", "CARD"].includes(payment.paymentMethod) && payment.bankAccountId) {
     // Gunakan akun bank spesifik jika ada
     const bankAccount = await tx.bankAccount.findUnique({
       where: { id: payment.bankAccountId }
@@ -369,7 +443,7 @@ async function handleOrderPayment(tx: TransactionClient, orderId: string, paymen
     } else {
       cashAccountCode = "102"; // Fallback ke akun Bank umum
     }
-  } else if (["TRANSFER", "QRIS", "CARD"].includes(payment.paymentMethod)) {
+  } else if (payment.paymentMethod && ["TRANSFER", "QRIS", "CARD"].includes(payment.paymentMethod)) {
     cashAccountCode = "102"; // Fallback ke akun Bank umum
   }
 
@@ -399,7 +473,7 @@ async function handleOrderPayment(tx: TransactionClient, orderId: string, paymen
       serviceRevenue += (amount - totalRev);
     }
 
-    const journalItems: any[] = [
+    const journalItems: Array<{ accountCode: string; debit?: number; credit?: number }> = [
       { accountCode: cashAccountCode, debit: amount },
     ];
     
@@ -446,7 +520,7 @@ async function handleOrderPayment(tx: TransactionClient, orderId: string, paymen
         serviceRevenue += (totalPrice - totalRev);
       }
 
-      const revenueItems: any[] = [
+      const revenueItems: Array<{ accountCode: string; debit?: number; credit?: number }> = [
         { accountCode: "103", debit: totalPrice },
       ];
       
@@ -480,7 +554,7 @@ async function handleOrderPayment(tx: TransactionClient, orderId: string, paymen
               data: { isPaid: true, paidAt: new Date() }
           });
 
-          const totalCommission = unpaidFees.reduce((sum: number, f: any) => sum + Number(f.amount), 0);
+          const totalCommission = unpaidFees.reduce((sum: number, f: OrderFeeRecord) => sum + Number(f.amount), 0);
 
           await createJournalEntry({
               description: `Pencairan Komisi Order #${order.id.slice(-6)} (Auto)`,
@@ -498,7 +572,7 @@ async function handleOrderPayment(tx: TransactionClient, orderId: string, paymen
 }
 
 // ==================== Handle Payroll Payment (Bayar Gaji) ====================
-async function handlePayrollPayment(tx: TransactionClient, payrollId: string, payment: any) {
+async function handlePayrollPayment(tx: TransactionClient, payrollId: string, payment: PaymentRecord) {
   const payroll = await tx.payroll.findUnique({
     where: { id: payrollId },
     include: { employee: true },
@@ -619,7 +693,7 @@ async function createJournalEntry(data: JournalEntryInput, tx?: TransactionClien
     });
 
     if (accounts.length !== uniqueAccountCodes.length) {
-      const foundCodes = accounts.map((a: any) => a.code);
+      const foundCodes = accounts.map((a: AccountRecord) => a.code);
       const missingCodes = uniqueAccountCodes.filter((c) => !foundCodes.includes(c));
       throw new Error(`Ada kode akun yang tidak valid atau belum dibuat: ${missingCodes.join(", ")}`);
     }
@@ -633,7 +707,7 @@ async function createJournalEntry(data: JournalEntryInput, tx?: TransactionClien
         items: {
           create: data.items.map((item) => {
             const account = accounts.find(
-              (a: any) => a.code === item.accountCode
+              (a: AccountRecord) => a.code === item.accountCode
             );
             return {
               accountId: account!.id,

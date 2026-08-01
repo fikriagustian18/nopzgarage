@@ -1,47 +1,18 @@
 "use client";
 
+// 1. Library Eksternal
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
-import { RoleGuard } from "@/components/shared/RoleGuard";
-import { getFinancialReports, getGeneralLedger, getOperationalReports } from "@/lib/actions/finance";
-import { Button } from "@/components/ui/Button";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/Card";
-import { Badge } from "@/components/ui/Badge";
-import { Input } from "@/components/ui/Input";
-import { Label } from "@/components/ui/Label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/Select";
 import {
   TrendingUp,
   TrendingDown,
-  ArrowLeft,
   RefreshCw,
-  Calendar,
   Layers,
   Wrench,
   Package,
-  Printer,
-  ChevronRight,
-  ClipboardList,
-  DollarSign,
   Wallet,
   CheckCircle,
   FileText,
-  Filter,
 } from "lucide-react";
-import { ExportButton } from "@/components/export/ExportButton";
-import { exportBalanceSheet } from "@/lib/export/reports/balanceSheetExport";
-import { exportIncomeStatement } from "@/lib/export/reports/financialExport";
-import type { BalanceSheetData, IncomeStatementData } from "@/lib/export/types";
-import { Toaster } from "@/components/ui/Toaster";
-import { toast } from "@/hooks/useToast";
-
-// Recharts components
 import {
   ResponsiveContainer,
   LineChart,
@@ -56,16 +27,39 @@ import {
   Cell,
 } from "recharts";
 
-type OrderItem = {
+// 2. Komponen Internal
+import { RoleGuard } from "@/components/shared/RoleGuard";
+import { Button } from "@/components/ui/Button";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/Card";
+import { Input } from "@/components/ui/Input";
+import { Label } from "@/components/ui/Label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/Select";
+import { ExportButton } from "@/components/export/ExportButton";
+import { Toaster } from "@/components/ui/Toaster";
+
+// 3. Utilitas & Logic
+import { getFinancialReports, getOperationalReports } from "@/lib/actions/finance";
+import { exportIncomeStatement } from "@/lib/export/reports/financialExport";
+
+// 4. Tipe
+import type { IncomeStatementData } from "@/lib/export/types";
+
+interface OrderItem {
   id: string;
   itemName: string;
   quantity: number;
   unitPrice: number;
   totalPrice: number;
   itemType: string;
-};
+}
 
-type Order = {
+interface Order {
   id: string;
   custName: string;
   custPhone: string;
@@ -78,9 +72,9 @@ type Order = {
   totalPaid: number;
   createdAt: string;
   orderItems: OrderItem[];
-};
+}
 
-type Expense = {
+interface Expense {
   id: string;
   date: string;
   description: string;
@@ -89,16 +83,34 @@ type Expense = {
   category: string;
   categoryCode: string;
   source: string;
-};
+}
+
+interface IncomeStatementAccount {
+  code: string;
+  name: string;
+  balance: number;
+}
+
+interface FinancialReportData {
+  trialBalance?: any[];
+  incomeStatement: {
+    period?: string;
+    revenues: IncomeStatementAccount[];
+    totalRevenue: number;
+    expenses: IncomeStatementAccount[];
+    totalExpense: number;
+    netIncome: number;
+  };
+  balanceSheet?: any;
+}
 
 export default function Page() {
-  const router = useRouter();
   const [isMounted, setIsMounted] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
   // Data States
-  const [reportData, setReportData] = useState<any>(null);
+  const [reportData, setReportData] = useState<FinancialReportData | null>(null);
   const [orders, setOrders] = useState<Order[]>([]);
   const [expenses, setExpenses] = useState<Expense[]>([]);
 
@@ -130,7 +142,7 @@ export default function Page() {
         getOperationalReports(),
       ]);
 
-      if (reportsRes.success) {
+      if (reportsRes.success && reportsRes.data) {
         setReportData(reportsRes.data);
       } else {
         setError(reportsRes.error || "Gagal memuat laporan keuangan.");
@@ -151,19 +163,23 @@ export default function Page() {
   }
 
   // Formatting currency helper
-  const formatIDR = (val: number) => {
+  function formatIDR(val: number) {
     return `Rp ${Number(val).toLocaleString("id-ID")}`;
-  };
+  }
 
   // Reset Filters
-  const handleResetFilters = () => {
+  function handleResetFilters() {
     const now = new Date();
     const start = new Date(now.getFullYear(), now.getMonth(), 1);
     setStartDate(start.toISOString().split("T")[0]);
     setEndDate(now.toISOString().split("T")[0]);
     setFilterType("ALL");
     setFilterPaymentMethod("ALL");
-  };
+  }
+
+  function handleRetry() {
+    fetchData();
+  }
 
   if (loading || !isMounted) {
     return (
@@ -178,7 +194,7 @@ export default function Page() {
       <div className="flex flex-col items-center justify-center h-screen bg-background gap-4">
         <p className="text-destructive font-medium">{error}</p>
         <Button
-          onClick={fetchData}
+          onClick={handleRetry}
           variant="outline"
           className="gap-2"
         >
@@ -388,13 +404,13 @@ export default function Page() {
                   if (!reportData) return new Blob([]);
                   const incomeData: IncomeStatementData = {
                     period: `${formatIndonesianDate(startDate)} - ${formatIndonesianDate(endDate)}`,
-                    revenues: reportData.incomeStatement.revenues.map((acc: any) => ({
+                    revenues: reportData.incomeStatement.revenues.map((acc) => ({
                       code: acc.code,
                       name: acc.name,
                       balance: acc.balance,
                     })),
                     totalRevenue: reportData.incomeStatement.totalRevenue,
-                    expenses: reportData.incomeStatement.expenses.map((acc: any) => ({
+                    expenses: reportData.incomeStatement.expenses.map((acc) => ({
                       code: acc.code,
                       name: acc.name,
                       balance: acc.balance,
@@ -406,58 +422,6 @@ export default function Page() {
                 }}
               />
 
-              <ExportButton
-                title="Laporan_Neraca"
-                label="Unduh Neraca"
-                variant="outline"
-                onExport={async (format, orientation) => {
-                  if (!reportData) return new Blob([]);
-                  const balanceSheetData: BalanceSheetData = {
-                    date: new Date(),
-                    assets: [
-                      {
-                        title: "Aset Lancar",
-                        accounts: reportData.balanceSheet.assets.map((acc: any) => ({
-                          code: acc.code,
-                          name: acc.name,
-                          balance: acc.balance,
-                        })),
-                        total: reportData.balanceSheet.totalAsset,
-                      },
-                    ],
-                    liabilities: [
-                      {
-                        title: "Kewajiban",
-                        accounts: reportData.balanceSheet.liabilities.map((acc: any) => ({
-                          code: acc.code,
-                          name: acc.name,
-                          balance: acc.balance,
-                        })),
-                        total: reportData.balanceSheet.totalLiability,
-                      },
-                    ],
-                    equity: [
-                      {
-                        title: "Ekuitas",
-                        accounts: [
-                          ...reportData.balanceSheet.equity.map((acc: any) => ({
-                            code: acc.code,
-                            name: acc.name,
-                            balance: acc.balance,
-                          })),
-                          {
-                            code: "-",
-                            name: "Laba Tahun Berjalan",
-                            balance: reportData.balanceSheet.netIncome,
-                          },
-                        ],
-                        total: reportData.balanceSheet.totalEquity,
-                      },
-                    ],
-                  };
-                  return await exportBalanceSheet(balanceSheetData, format, orientation);
-                }}
-              />
             </div>
           </div>
 
@@ -562,7 +526,7 @@ export default function Page() {
               <Label className="text-xs font-bold text-muted-foreground">Jenis Transaksi</Label>
               <Select
                 value={filterType}
-                onValueChange={(val: any) => setFilterType(val)}
+                onValueChange={(val: "ALL" | "SERVICE" | "PART" | "OTHER") => setFilterType(val)}
               >
                 <SelectTrigger className="bg-background border-input h-10 text-xs rounded-lg">
                   <SelectValue placeholder="Semua Jenis" />
@@ -581,7 +545,7 @@ export default function Page() {
               <Label className="text-xs font-bold text-muted-foreground">Metode Pembayaran</Label>
               <Select
                 value={filterPaymentMethod}
-                onValueChange={(val: any) => setFilterPaymentMethod(val)}
+                onValueChange={(val: "ALL" | "CASH" | "TRANSFER" | "QRIS" | "CARD") => setFilterPaymentMethod(val)}
               >
                 <SelectTrigger className="bg-background border-input h-10 text-xs rounded-lg">
                   <SelectValue placeholder="Semua Metode Pembayaran" />
