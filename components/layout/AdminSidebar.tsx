@@ -18,7 +18,6 @@ import {
   TrendingUp,
   Globe,
   User,
-  BookOpen,
   Book,
   ImagePlus,
   Database,
@@ -27,14 +26,22 @@ import {
   Clock,
   Wrench,
 } from "lucide-react";
+
 import { Button } from "@/components/ui/Button";
+
+interface MenuItem {
+  href: string;
+  label: string;
+  icon: React.ComponentType<{ className?: string }>;
+  exact?: boolean;
+}
 
 export function AdminSidebar() {
   const pathname = usePathname();
   const router = useRouter();
   const { data: session } = useSession();
 
-  const menuItems = [
+  const menuItems: MenuItem[] = [
     {
       href: "/admin",
       label: "Dashboard",
@@ -75,11 +82,6 @@ export function AdminSidebar() {
       href: "/admin/income",
       label: "Pemasukan Lain",
       icon: TrendingUp,
-    },
-    {
-      href: "/admin/journal",
-      label: "Jurnal Umum",
-      icon: BookOpen,
     },
     {
       href: "/admin/transactions",

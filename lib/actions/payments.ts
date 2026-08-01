@@ -13,7 +13,7 @@ type TransactionClient = Parameters<Parameters<typeof prisma.$transaction>[0]>[0
 
 export type PaymentStatus = "UNPAID" | "PARTIAL" | "PAID";
 
-export type CreatePaymentInput = {
+export interface CreatePaymentInput {
   amount: number;
   note?: string;
   orderId?: string;
@@ -21,9 +21,9 @@ export type CreatePaymentInput = {
   paymentMethod?: "CASH" | "TRANSFER" | "QRIS" | "CARD";
   bankAccountId?: string;
   payCommissionNow?: boolean; // New Option: Pay employee commission immediately
-};
+}
 
-export type JournalEntryInput = {
+export interface JournalEntryInput {
   description: string;
   items: {
     accountCode: string;
@@ -32,17 +32,23 @@ export type JournalEntryInput = {
   }[];
   paymentId?: string;
   reference?: string;
-};
+}
 
 // ==================== Helper: Serialize Decimal ====================
-function toNumber(val: any) {
-  if (typeof val === 'number') return val;
-  if (val && typeof val.toNumber === 'function') return val.toNumber();
+function toNumber(val: unknown): number {
+  if (typeof val === 'number') {
+    return val;
+  }
+  if (typeof val === 'object' && val !== null && 'toNumber' in val && typeof (val as { toNumber: () => number }).toNumber === 'function') {
+    return (val as { toNumber: () => number }).toNumber();
+  }
   return 0;
 }
 
 function serializeJournalItem(item: any) {
-  if (!item) return null;
+  if (!item) {
+    return null;
+  }
   const serialized = {
     ...item,
     debit: toNumber(item.debit),
@@ -58,7 +64,9 @@ function serializeJournalItem(item: any) {
 }
 
 function serializeJournalEntry(entry: any) {
-  if (!entry) return null;
+  if (!entry) {
+    return null;
+  }
   const serialized = {
     ...entry,
     date: entry.date instanceof Date ? entry.date.toISOString() : entry.date,
@@ -72,7 +80,9 @@ function serializeJournalEntry(entry: any) {
 }
 
 function serializePayment(payment: any) {
-  if (!payment) return null;
+  if (!payment) {
+    return null;
+  }
   const p = {
     ...payment,
     amount: toNumber(payment.amount),
@@ -223,14 +233,15 @@ async function getRevenueBreakdown(tx: TransactionClient, orderId: string, order
   let partRevenue = 0;
 
   if (orderItems.length > 0) {
-    for (const item of orderItems) {
+    orderItems.forEach((item) => {
       const totalPrice = Number(item.totalPrice);
       if (item.itemType === 'service') {
         serviceRevenue += totalPrice;
-      } else if (item.itemType === 'part') {
+      }
+      if (item.itemType === 'part') {
         partRevenue += totalPrice;
       }
-    }
+    });
   } else {
     // Fallback ke JSON items
     const order = orderHeader || await tx.order.findUnique({
@@ -241,16 +252,17 @@ async function getRevenueBreakdown(tx: TransactionClient, orderId: string, order
     if (order && order.items) {
       const parsedItems = typeof order.items === 'string' ? JSON.parse(order.items) : order.items;
       if (Array.isArray(parsedItems)) {
-        for (const item of parsedItems) {
+        parsedItems.forEach((item: any) => {
           const qty = Number(item.qty || 0);
           const price = Number(item.price || 0);
           const itemTotalPrice = qty * price;
           if (item.type === 'service') {
             serviceRevenue += itemTotalPrice;
-          } else if (item.type === 'part') {
+          }
+          if (item.type === 'part') {
             partRevenue += itemTotalPrice;
           }
-        }
+        });
       }
     }
   }
@@ -591,10 +603,10 @@ async function createJournalEntry(data: JournalEntryInput, tx?: TransactionClien
     let totalDebit = 0;
     let totalCredit = 0;
 
-    for (const item of data.items) {
+    data.items.forEach((item) => {
       totalDebit += item.debit || 0;
       totalCredit += item.credit || 0;
-    }
+    });
 
     if (Math.abs(totalDebit - totalCredit) > 0.01) {
       throw new Error("Jurnal tidak balance! Debit harus sama dengan Kredit");
@@ -722,7 +734,7 @@ export async function getPaymentHistory(filters?: {
 // ==================== Get Journal Entries ====================
 /**
  * Mengambil data jurnal akuntansi.
- * Digunakan untuk laporan buku besar atau jurnal umum.
+ * Digunakan untuk laporan buku besar atau jurnal akuntansi.
  * 
  * @param {Object} filters - Filter tanggal atau kode akun.
  * @returns {Object} List jurnal entries.
@@ -735,7 +747,7 @@ export async function getJournalEntries(filters?: {
   try {
     const session = await auth();
     if (!session || session.user?.role !== "OWNER") {
-      return { success: false, error: "Akses ditolak: Hanya Owner yang dapat melihat jurnal umum." };
+      return { success: false, error: "Akses ditolak: Hanya Owner yang dapat melihat jurnal akuntansi." };
     }
     const entries = await prisma.journalEntry.findMany({
       where: {
@@ -771,6 +783,6 @@ export async function getJournalEntries(filters?: {
     return { success: true, entries: entries.map(serializeJournalEntry) };
   } catch (error) {
     console.error("Get journal entries error:", error);
-    return { success: false, error: "Gagal load jurnal" };
+    return { success: false, error: "Gagal load data pencatatan akuntansi" };
   }
 }

@@ -53,7 +53,7 @@ export async function getBankAccounts() {
  * Fungsi ini melakukan beberapa hal dalam satu transaksi database:
  * 1. Membuat data BankAccount (record sistem).
  * 2. Membuat akun COA (Chart of Accounts) terkait di Akuntansi (Kode 102-XXX).
- * 3. Jika ada saldo awal, otomatis membuat Jurnal Umum (Opening Balance).
+ * 3. Jika ada saldo awal, otomatis membuat Jurnal Akuntansi (Opening Balance).
  * 
  * @param {BankAccountData} data - Data rekening bank baru.
  * @returns {Object} Data rekening yang berhasil dibuat.
@@ -80,7 +80,9 @@ export async function createBankAccount(data: BankAccountData) {
       // 2. Create COA Account (Accounting Record)
       // Generate Code: 102 (Bank Prefix) + Last 3 digits of Account Number
       let codeSuffix = data.accountNumber.replace(/\D/g, '').slice(-3); // Get last 3 digits
-      if (codeSuffix.length < 3) codeSuffix = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
+      if (codeSuffix.length < 3) {
+        codeSuffix = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
+      }
       
       let accountCode = `102-${codeSuffix}`;
       

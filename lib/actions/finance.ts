@@ -3,10 +3,16 @@
 import { prisma } from '@/lib/prisma';
 import { auth } from '@/lib/auth';
 
-function toNumber(val: any) {
-  if (!val) return 0;
-  if (typeof val === 'number') return val;
-  if (val && typeof val.toNumber === 'function') return val.toNumber();
+function toNumber(val: unknown): number {
+  if (!val) {
+    return 0;
+  }
+  if (typeof val === 'number') {
+    return val;
+  }
+  if (typeof val === 'object' && val !== null && 'toNumber' in val && typeof (val as { toNumber: () => number }).toNumber === 'function') {
+    return (val as { toNumber: () => number }).toNumber();
+  }
   return Number(val);
 }
 
@@ -15,7 +21,7 @@ function toNumber(val: any) {
  * Menghasilkan Laporan Keuangan lengkap (Neraca Saldo, Laba Rugi, Neraca).
  * 
  * Flow perhitungan:
- * 1. Ambil semua akun COA dan item jurnalnya.
+ * 1. Ambil semua akun COA dan item transaksinya.
  * 2. Hitung saldo per akun berdasarkan Debit - Kredit (atau sebaliknya tergantung tipe akun).
  * 3. Pisahkan akun berdasarkan tipe untuk Laba Rugi (Revenue, Expense) dan Neraca (Limitasi: Asset, Liability, Equity).
  * 4. Hitung Laba/Rugi Bersih (Net Income).
@@ -29,7 +35,7 @@ export async function getFinancialReports() {
     if (!session || session.user?.role !== 'OWNER') {
       return { success: false, error: 'Akses ditolak: Hanya Owner yang dapat melihat laporan keuangan.' };
     }
-    // Ambil semua akun beserta transaksi jurnalnya
+    // Ambil semua akun beserta item transaksinya
     const accounts = await prisma.account.findMany({
       include: {
         journalItems: {
@@ -119,7 +125,7 @@ export async function getFinancialReports() {
 }
 
 /**
- * Mengambil Jurnal Umum (General Ledger) terbaru.
+ * Mengambil Jurnal Akuntansi (General Ledger) terbaru.
  * 
  * @returns {Object} 100 transaksi jurnal terakhir dengan detail debit/kredit.
  */
@@ -127,7 +133,7 @@ export async function getGeneralLedger() {
   try {
     const session = await auth();
     if (!session || session.user?.role !== 'OWNER') {
-      return { success: false, error: 'Akses ditolak: Hanya Owner yang dapat mengakses jurnal umum.' };
+      return { success: false, error: 'Akses ditolak: Hanya Owner yang dapat mengakses jurnal akuntansi.' };
     }
     const journals = await prisma.journalEntry.findMany({
       include: {
@@ -156,7 +162,7 @@ export async function getGeneralLedger() {
     return { success: true, journals: sanitizedJournals };
   } catch (error) {
     console.error('Get ledger error:', error);
-    return { success: false, error: 'Gagal memuat jurnal umum' };
+    return { success: false, error: 'Gagal memuat jurnal akuntansi' };
   }
 }
 

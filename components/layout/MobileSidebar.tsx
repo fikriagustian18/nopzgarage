@@ -1,12 +1,12 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
 import { signOut, useSession } from "next-auth/react";
 import {
   LayoutDashboard,
-  ClipboardList,
   Users,
   DollarSign,
   FileText,
@@ -23,10 +23,10 @@ import {
   Clock,
   Wrench,
   Shield,
-  BookOpen,
   Book,
   ImagePlus,
 } from "lucide-react";
+
 import { Button } from "@/components/ui/Button";
 import {
   Sheet,
@@ -34,7 +34,13 @@ import {
   SheetTrigger,
   SheetTitle,
 } from "@/components/ui/Sheet";
-import { useState } from "react";
+
+interface MenuItem {
+  href: string;
+  label: string;
+  icon: React.ComponentType<{ className?: string }>;
+  exact?: boolean;
+}
 
 export function MobileSidebar() {
   const pathname = usePathname();
@@ -42,7 +48,7 @@ export function MobileSidebar() {
   const [open, setOpen] = useState(false);
   const { data: session } = useSession();
 
-  const menuItems = [
+  const menuItems: MenuItem[] = [
     {
       href: "/admin",
       label: "Dashboard",
@@ -83,11 +89,6 @@ export function MobileSidebar() {
       href: "/admin/income",
       label: "Pemasukan Lain",
       icon: TrendingUp,
-    },
-    {
-      href: "/admin/journal",
-      label: "Jurnal Umum",
-      icon: BookOpen,
     },
     {
       href: "/admin/transactions",

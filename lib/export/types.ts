@@ -27,24 +27,6 @@ export interface LetterheadConfig {
   };
 }
 
-// Journal Entry Types
-export interface JournalEntryItem {
-  account: {
-    name: string;
-    code: string;
-  };
-  debit: number;
-  credit: number;
-}
-
-export interface JournalEntryExport {
-  id: string;
-  date: Date | string;
-  description: string;
-  reference?: string;
-  items: JournalEntryItem[];
-}
-
 // Balance Sheet Types
 export interface BalanceSheetAccount {
   code: string;

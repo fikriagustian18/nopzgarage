@@ -5,13 +5,13 @@ import { auth } from '@/lib/auth';
 import { revalidatePath } from 'next/cache';
 import { createLog } from './logs';
 
-export type CreateIncomeInput = {
+export interface CreateIncomeInput {
   description: string;
   amount: number;
   accountId: string; // Kategori Pemasukan
   date?: Date;
   reference?: string; 
-};
+}
 
 // ==================== Get Categories for Income Dropdown ====================
 /**
@@ -58,7 +58,7 @@ export async function getIncomeCategories() {
 /**
  * Mencatat Pemasukan Uang (Cash In).
  * 
- * Otomatis membuat Jurnal Umum:
+ * Otomatis membuat Jurnal Akuntansi:
  * - Debit: KAS (Code 101).
  * - Kredit: Akun Sumber Pemasukan (Revenue/Equity/Liability).
  * 
@@ -127,7 +127,7 @@ export async function createIncome(data: CreateIncomeInput) {
     });
 
     revalidatePath('/admin/income');
-    revalidatePath('/admin/accounting');
+    revalidatePath('/admin/finance');
 
     return { success: true };
   } catch (error) {
@@ -136,7 +136,6 @@ export async function createIncome(data: CreateIncomeInput) {
   }
 }
 
-// ==================== Get Income List ====================
 // ==================== Get Income List ====================
 /**
  * Mengambil daftar riwayat pemasukan.

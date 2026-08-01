@@ -1,12 +1,13 @@
 // components/AdminHeader.tsx
 "use client";
 
+import { useSession, signOut } from "next-auth/react";
+import { usePathname, useRouter } from "next/navigation";
+import { LogOut, User, Globe, ChevronDown } from "lucide-react";
+
 import { ThemeToggle } from "@/components/shared/ThemeToggle";
 import { NotificationPanel } from "@/components/shared/NotificationPanel";
 import { MobileSidebar } from "./MobileSidebar";
-import { cn } from "@/lib/utils";
-import { useSession, signOut } from "next-auth/react";
-import { usePathname, useRouter } from "next/navigation";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -17,7 +18,8 @@ import {
 } from "@/components/ui/DropdownMenu";
 import { Avatar, AvatarFallback } from "@/components/ui/Avatar";
 import { Button } from "@/components/ui/Button";
-import { LogOut, User, Globe, ChevronDown } from "lucide-react";
+
+import { cn } from "@/lib/utils";
 
 export function AdminHeader() {
   const { data: session } = useSession();
@@ -34,30 +36,67 @@ export function AdminHeader() {
   }
 
   function getPageTitle() {
-    if (pathname === "/admin") return "Dashboard";
-    if (pathname === "/admin/orders/kanban") return "Antrian Servis";
-    if (pathname.startsWith("/admin/orders")) return "Order Servis";
-    if (pathname.startsWith("/admin/pelayanan")) return "Pelayanan";
-    if (pathname.startsWith("/admin/transactions")) return "Transaksi & Pembayaran";
-    if (pathname.startsWith("/admin/employees")) return "Karyawan";
-    if (pathname.startsWith("/admin/payroll")) return "Gaji & Payroll";
-    if (pathname.startsWith("/admin/inventory")) return "Inventory";
-    if (pathname.startsWith("/admin/expenses")) return "Pengeluaran";
-    if (pathname.startsWith("/admin/income")) return "Pemasukan Lain";
-    if (pathname.startsWith("/admin/journal")) return "Jurnal Umum";
-    if (pathname.startsWith("/admin/finance")) return "Keuangan";
-    if (pathname.startsWith("/admin/reports")) return "Laporan";
-    if (pathname.startsWith("/admin/docs")) return "Documentation";
-    if (pathname.startsWith("/admin/content")) return "Konten Website";
-    if (pathname.startsWith("/admin/media")) return "Media Gallery";
-    if (pathname.startsWith("/admin/settings")) return "Pengaturan";
-    if (pathname.startsWith("/admin/profile")) return "Profil Pengguna";
+    if (pathname === "/admin") {
+      return "Dashboard";
+    }
+    if (pathname === "/admin/orders/kanban") {
+      return "Antrian Servis";
+    }
+    if (pathname.startsWith("/admin/orders")) {
+      return "Order Servis";
+    }
+    if (pathname.startsWith("/admin/pelayanan")) {
+      return "Pelayanan";
+    }
+    if (pathname.startsWith("/admin/transactions")) {
+      return "Transaksi & Pembayaran";
+    }
+    if (pathname.startsWith("/admin/employees")) {
+      return "Karyawan";
+    }
+    if (pathname.startsWith("/admin/payroll")) {
+      return "Gaji & Payroll";
+    }
+    if (pathname.startsWith("/admin/inventory")) {
+      return "Inventory";
+    }
+    if (pathname.startsWith("/admin/expenses")) {
+      return "Pengeluaran";
+    }
+    if (pathname.startsWith("/admin/income")) {
+      return "Pemasukan Lain";
+    }
+    if (pathname.startsWith("/admin/finance")) {
+      return "Keuangan";
+    }
+    if (pathname.startsWith("/admin/reports")) {
+      return "Laporan";
+    }
+    if (pathname.startsWith("/admin/docs")) {
+      return "Documentation";
+    }
+    if (pathname.startsWith("/admin/content")) {
+      return "Konten Website";
+    }
+    if (pathname.startsWith("/admin/media")) {
+      return "Media Gallery";
+    }
+    if (pathname.startsWith("/admin/settings")) {
+      return "Pengaturan";
+    }
+    if (pathname.startsWith("/admin/profile")) {
+      return "Profil Pengguna";
+    }
     return "Dashboard";
   }
 
   function getRoleLabel(role?: string) {
-    if (role === "OWNER") return "Owner";
-    if (role === "ADMIN") return "Administrator";
+    if (role === "OWNER") {
+      return "Owner";
+    }
+    if (role === "ADMIN") {
+      return "Administrator";
+    }
     return role || "Administrator";
   }
 

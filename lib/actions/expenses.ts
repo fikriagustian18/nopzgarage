@@ -5,13 +5,13 @@ import { auth } from '@/lib/auth';
 import { revalidatePath } from 'next/cache';
 import { createLog } from './logs';
 
-export type CreateExpenseInput = {
+export interface CreateExpenseInput {
   description: string;
   amount: number;
   accountId: string; // Akun beban/aset yang dipilih user
   date?: Date;
   reference?: string; // No Resi/Nota
-};
+}
 
 // ==================== Get Accounts for Expense Dropdown ====================
 /**
@@ -61,7 +61,7 @@ export async function getExpenseCategories() {
 /**
  * Mencatat Pengeluaran Baru.
  * 
- * Fungsi ini otomatis membuat Jurnal Umum:
+ * Fungsi ini otomatis membuat Jurnal Akuntansi:
  * - Debit: Akun biaya/aset yang dipilih user.
  * - Kredit: Akun KAS (Kode 101).
  * 
@@ -128,7 +128,7 @@ export async function createExpense(data: CreateExpenseInput) {
     });
 
     revalidatePath('/admin/expenses');
-    revalidatePath('/admin/accounting'); // Update jurnal page juga
+    revalidatePath('/admin/finance');
 
     return { success: true };
   } catch (error) {
@@ -140,7 +140,7 @@ export async function createExpense(data: CreateExpenseInput) {
 // ==================== Get Expenses List ====================
 /**
  * Mengambil daftar riwayat pengeluaran.
- * Mengambil data dari Jurnal Umum yang mengkredit akun Kas.
+ * Mengambil data jurnal transaksi yang mengkredit akun Kas.
  * Max 50 transaksi terakhir.
  * 
  * @returns {Object} Daftar transaksi pengeluaran.
