@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { RoleGuard } from "@/components/shared/RoleGuard";
+import { OrderStatus as PrismaOrderStatus, ServiceType } from "@prisma/client";
 import {
   Search,
   Edit,
@@ -22,17 +22,19 @@ import {
   Plus,
   CreditCard,
 } from "lucide-react";
+
+import { RoleGuard } from "@/components/shared/RoleGuard";
 import { Card, CardContent } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Badge } from "@/components/ui/Badge";
-import { 
+import {
   Dialog,
   DialogContent,
   DialogDescription,
   DialogHeader,
   DialogTitle,
-  DialogFooter
+  DialogFooter,
 } from "@/components/ui/Dialog";
 import {
   Select,
@@ -41,21 +43,21 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/Select";
-import { getAdminOrders, finishOrder, closeOrder, confirmOrder } from "@/lib/actions/orders";
-import { getMechanics } from "@/lib/actions/employees";
-import { OrderStatus as PrismaOrderStatus, ServiceType } from "@prisma/client";
 import { OrderDialog } from "@/components/dialogs/OrderDialog";
 import { DeleteConfirmDialog } from "@/components/dialogs/DeleteConfirmDialog";
 import { ProcessOrderDialog } from "@/components/dialogs/ProcessOrderDialog";
-import { PaymentDialog } from "@/components/dialogs/PaymentDialog"; 
+import { PaymentDialog } from "@/components/dialogs/PaymentDialog";
 import { Toaster } from "@/components/ui/Toaster";
-import { toast } from "@/hooks/useToast";
 import { ExportButton } from "@/components/export/ExportButton";
+
+import { getAdminOrders, finishOrder, closeOrder, confirmOrder, getOrderDetail } from "@/lib/actions/orders";
+import { getMechanics } from "@/lib/actions/employees";
+import { toast } from "@/hooks/useToast";
 import { exportInvoice } from "@/lib/export/reports/invoiceExport";
-import { getOrderDetail } from "@/lib/actions/orders";
+
 import type { InvoiceExport } from "@/lib/export/types";
 
-type Order = {
+interface Order {
   id: string;
   custName: string;
   custPhone: string;
@@ -78,13 +80,13 @@ type Order = {
   payments: any[];
   paymentStatus: string;
   queueNumber?: string;
-};
+}
 
-type Mechanic = {
+interface Mechanic {
   id: string;
   name: string;
   role: string;
-};
+}
 
 export default function Page() {
   const router = useRouter();
@@ -191,15 +193,15 @@ export default function Page() {
   }
 
   // Reset Filters
-  const handleResetFilters = () => {
+  function handleResetFilters() {
     setSearchQuery("");
     setFilterStatus("ALL");
     setFilterMechanic("ALL");
     setCurrentPage(1);
-  };
+  }
 
   // Helper formatting dates in Indonesian
-  const formatIndonesianDate = (dateString?: string | Date | null) => {
+  function formatIndonesianDate(dateString?: string | Date | null) {
     if (!dateString) return { dateStr: "-", timeStr: "-" };
     const date = new Date(dateString);
     if (isNaN(date.getTime())) return { dateStr: "-", timeStr: "-" };
@@ -219,10 +221,10 @@ export default function Page() {
       dateStr: `${day} ${month} ${year}`,
       timeStr: `${hours}:${minutes}`
     };
-  };
+  }
 
   // Get service names string from order items
-  const getServiceTypeLabel = (order: Order) => {
+  function getServiceTypeLabel(order: Order) {
     const services = order.items
       ?.filter((i: any) => i.type === "service")
       .map((i: any) => i.name);
@@ -232,9 +234,9 @@ export default function Page() {
     }
     
     return order.serviceType === "LIGHT_SERVICE" ? "Servis Ringan" : "Modifikasi";
-  };
+  }
 
-  // Metrik Cards Calculation
+  // Metrics Cards Calculation
   const totalCount = orders.length;
   
   const waitingCount = orders.filter((o) => 
@@ -279,7 +281,7 @@ export default function Page() {
   const indexOfFirstItem = indexOfLastItem - itemsPerPage;
   const currentItems = filteredOrders.slice(indexOfFirstItem, indexOfLastItem);
 
-  const getStatusBadge = (order: Order) => {
+  function getStatusBadge(order: Order) {
     switch (order.status) {
       case "PENDING":
         return (
@@ -313,14 +315,13 @@ export default function Page() {
               Siap Diambil
             </Badge>
           );
-        } else {
-          return (
-            <Badge className="bg-teal-100 hover:bg-teal-200 text-teal-800 border-teal-300 dark:bg-teal-950/20 dark:text-teal-400 dark:border-emerald-800/50 flex items-center w-fit gap-1 font-semibold px-2.5 py-0.5 rounded-full text-xs">
-              <Clock className="h-3 w-3" />
-              Menunggu Pembayaran
-            </Badge>
-          );
         }
+        return (
+          <Badge className="bg-teal-100 hover:bg-teal-200 text-teal-800 border-teal-300 dark:bg-teal-950/20 dark:text-teal-400 dark:border-emerald-800/50 flex items-center w-fit gap-1 font-semibold px-2.5 py-0.5 rounded-full text-xs">
+            <Clock className="h-3 w-3" />
+            Menunggu Pembayaran
+          </Badge>
+        );
       case "CANCELLED":
         return (
           <Badge className="bg-rose-100 hover:bg-rose-200 text-rose-800 border-rose-300 dark:bg-rose-950/20 dark:text-rose-400 dark:border-rose-800/50 flex items-center w-fit gap-1 font-semibold px-2.5 py-0.5 rounded-full text-xs">
@@ -334,7 +335,7 @@ export default function Page() {
           </Badge>
         );
     }
-  };
+  }
 
   return (
     <RoleGuard allowedRoles={["ADMIN"]}>
@@ -716,7 +717,6 @@ export default function Page() {
                                         })),
                                         subtotal: fullOrder.totalPrice,
                                         tax: 0,
-                                        discount: 0,
                                         total: fullOrder.totalPrice,
                                         notes: `Kendaraan: ${fullOrder.vehicle} (${fullOrder.plateNumber || '-'})`
                                       };

@@ -122,7 +122,7 @@ async function main() {
     update: {},
     create: {
       key: 'max_booking_per_hour',
-      value: '3', // Max 3 motor per jam
+      value: '3', // Max 3 motorcycles per hour
     },
   });
 
@@ -131,7 +131,7 @@ async function main() {
     update: {},
     create: {
       key: 'whatsapp_api_key',
-      value: '', // Kosongkan, diisi manual
+      value: '', // Leave empty, fill manually
     },
   });
 
@@ -143,7 +143,7 @@ async function main() {
       value: JSON.stringify({
         open: '08:00',
         close: '17:00',
-        daysOff: [0], // 0 = Minggu
+        daysOff: [0], // 0 = Sunday
       }),
     },
   });
@@ -269,7 +269,7 @@ async function seedERDTables() {
         no_order: 'ORD-ERD-001',
         tanggal_order: new Date(),
         status_order: 'Proses',
-        estimasi_selesai: new Date(Date.now() + 2 * 60 * 60 * 1000), // 2 jam dari sekarang
+        estimasi_selesai: new Date(Date.now() + 2 * 60 * 60 * 1000), // 2 hours from now
         catatan: 'Minta cek kampas rem belakang sekalian',
       },
     });
@@ -332,8 +332,7 @@ async function seedERDTables() {
       data: {
         id_order: order.id_order,
         tanggal_transaksi: new Date(),
-        total_tagihan: 125000, // 75000 jasa + 50000 oli
-        diskon: 0,
+        total_tagihan: 125000, // 75000 service + 50000 oil
         total_bayar: 125000,
         metode_bayar: 'Tunai',
         jumlah_bayar: 150000,
@@ -408,7 +407,7 @@ async function seedERDTables() {
       data: [
         {
           id_order: order.id_order,
-          tanggal: new Date(Date.now() - 30 * 60 * 1000), // 30 menit lalu
+          tanggal: new Date(Date.now() - 30 * 60 * 1000), // 30 minutes ago
           status_order: 'Menunggu Servis',
           keterangan: 'Booking dikonfirmasi menjadi antrian order',
         },
@@ -430,9 +429,9 @@ async function seedERDTables() {
     stokMasuk = await prisma.sTOK_MASUK.create({
       data: {
         id_barang: inventoryOli.id_barang,
-        tanggal: new Date(Date.now() - 24 * 60 * 60 * 1000), // 1 hari lalu
+        tanggal: new Date(Date.now() - 24 * 60 * 60 * 1000), // 1 day ago
         supplier: 'Castrol Indonesia Distributor',
-        jumlah: 21, // 20 sisa + 1 yang dipakai
+        jumlah: 21, // 20 remaining + 1 used
         harga_beli: 35000,
         total: 21 * 35000,
         keterangan: 'Stock masuk awal untuk testing ERD',

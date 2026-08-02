@@ -1,4 +1,4 @@
-// lib/export/reports/invoice-export.ts
+// lib/export/reports/invoiceExport.ts
 import { PDFGenerator, formatCurrency, formatDate } from "../pdfGenerator";
 import { ExcelGenerator, formatExcelCurrency, formatExcelDate } from "../excelGenerator";
 import type { InvoiceExport, ExportFormat, PageOrientation } from "../types";
@@ -10,9 +10,8 @@ export async function exportInvoice(
 ) {
   if (format === "pdf") {
     return exportInvoiceToPDF(invoice, orientation);
-  } else {
-    return exportInvoiceToExcel(invoice);
   }
+  return exportInvoiceToExcel(invoice);
 }
 
 function exportInvoiceToPDF(invoice: InvoiceExport, orientation: PageOrientation): Blob {
@@ -63,16 +62,12 @@ function exportInvoiceToPDF(invoice: InvoiceExport, orientation: PageOrientation
   pdf.addSpacing(5);
   pdf.addText(`Subtotal: ${formatCurrency(invoice.subtotal)}`, { align: "right" });
 
-  if (invoice.discount) {
-    pdf.addText(`Diskon: -${formatCurrency(invoice.discount)}`, { align: "right" });
-  }
-
   if (invoice.tax) {
     pdf.addText(`Pajak: ${formatCurrency(invoice.tax)}`, { align: "right" });
   }
 
   pdf.addSpacing(2);
-  // Gunakan garis native daripada special character
+  // Use native line instead of special character
   pdf.addHorizontalLine(); 
   pdf.addSpacing(2);
   pdf.addText(`TOTAL: ${formatCurrency(invoice.total)}`, { bold: true, align: "right" });
@@ -139,10 +134,6 @@ async function exportInvoiceToExcel(invoice: InvoiceExport): Promise<Blob> {
   // Totals
   excel.addSpacing();
   excel.addRow(["", "", "", "Subtotal:", formatExcelCurrency(invoice.subtotal)]);
-
-  if (invoice.discount) {
-    excel.addRow(["", "", "", "Diskon:", `-${formatExcelCurrency(invoice.discount)}`]);
-  }
 
   if (invoice.tax) {
     excel.addRow(["", "", "", "Pajak:", formatExcelCurrency(invoice.tax)]);

@@ -48,20 +48,20 @@ export interface BalanceSheetData {
 }
 
 export interface IncomeStatementData {
-    period: string;
-    revenues: {
-        code: string;
-        name: string;
-        balance: number;
-    }[];
-    totalRevenue: number;
-    expenses: {
-        code: string;
-        name: string;
-        balance: number;
-    }[];
-    totalExpense: number;
-    netIncome: number;
+  period: string;
+  revenues: {
+    code: string;
+    name: string;
+    balance: number;
+  }[];
+  totalRevenue: number;
+  expenses: {
+    code: string;
+    name: string;
+    balance: number;
+  }[];
+  totalExpense: number;
+  netIncome: number;
 }
 
 // Payroll Types
@@ -140,7 +140,6 @@ export interface InvoiceExport {
   items: InvoiceLineItem[];
   subtotal: number;
   tax?: number;
-  discount?: number;
   total: number;
   paymentStatus?: string;
   notes?: string;

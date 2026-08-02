@@ -22,18 +22,19 @@ import {
   Wallet,
   Download,
 } from "lucide-react";
+
 import { RoleGuard } from "@/components/shared/RoleGuard";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Badge } from "@/components/ui/Badge";
-import { 
+import {
   Dialog,
   DialogContent,
   DialogDescription,
   DialogHeader,
   DialogTitle,
-  DialogFooter
+  DialogFooter,
 } from "@/components/ui/Dialog";
 import {
   Select,
@@ -43,14 +44,16 @@ import {
   SelectValue,
 } from "@/components/ui/Select";
 import { Label } from "@/components/ui/Label";
-import { PaymentDialog } from "@/components/dialogs/PaymentDialog"; 
+import { PaymentDialog } from "@/components/dialogs/PaymentDialog";
 import { Toaster } from "@/components/ui/Toaster";
-import { toast } from "@/hooks/useToast";
 import { ExportButton } from "@/components/export/ExportButton";
+
 import { getAdminOrders, getOrderDetail } from "@/lib/actions/orders";
 import { getPaymentHistory, createPayment } from "@/lib/actions/payments";
 import { getBankAccounts } from "@/lib/actions/bank";
+import { toast } from "@/hooks/useToast";
 import { exportInvoice } from "@/lib/export/reports/invoiceExport";
+
 import type { InvoiceExport } from "@/lib/export/types";
 
 interface Order {
@@ -758,10 +761,6 @@ export default function Page() {
                           <span className="text-muted-foreground font-semibold">Subtotal</span>
                           <span className="font-semibold text-foreground">Rp {Number(selectedOrder.totalPrice).toLocaleString("id-ID")}</span>
                         </div>
-                        <div className="flex justify-between">
-                          <span className="text-muted-foreground font-semibold">Diskon</span>
-                          <span className="font-semibold text-foreground">Rp 0</span>
-                        </div>
                         <div className="flex justify-between text-sm font-extrabold pt-1">
                           <span className="text-foreground">Total</span>
                           <span className="text-primary">Rp {Number(selectedOrder.totalPrice).toLocaleString("id-ID")}</span>
@@ -873,7 +872,6 @@ export default function Page() {
                               })),
                               subtotal: fullOrder.totalPrice,
                               tax: 0,
-                              discount: 0,
                               total: fullOrder.totalPrice,
                               notes: `Kendaraan: ${fullOrder.vehicle} (${fullOrder.plateNumber || "-"})`
                             };
@@ -910,7 +908,6 @@ export default function Page() {
                               })),
                               subtotal: fullOrder.totalPrice,
                               tax: 0,
-                              discount: 0,
                               total: fullOrder.totalPrice,
                               notes: `Kendaraan: ${fullOrder.vehicle} (${fullOrder.plateNumber || "-"})`
                             };

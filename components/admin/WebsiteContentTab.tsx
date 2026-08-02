@@ -252,7 +252,7 @@ export function WebsiteContentTab() {
       }
     } else {
       setPromos([
-        { title: "PROMO MERDEKA", desc: "Diskon Jasa Servis 17%", isActive: true }
+        { title: "PROMO MERDEKA", desc: "Promo Jasa Servis Spesial", isActive: true }
       ]);
     }
 

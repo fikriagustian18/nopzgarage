@@ -453,7 +453,6 @@ model TRANSAKSI {
   id_order           String               @unique
   tanggal_transaksi  DateTime             @default(now())
   total_tagihan      Decimal              @db.Decimal(12, 2)
-  diskon             Decimal              @default(0) @db.Decimal(12, 2)
   total_bayar        Decimal              @db.Decimal(12, 2)
   metode_bayar       String               // Tunai/Transfer/QRIS/Kartu
   jumlah_bayar       Decimal              @db.Decimal(12, 2)
