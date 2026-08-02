@@ -1,4 +1,3 @@
-// components/AdminHeader.tsx
 "use client";
 
 import { useSession, signOut } from "next-auth/react";
@@ -64,9 +63,6 @@ export function AdminHeader() {
     if (pathname.startsWith("/admin/expenses")) {
       return "Pengeluaran";
     }
-    if (pathname.startsWith("/admin/income")) {
-      return "Pemasukan Lain";
-    }
     if (pathname.startsWith("/admin/reports")) {
       return "Laporan Keuangan";
     }
@@ -78,6 +74,12 @@ export function AdminHeader() {
     }
     if (pathname.startsWith("/admin/media")) {
       return "Media Gallery";
+    }
+    if (pathname.startsWith("/query")) {
+      return "Database Console";
+    }
+    if (pathname.startsWith("/admin/users")) {
+      return "Pengguna";
     }
     if (pathname.startsWith("/admin/settings")) {
       return "Pengaturan";
@@ -117,18 +119,25 @@ export function AdminHeader() {
         <div className="flex items-center gap-4">
           <ThemeToggle />
           <NotificationPanel />
-          
+
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="flex items-center gap-2 px-2 py-1.5 h-auto rounded-full hover:bg-accent hover:text-accent-foreground select-none cursor-pointer">
+              <Button
+                variant="ghost"
+                className="flex items-center gap-2 px-2 py-1.5 h-auto rounded-full hover:bg-accent hover:text-accent-foreground select-none cursor-pointer"
+              >
                 <Avatar className="h-8 w-8 border">
                   <AvatarFallback className="bg-primary/10 text-primary font-bold text-xs">
                     {getInitials(session?.user?.employeeName || session?.user?.email || "AD")}
                   </AvatarFallback>
                 </Avatar>
                 <div className="hidden md:flex flex-col text-left">
-                  <span className="text-xs font-semibold leading-none text-foreground">{session?.user?.employeeName || "Admin Bengkel"}</span>
-                  <span className="text-[10px] leading-none text-muted-foreground mt-1">{getRoleLabel(session?.user?.role)}</span>
+                  <span className="text-xs font-semibold leading-none text-foreground">
+                    {session?.user?.employeeName || "Admin Bengkel"}
+                  </span>
+                  <span className="text-[10px] leading-none text-muted-foreground mt-1">
+                    {getRoleLabel(session?.user?.role)}
+                  </span>
                 </div>
                 <ChevronDown className="h-3.5 w-3.5 text-muted-foreground hidden md:block" />
               </Button>
@@ -140,24 +149,35 @@ export function AdminHeader() {
             >
               <DropdownMenuLabel className="font-normal">
                 <div className="flex flex-col space-y-1">
-                  <p className="text-sm font-medium leading-none">{session?.user?.employeeName || "Administrator"}</p>
+                  <p className="text-sm font-medium leading-none">
+                    {session?.user?.employeeName || "Administrator"}
+                  </p>
                   <p className="text-xs leading-none text-muted-foreground">
                     {session?.user?.email}
                   </p>
                 </div>
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => router.push('/admin/profile')} className="cursor-pointer">
+              <DropdownMenuItem
+                onClick={() => router.push("/admin/profile")}
+                className="cursor-pointer"
+              >
                 <User className="mr-2 h-4 w-4" />
                 <span>Profil Saya</span>
               </DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => window.open('/', '_blank')} className="cursor-pointer">
+              <DropdownMenuItem
+                onClick={() => window.open("/", "_blank")}
+                className="cursor-pointer"
+              >
                 <Globe className="mr-2 h-4 w-4" />
                 <span>Lihat Landing Page</span>
               </DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={handleLogout} className="text-red-600 focus:text-red-600 focus:bg-red-50 cursor-pointer">
+              <DropdownMenuItem
+                onClick={handleLogout}
+                className="text-red-600 focus:text-red-600 focus:bg-red-50 cursor-pointer"
+              >
                 <LogOut className="mr-2 h-4 w-4" />
                 <span>Log out</span>
               </DropdownMenuItem>

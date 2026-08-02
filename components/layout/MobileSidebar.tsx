@@ -14,7 +14,6 @@ import {
   Package,
   Menu,
   Wallet,
-  TrendingUp,
   Globe,
   User,
   Database,
@@ -88,11 +87,6 @@ export function MobileSidebar() {
       icon: Wallet,
     },
     {
-      href: "/admin/income",
-      label: "Pemasukan Lain",
-      icon: TrendingUp,
-    },
-    {
       href: "/admin/transactions",
       label: "Transaksi & Pembayaran",
       icon: CreditCard,
@@ -150,13 +144,13 @@ export function MobileSidebar() {
         "/admin/inventory",
         "/admin/transactions",
         "/admin/payroll",
-        "/admin/profile"
+        "/admin/profile",
       ].includes(item.href);
     }
     if (userRole === "OWNER") {
       return ![
         "/admin/orders",
-        "/admin/pelayanan"
+        "/admin/pelayanan",
       ].includes(item.href);
     }
     return false;
@@ -188,14 +182,20 @@ export function MobileSidebar() {
       <SheetContent side="left" className="p-0 w-72 bg-sidebar border-r border-sidebar-border text-sidebar-foreground">
         <SheetTitle className="sr-only">Mobile Navigation</SheetTitle>
         <div className="flex flex-col h-full p-6">
-          <div className="flex flex-col items-start gap-1 mb-8 group cursor-pointer" onClick={() => { router.push("/"); setOpen(false); }}>
+          <div
+            className="flex flex-col items-start gap-1 mb-8 group cursor-pointer"
+            onClick={() => {
+              router.push("/");
+              setOpen(false);
+            }}
+          >
             <div className="relative p-1">
-              <Image 
-                src="/logo.svg" 
-                alt="NopzGarage" 
-                width={150} 
-                height={35} 
-                style={{ height: 'auto' }}
+              <Image
+                src="/logo.svg"
+                alt="NopzGarage"
+                width={150}
+                height={35}
+                style={{ height: "auto" }}
                 className="relative z-10"
                 priority
               />
@@ -223,7 +223,7 @@ export function MobileSidebar() {
                 >
                   <Icon className={`h-5 w-5 ${active ? "text-white" : "text-muted-foreground group-hover:text-primary transition-colors"}`} />
                   <span className="font-medium">
-                     {item.href === "/admin/payroll" && userRole === "ADMIN" ? "Slip Gaji" : item.label}
+                    {item.href === "/admin/payroll" && userRole === "ADMIN" ? "Slip Gaji" : item.label}
                   </span>
                 </Link>
               );
@@ -231,7 +231,7 @@ export function MobileSidebar() {
           </nav>
 
           <div className="pt-6 mt-auto border-t border-sidebar-border space-y-3">
-             {session && (
+            {session && (
               <div className="px-2 py-2 mb-2 flex items-center gap-3 rounded-lg bg-sidebar-accent/50">
                 <div className="h-8 w-8 rounded-full bg-primary/20 flex items-center justify-center">
                   <User className="h-4 w-4 text-primary" />

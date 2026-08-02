@@ -1,4 +1,3 @@
-// components/AdminSidebar.tsx
 "use client";
 
 import Link from "next/link";
@@ -13,7 +12,6 @@ import {
   LogOut,
   Package,
   Wallet,
-  TrendingUp,
   Globe,
   User,
   Book,
@@ -80,11 +78,6 @@ export function AdminSidebar() {
       icon: Wallet,
     },
     {
-      href: "/admin/income",
-      label: "Pemasukan Lain",
-      icon: TrendingUp,
-    },
-    {
       href: "/admin/transactions",
       label: "Transaksi & Pembayaran",
       icon: CreditCard,
@@ -142,14 +135,13 @@ export function AdminSidebar() {
         "/admin/inventory",
         "/admin/transactions",
         "/admin/payroll",
-        "/admin/profile"
+        "/admin/profile",
       ].includes(item.href);
     }
     if (userRole === "OWNER") {
-      // Owner doesn't manage direct operations but views statistics, staff, finance, reports, content, settings
       return ![
         "/admin/orders",
-        "/admin/pelayanan"
+        "/admin/pelayanan",
       ].includes(item.href);
     }
     return false;
@@ -169,14 +161,17 @@ export function AdminSidebar() {
   return (
     <aside className="hidden md:flex fixed left-0 top-0 h-full w-64 flex-col bg-sidebar border-r border-sidebar-border text-sidebar-foreground z-50">
       <div className="p-6">
-        <div className="flex flex-col items-start gap-1 mb-6 group cursor-pointer" onClick={() => router.push("/")}>
+        <div
+          className="flex flex-col items-start gap-1 mb-6 group cursor-pointer"
+          onClick={() => router.push("/")}
+        >
           <div className="relative p-1">
-            <Image 
-              src="/logo.svg" 
-              alt="NopzGarage" 
-              width={150} 
-              height={35} 
-              style={{ height: 'auto' }}
+            <Image
+              src="/logo.svg"
+              alt="NopzGarage"
+              width={150}
+              height={35}
+              style={{ height: "auto" }}
               className="relative z-10 transition-transform group-hover:scale-105"
               priority
             />
