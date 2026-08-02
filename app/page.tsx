@@ -43,12 +43,6 @@ import {
 
 export const dynamic = "force-dynamic";
 
-export interface LandingTestimonial {
-  name: string;
-  quote: string;
-  vehicle: string;
-  rating?: number;
-}
 
 export interface LandingPromo {
   title: string;
@@ -99,15 +93,6 @@ export default async function Page() {
     : DEFAULT_SERVICE_ITEMS;
 
   const footerConfig = (content["footer"] as { content?: LandingFooterConfig })?.content || {};
-  const testimonialsConfig = (content["testimonials"] as { content?: { items?: LandingTestimonial[] } })?.content || {};
-  
-  const testimonialItems: LandingTestimonial[] = Array.isArray(testimonialsConfig.items) 
-    ? testimonialsConfig.items 
-    : [
-        { name: "Andi Saputra", quote: "Pelayanan luar biasa, motor jadi enak banget.", vehicle: "Yamaha NMAX", rating: 5 },
-        { name: "Siti Aminah", quote: "Fitur trackingnya sangat membantu.", vehicle: "Honda Beat", rating: 5 },
-        { name: "Budi Santoso", quote: "Modifikasi project lane hasilnya rapi banget.", vehicle: "Kawasaki Ninja", rating: 5 }
-      ];
 
   const promosContent = content["promos"] as { content?: { items?: LandingPromo[] } } | undefined;
   const promos: LandingPromo[] = promosContent?.content?.items || [];
@@ -599,60 +584,6 @@ export default async function Page() {
               items={socialEmbeds} 
               columns={3} 
             />
-          </div>
-        </section>
-      )}
-
-      {(content["testimonials"] as { isVisible?: boolean })?.isVisible !== false && (
-        <section className="py-24 md:py-32 bg-gradient-to-b from-muted/30 to-background border-t-2 border-border/50">
-          <div className="container mx-auto px-4 lg:px-6">
-            <div className="text-center mb-20 space-y-6">
-              <div className="inline-flex items-center gap-2 px-4 py-2 bg-primary/10 border border-primary/20 rounded-full text-primary text-xs font-bold uppercase tracking-widest">
-                <Star className="h-4 w-4 fill-primary" />
-                Testimonial
-              </div>
-              <h2 className="text-4xl md:text-5xl lg:text-6xl font-black text-foreground tracking-tight">
-                {(content["testimonials"] as { title?: string })?.title || "Apa Kata Mereka?"}
-              </h2>
-              <p className="text-muted-foreground text-lg md:text-xl font-medium max-w-2xl mx-auto">
-                {(content["testimonials"] as { subtitle?: string })?.subtitle || "Testimoni jujur dari pelanggan setia NopzGarage"}
-              </p>
-            </div>
-
-            <div className={`grid md:grid-cols-${Math.min(testimonialItems.length, 2)} lg:grid-cols-${Math.min(testimonialItems.length, 3)} gap-6 lg:gap-8 max-w-7xl mx-auto`}>
-              {testimonialItems.map((item, idx) => (
-                <div 
-                  key={idx} 
-                  className="group bg-card border-2 border-border hover:border-primary/40 p-8 lg:p-10 rounded-3xl hover:shadow-2xl hover:shadow-primary/10 transition-all duration-500 hover:-translate-y-1 flex flex-col h-full"
-                >
-                  <div className="flex gap-1 mb-6">
-                    {[1, 2, 3, 4, 5].map((star) => (
-                      <Star 
-                        key={star} 
-                        className={`h-5 w-5 transition-all duration-300 ${
-                          star <= (item.rating || 5) 
-                            ? "fill-yellow-400 text-yellow-400 scale-100" 
-                            : "text-muted scale-90"
-                        }`} 
-                      />
-                    ))}
-                  </div>
-
-                  <blockquote className="italic text-muted-foreground text-base lg:text-lg mb-8 flex-1 leading-relaxed font-medium">
-                    &quot;{item.quote}&quot;
-                  </blockquote>
-
-                  <div className="pt-6 border-t-2 border-dashed border-border/50">
-                    <div className="font-black text-lg text-foreground group-hover:text-primary transition-colors duration-300">
-                      {item.name}
-                    </div>
-                    <div className="text-sm text-muted-foreground font-semibold mt-1">
-                      {item.vehicle}
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
           </div>
         </section>
       )}

@@ -67,11 +67,9 @@ export interface LandingPageContent {
   hero: HeroSection;
   promos: unknown[];
   services: unknown;
-  testimonials: unknown[];
   cta: CtaSection;
   footer: FooterSection;
-  /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 export interface UpdateSettingResult {
@@ -206,26 +204,7 @@ export async function getAllSettings(): Promise<SettingsResult> {
     },
     promos: [],
     services: DEFAULT_SERVICES,
-    testimonials: [
-      { 
-        name: "Budi Santoso", 
-        role: "Pemilik Yamaha R15", 
-        comment: "Servis cepat, harga transparan, hasil memuaskan! Motor jadi lebih responsif dan irit. Recommended!", 
-        rating: 5 
-      },
-      { 
-        name: "Dian Pratama", 
-        role: "Pemilik Honda CBR", 
-        comment: "Project custom body motor saya dikerjakan dengan sangat detail dan presisi. Hasilnya beyond expectation!", 
-        rating: 5 
-      },
-      { 
-        name: "Rizky Aditya", 
-        role: "Pemilik Kawasaki Ninja", 
-        comment: "Booking online memudahkan, bisa track progress real-time. Teknisinya ramah dan profesional. Top!", 
-        rating: 5 
-      }
-    ],
+
     cta: {
       title: "Siap Upgrade Motor Anda?",
       subtitle: "Booking sekarang dan dapatkan konsultasi gratis untuk servis pertama!"

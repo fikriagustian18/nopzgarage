@@ -14,7 +14,6 @@ import {
   Heart, 
   Target, 
   ThumbsUp,
-  MessageSquare, 
   Megaphone, 
   Link2, 
   Save, 
@@ -109,13 +108,6 @@ export interface StatsConfigState {
   support: string;
 }
 
-export interface TestimonialItemState {
-  name: string;
-  quote: string;
-  vehicle: string;
-  rating: number;
-}
-
 export interface PromoItemState {
   title: string;
   desc: string;
@@ -180,7 +172,6 @@ export function WebsiteContentTab() {
     support: "24 Jam"
   });
 
-  const [testimonials, setTestimonials] = useState<TestimonialItemState[]>([]);
   const [promos, setPromos] = useState<PromoItemState[]>([]);
   const [footer, setFooter] = useState<FooterConfigState>({ 
     instagram: "", 
@@ -250,19 +241,6 @@ export function WebsiteContentTab() {
         { title: "Garansi Resmi", desc: "Setiap pengerjaan dilindungi garansi resmi. Kepuasan terjamin." },
         { title: "Teknisi Bersertifikat", desc: "Tim mekanik profesional dengan pengalaman 15+ tahun." },
         { title: "Spare Parts Original", desc: "Hanya menggunakan parts original dari distributor resmi." }
-      ]);
-    }
-
-    const testiData = await getContent("testimonials");
-    if (testiData.success && testiData.data) {
-      const contentObj = (testiData.data.content as { items?: TestimonialItemState[] }) || {};
-      if (contentObj.items) {
-        setTestimonials(contentObj.items);
-      }
-    } else {
-      setTestimonials([
-        { name: "Andi Saputra", quote: "Pelayanan luar biasa, motor jadi enak banget.", vehicle: "Yamaha NMAX", rating: 5 },
-        { name: "Siti Aminah", quote: "Fitur trackingnya sangat membantu.", vehicle: "Honda Beat", rating: 5 }
       ]);
     }
 
@@ -372,20 +350,6 @@ export function WebsiteContentTab() {
     }
   }
 
-  async function handleSaveTestimonials() {
-    const res = await updateContent("testimonials", {
-      title: "Apa Kata Mereka?",
-      subtitle: "Testimoni Pelanggan",
-      content: { items: testimonials },
-      isVisible: true
-    });
-    if (res.success) {
-      toast.success("Testimoni berhasil disimpan");
-    } else {
-      toast.error("Gagal update testimoni");
-    }
-  }
-
   async function handleSavePromos() {
     const res = await updateContent("promos", {
       title: "Promo Banner",
@@ -488,30 +452,6 @@ export function WebsiteContentTab() {
     setFeatureItems(nextItems);
   }
 
-  function handleAddTestimonial() {
-    setTestimonials([
-      ...testimonials, 
-      { 
-        name: "Nama", 
-        quote: "Komentar...", 
-        vehicle: "Kendaraan", 
-        rating: 5 
-      }
-    ]);
-  }
-
-  function handleRemoveTestimonial(index: number) {
-    const nextItems = [...testimonials];
-    nextItems.splice(index, 1);
-    setTestimonials(nextItems);
-  }
-
-  function handleUpdateTestimonial(index: number, field: string, value: unknown) {
-    const nextItems = [...testimonials];
-    nextItems[index] = { ...nextItems[index], [field]: value };
-    setTestimonials(nextItems);
-  }
-
   function handleAddPromo() {
     setPromos([
       ...promos, 
@@ -568,9 +508,6 @@ export function WebsiteContentTab() {
             </TabsTrigger>
             <TabsTrigger value="features" className="gap-2">
               <ThumbsUp className="h-4 w-4" /> Keunggulan
-            </TabsTrigger>
-            <TabsTrigger value="testimoni" className="gap-2">
-              <MessageSquare className="h-4 w-4" /> Testimoni
             </TabsTrigger>
             <TabsTrigger value="promo" className="gap-2">
               <Megaphone className="h-4 w-4" /> Promo
@@ -1048,76 +985,6 @@ export function WebsiteContentTab() {
                 className="gap-2 bg-primary text-primary-foreground"
               >
                 <Save className="h-4 w-4" /> Simpan Tema
-              </Button>
-            </div>
-          </TabsContent>
-
-          <TabsContent value="testimoni" className="space-y-6 animate-in fade-in-50">
-            <div className="flex justify-between items-center bg-muted/30 p-4 rounded-lg border">
-              <div>
-                <h4 className="font-medium">Daftar Testimoni</h4>
-                <p className="text-sm text-muted-foreground">Apa kata pelanggan tentang bengkel Anda.</p>
-              </div>
-              <Button
-                size="sm"
-                onClick={handleAddTestimonial}
-                className="gap-2"
-              >
-                <Plus className="h-4 w-4" /> Tambah
-              </Button>
-            </div>
-            
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {testimonials.map((item, i) => (
-                <Card key={i} className="relative group">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="absolute top-2 right-2 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity text-destructive"
-                    onClick={() => handleRemoveTestimonial(i)}
-                  >
-                    <Trash2 className="h-3 w-3" />
-                  </Button>
-                  <CardContent className="p-4 space-y-3">
-                    <div className="flex items-center gap-2 mb-2">
-                      {[1, 2, 3, 4, 5].map((star) => (
-                        <Star 
-                          key={star} 
-                          className={`h-3 w-3 ${star <= (item.rating || 5) ? "fill-yellow-400 text-yellow-400" : "text-slate-200"}`} 
-                          onClick={() => handleUpdateTestimonial(i, 'rating', star)} 
-                        />
-                      ))}
-                    </div>
-                    <Textarea 
-                      value={item.quote} 
-                      onChange={(e) => handleUpdateTestimonial(i, 'quote', e.target.value)} 
-                      className="text-xs resize-none" 
-                      placeholder="Komentar..."
-                    />
-                    <div className="grid grid-cols-2 gap-2">
-                      <Input 
-                        value={item.name} 
-                        onChange={(e) => handleUpdateTestimonial(i, 'name', e.target.value)} 
-                        className="h-7 text-xs" 
-                        placeholder="Nama"
-                      />
-                      <Input 
-                        value={item.vehicle} 
-                        onChange={(e) => handleUpdateTestimonial(i, 'vehicle', e.target.value)} 
-                        className="h-7 text-xs" 
-                        placeholder="Motor"
-                      />
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-            <div className="flex justify-end pt-4 border-t">
-              <Button 
-                onClick={handleSaveTestimonials} 
-                className="gap-2 bg-primary text-primary-foreground"
-              >
-                <Save className="h-4 w-4" /> Simpan Testimoni
               </Button>
             </div>
           </TabsContent>
