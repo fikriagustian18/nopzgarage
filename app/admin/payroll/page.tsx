@@ -829,7 +829,7 @@ export default function Page() {
               <DialogHeader>
                 <DialogTitle>Approval & Pencairan Gaji</DialogTitle>
                 <DialogDescription>
-                  Membuat jurnal transaksi pembayaran gaji. Transaksi akan langsung tercatat sebagai pengeluaran kas.
+                  Proses persetujuan dan pencairan pembayaran gaji karyawan.
                 </DialogDescription>
               </DialogHeader>
               <div className="grid gap-4 py-4">
@@ -940,10 +940,10 @@ export default function Page() {
                 >
                   {paying ? (
                     <>
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" /> Menjurnal...
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" /> Memproses...
                     </>
                   ) : (
-                    "Approve & Jurnal Kas Keluar"
+                    "Approve"
                   )}
                 </Button>
               </DialogFooter>
