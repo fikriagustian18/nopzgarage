@@ -4,7 +4,8 @@
 import { useState, useEffect } from "react";
 import { getUsers, createUser, updateUser, resetUserPassword, deleteUser } from "@/lib/actions/auth";
 import { getEmployees } from "@/lib/actions/employees";
-import { Card, CardContent } from "@/components/ui/Card";
+import type { SalaryType } from "@prisma/client";
+import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Label } from "@/components/ui/Label";
@@ -37,12 +38,12 @@ import {
   Eye, 
   ShieldAlert, 
   CheckCircle2, 
-  XCircle 
+  XCircle,
 } from "lucide-react";
 import { format } from "date-fns";
 import { id } from "date-fns/locale";
 
-type UserType = {
+interface ManagedUser {
   id: string;
   email: string;
   role: string;
@@ -53,13 +54,16 @@ type UserType = {
     name: string;
     role: string;
     phone?: string | null;
+    salaryType?: SalaryType | string | null;
+    dailyRate?: number | null;
+    commissionRate?: number | null;
   } | null;
   createdAt: string;
   updatedAt: string;
-};
+}
 
 export function UserManagementTab() {
-  const [users, setUsers] = useState<UserType[]>([]);
+  const [users, setUsers] = useState<ManagedUser[]>([]);
   const [employees, setEmployees] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -76,7 +80,7 @@ export function UserManagementTab() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [statusDialogOpen, setStatusDialogOpen] = useState(false);
 
-  const [selectedUser, setSelectedUser] = useState<UserType | null>(null);
+  const [selectedUser, setSelectedUser] = useState<ManagedUser | null>(null);
 
   // Form states
   const [formData, setFormData] = useState({
@@ -86,6 +90,9 @@ export function UserManagementTab() {
     employeeId: "",
     name: "",
     phone: "",
+    salaryType: "COMMISSION" as SalaryType,
+    dailyRate: 0,
+    commissionRate: 0,
     isActive: true,
   });
 
@@ -96,7 +103,7 @@ export function UserManagementTab() {
     loadData();
   }, []);
 
-  const loadData = async () => {
+  async function loadData() {
     setLoading(true);
     const [usersRes, employeesRes] = await Promise.all([
       getUsers(),
@@ -110,15 +117,19 @@ export function UserManagementTab() {
       setEmployees(employeesRes.employees);
     }
     setLoading(false);
-  };
+  }
 
-  const handleCreateUser = async () => {
+  async function handleCreateUser() {
     if (!formData.email || !formData.password) {
       toast.error("Email dan password harus diisi");
       return;
     }
     try {
-      const res = await createUser(formData);
+      const res = await createUser({
+        ...formData,
+        dailyRate: Number(formData.dailyRate) || 0,
+        commissionRate: Number(formData.commissionRate) || 0,
+      });
       if (res.success) {
         toast.success("User berhasil dibuat");
         setCreateDialogOpen(false);
@@ -130,6 +141,9 @@ export function UserManagementTab() {
           employeeId: "",
           name: "",
           phone: "",
+          salaryType: "COMMISSION",
+          dailyRate: 0,
+          commissionRate: 0,
           isActive: true,
         });
         loadData();
@@ -139,10 +153,12 @@ export function UserManagementTab() {
     } catch (e) {
       toast.error("Terjadi kesalahan");
     }
-  };
+  }
 
-  const handleUpdateUser = async () => {
-    if (!selectedUser) return;
+  async function handleUpdateUser() {
+    if (!selectedUser) {
+      return;
+    }
     try {
       const res = await updateUser({
         id: selectedUser.id,
@@ -150,6 +166,9 @@ export function UserManagementTab() {
         role: formData.role,
         name: formData.name,
         phone: formData.phone,
+        salaryType: formData.salaryType,
+        dailyRate: Number(formData.dailyRate) || 0,
+        commissionRate: Number(formData.commissionRate) || 0,
       });
       if (res.success) {
         toast.success("User berhasil diperbarui");
@@ -161,10 +180,12 @@ export function UserManagementTab() {
     } catch (e) {
       toast.error("Terjadi kesalahan");
     }
-  };
+  }
 
-  const handleResetPassword = async () => {
-    if (!selectedUser) return;
+  async function handleResetPassword() {
+    if (!selectedUser) {
+      return;
+    }
     if (newPassword.length < 6) {
       toast.error("Password minimal 6 karakter");
       return;
@@ -184,10 +205,12 @@ export function UserManagementTab() {
     } catch (e) {
       toast.error("Terjadi kesalahan");
     }
-  };
+  }
 
-  const handleDeleteUser = async () => {
-    if (!selectedUser) return;
+  async function handleDeleteUser() {
+    if (!selectedUser) {
+      return;
+    }
     try {
       const res = await deleteUser(selectedUser.id);
       if (res.success) {
@@ -200,10 +223,12 @@ export function UserManagementTab() {
     } catch (e) {
       toast.error("Terjadi kesalahan");
     }
-  };
+  }
 
-  const handleToggleStatus = async () => {
-    if (!selectedUser) return;
+  async function handleToggleStatus() {
+    if (!selectedUser) {
+      return;
+    }
     try {
       const res = await updateUser({
         id: selectedUser.id,
@@ -219,9 +244,9 @@ export function UserManagementTab() {
     } catch (e) {
       toast.error("Terjadi kesalahan");
     }
-  };
+  }
 
-  const openEditDialog = (user: UserType) => {
+  function openEditDialog(user: ManagedUser) {
     setSelectedUser(user);
     setFormData({
       email: user.email,
@@ -230,43 +255,50 @@ export function UserManagementTab() {
       employeeId: user.employeeId || "",
       name: user.employee?.name || "",
       phone: user.employee?.phone || "",
+      salaryType: (user.employee?.salaryType as any) || "COMMISSION",
+      dailyRate: Number(user.employee?.dailyRate) || 0,
+      commissionRate: Number(user.employee?.commissionRate) || 0,
       isActive: user.isActive,
     });
     setEditDialogOpen(true);
-  };
+  }
 
-  const openViewDialog = (user: UserType) => {
+  function openViewDialog(user: ManagedUser) {
     setSelectedUser(user);
     setViewDialogOpen(true);
-  };
+  }
 
-  const openResetPasswordDialog = (user: UserType) => {
+  function openResetPasswordDialog(user: ManagedUser) {
     setSelectedUser(user);
     setNewPassword("");
     setConfirmPassword("");
     setResetPasswordDialogOpen(true);
-  };
+  }
 
-  const openDeleteDialog = (user: UserType) => {
+  function openDeleteDialog(user: ManagedUser) {
     setSelectedUser(user);
     setDeleteDialogOpen(true);
-  };
+  }
 
-  const openStatusToggleDialog = (user: UserType) => {
+  function openStatusToggleDialog(user: ManagedUser) {
     setSelectedUser(user);
     setStatusDialogOpen(true);
-  };
+  }
 
-  const getRoleLabel = (role: string) => {
+  function getRoleLabel(role: string) {
     switch (role) {
-      case "OWNER": return "Owner";
-      case "ADMIN": return "Administrator";
-      case "EMPLOYEE": return "Mekanik";
-      default: return role;
+      case "OWNER":
+        return "Owner";
+      case "ADMIN":
+        return "Administrator";
+      case "EMPLOYEE":
+        return "Mekanik";
+      default:
+        return role;
     }
-  };
+  }
 
-  const getRoleBadgeStyle = (role: string) => {
+  function getRoleBadgeStyle(role: string) {
     switch (role) {
       case "OWNER":
         return "bg-purple-100 text-purple-800 dark:bg-purple-950 dark:text-purple-200 border-purple-200";
@@ -277,13 +309,26 @@ export function UserManagementTab() {
       default:
         return "bg-muted text-muted-foreground";
     }
-  };
+  }
 
-  const handleResetFilters = () => {
+  function handleResetFilters() {
     setSearchQuery("");
     setRoleFilter("ALL");
     setStatusFilter("ALL");
-  };
+  }
+
+  function getSalaryTypeLabel(salaryType?: string | null) {
+    switch (salaryType) {
+      case "MONTHLY":
+        return "Gaji Bulanan";
+      case "DAILY":
+        return "Gaji Harian";
+      case "COMMISSION":
+        return "Komisi";
+      default:
+        return "-";
+    }
+  }
 
   // Filtered logic
   const filteredUsers = users.filter((u) => {
@@ -320,7 +365,7 @@ export function UserManagementTab() {
           </div>
           <h2 className="text-2xl md:text-3xl font-black tracking-tight">Manajemen Pengguna</h2>
           <p className="text-xs md:text-sm text-muted-foreground mt-1">
-            Kelola data pengguna yang dapat mengakses sistem sesuai dengan peran dan hak aksesnya.
+            Kelola data pengguna, peran, skema gaji (Harian, Bulanan, Komisi), dan rate komisi.
           </p>
         </div>
         <Button onClick={() => setCreateDialogOpen(true)} className="gap-2 font-bold h-11 px-5 rounded-xl shadow-lg shadow-primary/10">
@@ -392,6 +437,8 @@ export function UserManagementTab() {
                 <th className="p-4">Nama Lengkap</th>
                 <th className="p-4">Username</th>
                 <th className="p-4">Email</th>
+                <th className="p-4 text-center">Skema Gaji</th>
+                <th className="p-4 text-center">Rate / Fee</th>
                 <th className="p-4 text-center">Peran</th>
                 <th className="p-4 text-center">Status</th>
                 <th className="p-4">Terakhir Aktif</th>
@@ -412,7 +459,12 @@ export function UserManagementTab() {
                         <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center text-primary">
                           <User className="h-4.5 w-4.5" />
                         </div>
-                        <span>{user.employee?.name || getRoleLabel(user.role)}</span>
+                        <div>
+                          <span>{user.employee?.name || getRoleLabel(user.role)}</span>
+                          {user.employee?.phone && (
+                            <p className="text-[10px] text-muted-foreground font-normal">{user.employee.phone}</p>
+                          )}
+                        </div>
                       </div>
                     </td>
 
@@ -421,6 +473,38 @@ export function UserManagementTab() {
 
                     {/* Email */}
                     <td className="p-4 text-muted-foreground font-mono">{user.email}</td>
+
+                    {/* Skema Gaji */}
+                    <td className="p-4 text-center">
+                      {user.employee ? (
+                        <Badge variant="outline" className="px-2 py-0.5 rounded text-[10px] font-medium bg-muted">
+                          {getSalaryTypeLabel(user.employee.salaryType)}
+                        </Badge>
+                      ) : (
+                        <span className="text-muted-foreground">-</span>
+                      )}
+                    </td>
+
+                    {/* Rate / Fee */}
+                    <td className="p-4 text-center font-semibold">
+                      {user.employee ? (
+                        (user.employee.salaryType as string) === "COMMISSION" ? (
+                          <span className="text-primary font-mono font-bold">
+                            {Number(user.employee.commissionRate || 0)}%
+                          </span>
+                        ) : (user.employee.salaryType as string) === "MONTHLY" ? (
+                          <span className="text-indigo-600 dark:text-indigo-400 font-mono">
+                            Rp {Number(user.employee.dailyRate || 0).toLocaleString("id-ID")} <span className="text-[10px] font-normal text-muted-foreground">/ bln</span>
+                          </span>
+                        ) : (
+                          <span className="text-chart-1 font-mono">
+                            Rp {Number(user.employee.dailyRate || 0).toLocaleString("id-ID")} <span className="text-[10px] font-normal text-muted-foreground">/ hr</span>
+                          </span>
+                        )
+                      ) : (
+                        <span className="text-muted-foreground">-</span>
+                      )}
+                    </td>
 
                     {/* Peran */}
                     <td className="p-4 text-center">
@@ -484,7 +568,7 @@ export function UserManagementTab() {
 
               {filteredUsers.length === 0 && (
                 <tr>
-                  <td colSpan={8} className="p-8 text-center text-muted-foreground">
+                  <td colSpan={10} className="p-8 text-center text-muted-foreground">
                     <ShieldAlert className="h-10 w-10 mx-auto mb-2 text-muted-foreground/30" />
                     <span>Tidak ditemukan user yang cocok.</span>
                   </td>
@@ -520,14 +604,14 @@ export function UserManagementTab() {
 
       {/* View User Details Dialog */}
       <Dialog open={viewDialogOpen} onOpenChange={setViewDialogOpen}>
-        <DialogContent className="rounded-2xl">
+        <DialogContent className="rounded-2xl max-w-md max-h-[90vh] flex flex-col p-6">
           <DialogHeader>
             <DialogTitle>Detail Pengguna</DialogTitle>
             <DialogDescription>
-              Rincian informasi akun pengguna
+              Rincian informasi akun pengguna dan skema gaji
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4 py-4 text-xs leading-relaxed">
+          <div className="space-y-4 py-4 text-xs leading-relaxed flex-1 overflow-y-auto pr-1">
             <div className="flex justify-between border-b pb-2">
               <span className="font-semibold text-muted-foreground">Nama Lengkap</span>
               <span className="font-bold text-foreground">{selectedUser?.employee?.name || getRoleLabel(selectedUser?.role || "")}</span>
@@ -541,8 +625,30 @@ export function UserManagementTab() {
               <span className="font-bold text-foreground">{selectedUser?.email}</span>
             </div>
             <div className="flex justify-between border-b pb-2">
+              <span className="font-semibold text-muted-foreground">No. Telepon</span>
+              <span className="font-bold text-foreground">{selectedUser?.employee?.phone || "-"}</span>
+            </div>
+            <div className="flex justify-between border-b pb-2">
               <span className="font-semibold text-muted-foreground">Role / Hak Akses</span>
               <span className="font-bold text-foreground">{getRoleLabel(selectedUser?.role || "")}</span>
+            </div>
+            <div className="flex justify-between border-b pb-2">
+              <span className="font-semibold text-muted-foreground">Skema Gaji</span>
+              <span className="font-bold text-foreground">
+                {selectedUser?.employee ? getSalaryTypeLabel(selectedUser.employee.salaryType) : "-"}
+              </span>
+            </div>
+            <div className="flex justify-between border-b pb-2">
+              <span className="font-semibold text-muted-foreground">Rate Komisi / Nominal Gaji</span>
+              <span className="font-bold text-foreground">
+                {selectedUser?.employee ? (
+                  (selectedUser.employee.salaryType as string) === "COMMISSION"
+                    ? `${Number(selectedUser.employee.commissionRate || 0)}%`
+                    : (selectedUser.employee.salaryType as string) === "MONTHLY"
+                    ? `Rp ${Number(selectedUser.employee.dailyRate || 0).toLocaleString("id-ID")} / bulan`
+                    : `Rp ${Number(selectedUser.employee.dailyRate || 0).toLocaleString("id-ID")} / hari`
+                ) : "-"}
+              </span>
             </div>
             <div className="flex justify-between border-b pb-2">
               <span className="font-semibold text-muted-foreground">Status Akun</span>
@@ -565,14 +671,14 @@ export function UserManagementTab() {
 
       {/* Create User Dialog */}
       <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
-        <DialogContent className="rounded-2xl max-w-md">
+        <DialogContent className="rounded-2xl max-w-md max-h-[90vh] flex flex-col p-6">
           <DialogHeader>
             <DialogTitle>Tambah User Baru</DialogTitle>
             <DialogDescription>
-              Buat akun user baru untuk akses sistem
+              Buat akun user baru untuk akses sistem beserta profil karyawan &amp; skema gajinya
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4 py-4 text-xs">
+          <div className="space-y-4 py-4 text-xs flex-1 overflow-y-auto pr-1">
             <div className="space-y-2">
               <Label htmlFor="email">Email (Username)</Label>
               <Input
@@ -656,6 +762,68 @@ export function UserManagementTab() {
               </>
             )}
 
+            {/* Skema Gaji & Rate */}
+            <div className="space-y-3 pt-3 border-t">
+              <div className="space-y-2">
+                <Label>Skema Gaji</Label>
+                <Select
+                  value={formData.salaryType}
+                  onValueChange={(v) => setFormData({ ...formData, salaryType: v as SalaryType })}
+                >
+                  <SelectTrigger className="h-11 rounded-xl">
+                    <SelectValue placeholder="Pilih Tipe Gaji" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="COMMISSION">Komisi (Persentase/Borongan)</SelectItem>
+                    <SelectItem value="DAILY">Gaji Harian (Fix)</SelectItem>
+                    <SelectItem value="MONTHLY">Gaji Bulanan (Fix)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {formData.salaryType === "COMMISSION" && (
+                <div className="space-y-2">
+                  <Label htmlFor="commissionRate">Rate Komisi (%)</Label>
+                  <Input
+                    id="commissionRate"
+                    type="number"
+                    placeholder="Contoh: 10"
+                    value={formData.commissionRate}
+                    onChange={(e) => setFormData({ ...formData, commissionRate: e.target.value as any })}
+                    className="h-11 rounded-xl"
+                  />
+                </div>
+              )}
+
+              {formData.salaryType === "DAILY" && (
+                <div className="space-y-2">
+                  <Label htmlFor="dailyRate">Rate Gaji Harian (Rp)</Label>
+                  <Input
+                    id="dailyRate"
+                    type="number"
+                    placeholder="Contoh: 150000"
+                    value={formData.dailyRate}
+                    onChange={(e) => setFormData({ ...formData, dailyRate: e.target.value as any })}
+                    className="h-11 rounded-xl"
+                  />
+                </div>
+              )}
+
+              {formData.salaryType === "MONTHLY" && (
+                <div className="space-y-2">
+                  <Label htmlFor="monthlyRate">Rate Gaji Bulanan (Rp)</Label>
+                  <Input
+                    id="monthlyRate"
+                    type="number"
+                    placeholder="Contoh: 3000000"
+                    value={formData.dailyRate}
+                    onChange={(e) => setFormData({ ...formData, dailyRate: e.target.value as any })}
+                    className="h-11 rounded-xl"
+                  />
+                </div>
+              )}
+            </div>
+
             <div className="space-y-2">
               <Label htmlFor="status">Status Awal</Label>
               <Select
@@ -687,14 +855,14 @@ export function UserManagementTab() {
 
       {/* Edit User Dialog */}
       <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
-        <DialogContent className="rounded-2xl max-w-md">
+        <DialogContent className="rounded-2xl max-w-md max-h-[90vh] flex flex-col p-6">
           <DialogHeader>
             <DialogTitle>Edit User</DialogTitle>
             <DialogDescription>
-              Update informasi user
+              Update informasi user &amp; skema gajinya
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4 py-4 text-xs">
+          <div className="space-y-4 py-4 text-xs flex-1 overflow-y-auto pr-1">
             <div className="space-y-2">
               <Label htmlFor="edit-email">Email (Username)</Label>
               <Input
@@ -740,6 +908,68 @@ export function UserManagementTab() {
                   <SelectItem value="EMPLOYEE">Mekanik</SelectItem>
                 </SelectContent>
               </Select>
+            </div>
+
+            {/* Skema Gaji & Rate Edit */}
+            <div className="space-y-3 pt-3 border-t">
+              <div className="space-y-2">
+                <Label>Skema Gaji</Label>
+                <Select
+                  value={formData.salaryType}
+                  onValueChange={(v) => setFormData({ ...formData, salaryType: v as SalaryType })}
+                >
+                  <SelectTrigger className="h-11 rounded-xl">
+                    <SelectValue placeholder="Pilih Tipe Gaji" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="COMMISSION">Komisi (Persentase/Borongan)</SelectItem>
+                    <SelectItem value="DAILY">Gaji Harian (Fix)</SelectItem>
+                    <SelectItem value="MONTHLY">Gaji Bulanan (Fix)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {formData.salaryType === "COMMISSION" && (
+                <div className="space-y-2">
+                  <Label htmlFor="edit-commissionRate">Rate Komisi (%)</Label>
+                  <Input
+                    id="edit-commissionRate"
+                    type="number"
+                    placeholder="Contoh: 10"
+                    value={formData.commissionRate}
+                    onChange={(e) => setFormData({ ...formData, commissionRate: e.target.value as any })}
+                    className="h-11 rounded-xl"
+                  />
+                </div>
+              )}
+
+              {formData.salaryType === "DAILY" && (
+                <div className="space-y-2">
+                  <Label htmlFor="edit-dailyRate">Rate Gaji Harian (Rp)</Label>
+                  <Input
+                    id="edit-dailyRate"
+                    type="number"
+                    placeholder="Contoh: 150000"
+                    value={formData.dailyRate}
+                    onChange={(e) => setFormData({ ...formData, dailyRate: e.target.value as any })}
+                    className="h-11 rounded-xl"
+                  />
+                </div>
+              )}
+
+              {formData.salaryType === "MONTHLY" && (
+                <div className="space-y-2">
+                  <Label htmlFor="edit-monthlyRate">Rate Gaji Bulanan (Rp)</Label>
+                  <Input
+                    id="edit-monthlyRate"
+                    type="number"
+                    placeholder="Contoh: 3000000"
+                    value={formData.dailyRate}
+                    onChange={(e) => setFormData({ ...formData, dailyRate: e.target.value as any })}
+                    className="h-11 rounded-xl"
+                  />
+                </div>
+              )}
             </div>
 
             {/* Quick Link to Reset Password */}

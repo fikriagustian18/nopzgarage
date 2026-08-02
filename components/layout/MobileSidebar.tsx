@@ -67,11 +67,6 @@ export function MobileSidebar() {
       icon: Wrench,
     },
     {
-      href: "/admin/employees",
-      label: "Karyawan",
-      icon: Users,
-    },
-    {
       href: "/admin/payroll",
       label: "Gaji & Payroll",
       icon: CreditCard,

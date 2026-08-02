@@ -1,4 +1,4 @@
-// app/actions/auth.ts - Authentication Server Actions
+// lib/actions/auth.ts - Authentication Server Actions
 'use server';
 
 import { prisma } from '@/lib/prisma';
@@ -6,9 +6,31 @@ import { auth } from '@/lib/auth';
 import bcrypt from 'bcryptjs';
 import { revalidatePath } from 'next/cache';
 import { createLog } from './logs';
+import type { SalaryType } from '@prisma/client';
 
-// ==================== Types ====================
-export type CreateUserInput = {
+// ==================== Helpers ====================
+/** Safely convert Prisma Decimal to plain number */
+function toNumber(value: unknown): number {
+  if (value != null && typeof (value as any).toNumber === 'function') {
+    return (value as any).toNumber();
+  }
+  return value ? Number(value) : 0;
+}
+
+/** Serialize employee Decimal fields for client consumption */
+function serializeEmployee(employee: any) {
+  if (!employee) {
+    return null;
+  }
+  return {
+    ...employee,
+    dailyRate: toNumber(employee.dailyRate),
+    commissionRate: toNumber(employee.commissionRate),
+  };
+}
+
+// ==================== Interfaces ====================
+export interface CreateUserInput {
   email: string;
   password: string;
   role: 'OWNER' | 'ADMIN' | 'EMPLOYEE';
@@ -16,9 +38,12 @@ export type CreateUserInput = {
   name?: string;
   phone?: string;
   isActive?: boolean;
-};
+  salaryType?: SalaryType;
+  dailyRate?: number;
+  commissionRate?: number;
+}
 
-export type UpdateUserInput = {
+export interface UpdateUserInput {
   id: string;
   email?: string;
   password?: string;
@@ -26,18 +51,21 @@ export type UpdateUserInput = {
   isActive?: boolean;
   name?: string;
   phone?: string;
-};
+  salaryType?: SalaryType;
+  dailyRate?: number;
+  commissionRate?: number;
+}
 
 // ==================== Get All Users ====================
 /**
- * Mengambil semua data pengguna (user) dari database.
+ * Fetch all users from the database.
  * 
- * Fungsi ini akan:
- * 1. Mengambil data user beserta relasi employee (karyawan).
- * 2. Mengurutkan berdasarkan waktu pembuatan (terbaru).
- * 3. Menghapus password dari hasil return untuk keamanan.
+ * Process:
+ * 1. Fetch user records including employee relations.
+ * 2. Order by creation date descending.
+ * 3. Sanitize passwords from response.
  * 
- * @returns {Object} Object berisi status success dan data users yang sudah disanitasi.
+ * @returns {Object} Success status and sanitized users list.
  */
 export async function getUsers() {
   try {
@@ -52,17 +80,22 @@ export async function getUsers() {
             id: true,
             name: true,
             role: true,
+            phone: true,
+            salaryType: true,
+            dailyRate: true,
+            commissionRate: true,
           }
         }
       },
       orderBy: { createdAt: 'desc' },
     });
 
-    // Remove password from response
+    // Remove password from response and serialize Decimal fields
     const sanitizedUsers = users.map((user) => {
       const { password, ...userWithoutPassword } = user;
       return {
         ...userWithoutPassword,
+        employee: serializeEmployee(user.employee),
         createdAt: user.createdAt.toISOString(),
         updatedAt: user.updatedAt.toISOString(),
       };
@@ -77,16 +110,16 @@ export async function getUsers() {
 
 // ==================== Create User ====================
 /**
- * Membuat user baru dalam sistem.
+ * Create a new user in the system.
  * 
- * Fungsi ini akan:
- * 1. Mengecek apakah email sudah terdaftar.
- * 2. Melakukan hashing pada password.
- * 3. Membuat record user baru dan menghubungkan dengan employee jika ada.
- * 4. Mencatat aktivitas ke dalam log sistem.
+ * Process:
+ * 1. Check if email already exists.
+ * 2. Hash password.
+ * 3. Create user record and link to employee.
+ * 4. Log activity.
  * 
- * @param {CreateUserInput} data - Data user baru (email, password, role, employeeId).
- * @returns {Object} Status success dan data user baru atau error jika gagal.
+ * @param {CreateUserInput} data - New user input data.
+ * @returns {Object} Success status and new user object.
  */
 export async function createUser(data: CreateUserInput) {
   try {
@@ -112,12 +145,24 @@ export async function createUser(data: CreateUserInput) {
       const emp = await prisma.employee.create({
         data: {
           name: data.name,
-          role: data.role === 'OWNER' ? 'Owner' : data.role === 'ADMIN' ? 'Administrator' : 'Karyawan',
+          role: data.role === 'OWNER' ? 'Owner' : data.role === 'ADMIN' ? 'Administrator' : 'Mekanik',
           phone: data.phone || null,
           isActive: data.isActive !== undefined ? data.isActive : true,
+          salaryType: data.salaryType || 'COMMISSION',
+          dailyRate: data.dailyRate !== undefined ? Number(data.dailyRate) : 0,
+          commissionRate: data.commissionRate !== undefined ? Number(data.commissionRate) : 0,
         }
       });
       employeeId = emp.id;
+    } else if (employeeId && (data.salaryType || data.dailyRate !== undefined || data.commissionRate !== undefined)) {
+      await prisma.employee.update({
+        where: { id: employeeId },
+        data: {
+          ...(data.salaryType && { salaryType: data.salaryType }),
+          ...(data.dailyRate !== undefined && { dailyRate: Number(data.dailyRate) }),
+          ...(data.commissionRate !== undefined && { commissionRate: Number(data.commissionRate) }),
+        }
+      });
     }
 
     // Create user
@@ -135,6 +180,7 @@ export async function createUser(data: CreateUserInput) {
     });
 
     revalidatePath('/admin/settings');
+    revalidatePath('/admin/users');
     
     await createLog({
       action: "CREATE_USER",
@@ -150,6 +196,7 @@ export async function createUser(data: CreateUserInput) {
       success: true, 
       user: {
         ...sanitizedUser,
+        employee: serializeEmployee(user.employee),
         createdAt: user.createdAt.toISOString(),
         updatedAt: user.updatedAt.toISOString(),
       }
@@ -162,16 +209,10 @@ export async function createUser(data: CreateUserInput) {
 
 // ==================== Update User ====================
 /**
- * Memperbarui data user yang sudah ada.
+ * Update an existing user.
  * 
- * Fungsi ini akan:
- * 1. Memilah data update (id, password, dll).
- * 2. Jika password diupdate, lakukan hashing ulang.
- * 3. Mengupdate data user di database.
- * 4. Mencatat aktivitas ke log sistem.
- * 
- * @param {UpdateUserInput} data - Data update user.
- * @returns {Object} Status success dan data user yang diperbarui.
+ * @param {UpdateUserInput} data - User update payload.
+ * @returns {Object} Success status and updated user object.
  */
 export async function updateUser(data: UpdateUserInput) {
   try {
@@ -179,7 +220,7 @@ export async function updateUser(data: UpdateUserInput) {
     if (!session || session.user?.role !== 'OWNER') {
       return { success: false, error: 'Akses ditolak: Hanya Owner yang dapat mengupdate user.' };
     }
-    const { id, password, name, phone, ...updateData } = data;
+    const { id, password, name, phone, salaryType, dailyRate, commissionRate, ...updateData } = data;
     
     let finalUpdateData: any = { ...updateData };
 
@@ -196,12 +237,15 @@ export async function updateUser(data: UpdateUserInput) {
 
     if (currentUser) {
       if (currentUser.employeeId) {
-        // Update existing employee name and phone if passed
+        // Update existing employee name, phone, salaryType, dailyRate, commissionRate if passed
         await prisma.employee.update({
           where: { id: currentUser.employeeId },
           data: {
             ...(name && { name }),
             ...(phone !== undefined && { phone }),
+            ...(salaryType && { salaryType }),
+            ...(dailyRate !== undefined && { dailyRate: Number(dailyRate) }),
+            ...(commissionRate !== undefined && { commissionRate: Number(commissionRate) }),
           }
         });
       } else if (name) {
@@ -209,8 +253,11 @@ export async function updateUser(data: UpdateUserInput) {
         const emp = await prisma.employee.create({
           data: {
             name,
-            role: currentUser.role === 'OWNER' ? 'Owner' : currentUser.role === 'ADMIN' ? 'Administrator' : 'Karyawan',
+            role: currentUser.role === 'OWNER' ? 'Owner' : currentUser.role === 'ADMIN' ? 'Administrator' : 'Mekanik',
             phone: phone || null,
+            salaryType: salaryType || 'COMMISSION',
+            dailyRate: dailyRate !== undefined ? Number(dailyRate) : 0,
+            commissionRate: commissionRate !== undefined ? Number(commissionRate) : 0,
           }
         });
         finalUpdateData.employeeId = emp.id;
@@ -226,6 +273,7 @@ export async function updateUser(data: UpdateUserInput) {
     });
 
     revalidatePath('/admin/settings');
+    revalidatePath('/admin/users');
     
     await createLog({
       action: "UPDATE_USER",
@@ -236,11 +284,12 @@ export async function updateUser(data: UpdateUserInput) {
       role: "ADMIN"
     });
 
-    const { password: _, ...sanitizedUser } = user;
+    const { password: unusedPassword, ...sanitizedUser } = user;
     return { 
       success: true, 
       user: {
         ...sanitizedUser,
+        employee: serializeEmployee(user.employee),
         createdAt: user.createdAt.toISOString(),
         updatedAt: user.updatedAt.toISOString(),
       }
@@ -569,14 +618,26 @@ export async function updateCurrentProfile(data: { name: string; phone: string; 
       data: { email: data.email }
     });
 
-    // Update Employee table if exists
+    // Update or Create Employee table for full name storage
     if (user.employeeId) {
       await prisma.employee.update({
         where: { id: user.employeeId },
         data: {
           name: data.name,
-          phone: data.phone,
+          phone: data.phone || null,
         }
+      });
+    } else if (data.name) {
+      const newEmp = await prisma.employee.create({
+        data: {
+          name: data.name,
+          role: user.role === 'OWNER' ? 'Owner' : user.role === 'ADMIN' ? 'Administrator' : 'Mekanik',
+          phone: data.phone || null,
+        }
+      });
+      await prisma.user.update({
+        where: { id: user.id },
+        data: { employeeId: newEmp.id }
       });
     }
 
@@ -586,9 +647,12 @@ export async function updateCurrentProfile(data: { name: string; phone: string; 
       title: "Profil Diperbarui",
       details: `Memperbarui informasi profil untuk ${data.email}`,
       metadata: { userId: user.id },
-      userName: user.employee?.name || "User",
+      userName: data.name || user.employee?.name || "User",
       role: user.role
     });
+
+    revalidatePath('/admin/profile');
+    revalidatePath('/admin/users');
 
     return { success: true, message: 'Profil berhasil diperbarui' };
   } catch (error) {

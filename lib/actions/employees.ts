@@ -6,7 +6,7 @@ import { auth } from '@/lib/auth';
 import { revalidatePath } from 'next/cache';
 import { createLog } from './logs';
 
-export type SalaryType = "DAILY" | "COMMISSION";
+import type { SalaryType } from '@prisma/client';
 
 // ==================== Types ====================
 export interface CreateEmployeeInput {
@@ -670,8 +670,19 @@ export async function updateEmployee(data: UpdateEmployeeInput) {
     if (!session || session.user?.role !== 'OWNER') {
       return { success: false, error: 'Akses ditolak: Hanya Owner yang dapat mengupdate data karyawan.' };
     }
-    const { id, ...updateData } = data;
+    const { id, salaryType, dailyRate, commissionRate, ...rest } = data;
     
+    const updateData: Record<string, unknown> = { ...rest };
+    if (salaryType) {
+      updateData.salaryType = salaryType;
+    }
+    if (dailyRate !== undefined) {
+      updateData.dailyRate = dailyRate;
+    }
+    if (commissionRate !== undefined) {
+      updateData.commissionRate = commissionRate;
+    }
+
     const employee = await prisma.employee.update({
       where: { id },
       data: updateData,

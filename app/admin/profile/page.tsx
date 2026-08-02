@@ -43,7 +43,7 @@ import {
   changeCurrentPassword,
 } from "@/lib/actions/auth";
 
-type UserProfile = {
+interface UserProfile {
   id: string;
   email: string;
   role: string;
@@ -55,15 +55,15 @@ type UserProfile = {
     role: string;
     phone: string | null;
   } | null;
-};
+}
 
-type Activity = {
+interface Activity {
   id: string;
   action: string;
   title: string;
   details: string;
   createdAt: string;
-};
+}
 
 export default function Page() {
   const { data: session, update: updateSession } = useSession();
@@ -103,7 +103,7 @@ export default function Page() {
     }
   }, []);
 
-  const loadProfileData = async () => {
+  async function loadProfileData() {
     setIsLoading(true);
     try {
       const res = await getCurrentProfile();
@@ -112,7 +112,7 @@ export default function Page() {
         setActivities((res.activities || []) as Activity[]);
         
         // Populate inputs
-        setFullName(res.profile.employee?.name || "Admin");
+        setFullName(res.profile.employee?.name || "");
         setEmail(res.profile.email);
         setPhone(res.profile.employee?.phone || "");
       } else {
@@ -132,9 +132,9 @@ export default function Page() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }
 
-  const handleSaveProfile = async (e: React.FormEvent) => {
+  async function handleSaveProfile(e: React.FormEvent) {
     e.preventDefault();
     if (!fullName.trim()) {
       toast({ title: "Validasi Gagal", description: "Nama Lengkap wajib diisi", variant: "destructive" });
@@ -184,9 +184,9 @@ export default function Page() {
     } finally {
       setIsSavingProfile(false);
     }
-  };
+  }
 
-  const handleChangePasswordSubmit = async (e: React.FormEvent) => {
+  async function handleChangePasswordSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!currentPassword) {
       toast({ title: "Validasi Gagal", description: "Password saat ini wajib diisi", variant: "destructive" });
@@ -236,9 +236,9 @@ export default function Page() {
     } finally {
       setIsChangingPassword(false);
     }
-  };
+  }
 
-  const handleSavePreferences = (e: React.FormEvent) => {
+  function handleSavePreferences(e: React.FormEvent) {
     e.preventDefault();
     setIsSavingPref(true);
     setTimeout(() => {
@@ -248,28 +248,36 @@ export default function Page() {
         description: "Preferensi dan notifikasi akun berhasil diperbarui",
       });
     }, 800);
-  };
+  }
 
   // Helper formats
-  const getInitials = (name: string) => {
+  function getInitials(name: string) {
     return name
       .split(" ")
       .map((n) => n[0])
       .join("")
       .toUpperCase()
       .slice(0, 2);
-  };
+  }
 
-  const getRoleLabel = (role?: string) => {
-    if (role === "OWNER") return "Owner";
-    if (role === "ADMIN") return "Administrator";
+  function getRoleLabel(role?: string) {
+    if (role === "OWNER") {
+      return "Owner";
+    }
+    if (role === "ADMIN") {
+      return "Administrator";
+    }
     return role || "Staf Bengkel";
-  };
+  }
 
-  const formatIndonesianDate = (dateString?: string) => {
-    if (!dateString) return "-";
+  function formatIndonesianDate(dateString?: string) {
+    if (!dateString) {
+      return "-";
+    }
     const date = new Date(dateString);
-    if (isNaN(date.getTime())) return "-";
+    if (isNaN(date.getTime())) {
+      return "-";
+    }
     
     const months = [
       "Januari", "Februari", "Maret", "April", "Mei", "Juni",
@@ -277,18 +285,22 @@ export default function Page() {
     ];
     
     return `${date.getDate()} ${months[date.getMonth()]} ${date.getFullYear()}`;
-  };
+  }
 
-  const formatTime = (dateString?: string) => {
-    if (!dateString) return "";
+  function formatTime(dateString?: string) {
+    if (!dateString) {
+      return "";
+    }
     const date = new Date(dateString);
-    if (isNaN(date.getTime())) return "";
+    if (isNaN(date.getTime())) {
+      return "";
+    }
     return `${String(date.getHours()).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")}`;
-  };
+  }
 
   // Get latest login date-time from activities or fallback to current session
-  const getLastLogin = () => {
-    const loginAct = activities.find(a => a.action === "LOGIN" || a.action === "SIGN_IN");
+  function getLastLogin() {
+    const loginAct = activities.find((a) => a.action === "LOGIN" || a.action === "SIGN_IN");
     if (loginAct) {
       return `${formatIndonesianDate(loginAct.createdAt)}, ${formatTime(loginAct.createdAt)}`;
     }
@@ -296,10 +308,10 @@ export default function Page() {
       return `${formatIndonesianDate(profile.createdAt)}, 10:30`;
     }
     return "-";
-  };
+  }
 
   // Render activity icon based on type
-  const getActivityIcon = (action: string) => {
+  function getActivityIcon(action: string) {
     switch (action) {
       case "LOGIN":
       case "SIGN_IN":
@@ -316,7 +328,7 @@ export default function Page() {
       default:
         return <Settings className="h-4 w-4 text-muted-foreground" />;
     }
-  };
+  }
 
   if (isLoading && !profile) {
     return (
@@ -400,7 +412,7 @@ export default function Page() {
 
                   <div>
                     <h3 className="text-lg font-bold text-foreground leading-tight">
-                      {profile?.employee?.name || "Admin Bengkel"}
+                      {profile?.employee?.name || getRoleLabel(profile?.role)}
                     </h3>
                     <Badge variant="secondary" className="mt-2 text-[10px] font-bold uppercase tracking-wider py-0.5 px-2 bg-primary/10 text-primary border-primary/20">
                       {getRoleLabel(profile?.role)}

@@ -337,6 +337,7 @@ enum ServiceType {
 enum SalaryType {
   DAILY
   COMMISSION
+  MONTHLY
 }
 
 model USERS {
