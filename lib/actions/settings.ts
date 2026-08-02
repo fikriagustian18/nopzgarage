@@ -1,73 +1,97 @@
 'use server';
 
-import { prisma } from '@/lib/prisma';
-import { auth } from '@/lib/auth';
-import { revalidatePath } from 'next/cache';
-import { createLog } from './logs';
+import { prisma } from "@/lib/prisma";
+import { auth } from "@/lib/auth";
+import { revalidatePath } from "next/cache";
+import { createLog } from "@/lib/actions/logs";
+import { DEFAULT_SERVICES } from "@/lib/constants/serviceDefaults";
 
-export type GeneralSettings = {
+export interface GeneralSettings {
   garageName: string;
   phone: string;
   email: string;
   address: string;
   openTime: string;
   closeTime: string;
-  days: string[]; // ['Senin', 'Selasa', ...]
-};
+  days: string[];
+}
 
-export type HolidaySettings = {
+export interface HolidaySettings {
   isHoliday: boolean;
   reason: string;
-  openAt: string; // Tanggal/Jam buka kembali
-};
+  openAt: string;
+}
 
-export type LandingPageContent = {
-  stats: {
-    motors: string;
-    satisfaction: string;
-    experience: string;
-    support: string;
-  };
-  features: any[]; // Flexible for new features structure
-  hero: {
-    title?: string;
-    title1?: string;
-    title2?: string;
-    subtitle?: string;
-    ctaText?: string;
-    isVisible?: boolean;
-    [key: string]: any;
-  };
-  promos: any[];
-  services: any; // Can be array (legacy) or object (new CMS section)
-  testimonials: any[];
-  cta: {
-    title: string;
-    subtitle: string;
-  };
-  footer: {
-    description: string;
-    quickLinks: {
-      label: string;
-      href: string;
-    }[];
-    social: {
-      instagram: string;
-      facebook: string;
-      whatsapp: string; // Link WA
-    };
-  };
-  [key: string]: any; // Allow dynamic sections
-};
+export interface QuickLink {
+  label: string;
+  href: string;
+}
 
-// ==================== Get Single Setting ====================
+export interface SocialLinks {
+  instagram: string;
+  facebook: string;
+  whatsapp: string;
+}
+
+export interface HeroSection {
+  title?: string;
+  title1?: string;
+  title2?: string;
+  subtitle?: string;
+  ctaText?: string;
+  isVisible?: boolean;
+  [key: string]: unknown;
+}
+
+export interface StatsSection {
+  motors: string;
+  satisfaction: string;
+  experience: string;
+  support: string;
+}
+
+export interface CtaSection {
+  title: string;
+  subtitle: string;
+}
+
+export interface FooterSection {
+  description: string;
+  quickLinks: QuickLink[];
+  social: SocialLinks;
+}
+
+export interface LandingPageContent {
+  stats: StatsSection;
+  features: unknown[];
+  hero: HeroSection;
+  promos: unknown[];
+  services: unknown;
+  testimonials: unknown[];
+  cta: CtaSection;
+  footer: FooterSection;
+  /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
+  [key: string]: any;
+}
+
+export interface UpdateSettingResult {
+  success: boolean;
+  error?: string;
+}
+
+export interface SettingsResult {
+  general: GeneralSettings;
+  holiday: HolidaySettings;
+  content: LandingPageContent;
+}
+
 /**
- * Mengambil value setting system berdasarkan key.
- * Jika tidak ditemukan, return default value.
+ * Retrieves a single system setting value by key.
+ * Returns default value if not found.
  * 
- * @param {string} key - Key setting (misal: 'garage_name', 'tax_rate').
- * @param {any} defaultValue - Nilai default jika key tidak ada.
- * @returns {any} Nilai setting.
+ * @param key Setting key (e.g. 'garage_name', 'tax_rate').
+ * @param defaultValue Default fallback value.
+ * @returns Setting value.
  */
 export async function getSetting<T>(key: string, defaultValue: T): Promise<T> {
   try {
@@ -85,20 +109,22 @@ export async function getSetting<T>(key: string, defaultValue: T): Promise<T> {
   }
 }
 
-// ==================== Update Setting ====================
 /**
- * Mengupdate atau membuat system setting baru.
- * Otomatis melakukan revalidate path halaman terkait.
+ * Updates or creates a new system setting.
+ * Automatically revalidates affected layout paths.
  * 
- * @param {string} key - Key setting.
- * @param {any} value - Nilai yang akan disimpan (bisa object/array).
- * @returns {Object} Status sukses.
+ * @param key Setting key.
+ * @param value Value to store.
+ * @returns Status object indicating success or failure.
  */
-export async function updateSetting(key: string, value: any) {
+export async function updateSetting(key: string, value: unknown): Promise<UpdateSettingResult> {
   try {
     const session = await auth();
-    if (!session || session.user?.role !== 'OWNER') {
-      return { success: false, error: 'Akses ditolak: Hanya Owner yang dapat mengupdate pengaturan.' };
+    if (!session || session.user?.role !== "OWNER") {
+      return { 
+        success: false, 
+        error: "Access denied: Only Owner can update settings." 
+      };
     }
     const stringValue = JSON.stringify(value);
     console.log(`[SETTINGS] Updating ${key}:`, stringValue);
@@ -109,154 +135,157 @@ export async function updateSetting(key: string, value: any) {
       create: { key, value: stringValue }
     });
 
-    revalidatePath('/', 'layout'); // Force refresh layout & page
-    revalidatePath('/admin/settings');
+    revalidatePath("/", "layout");
+    revalidatePath("/admin/settings");
     
-    // Log
     await createLog({
-        action: 'UPDATE_SETTINGS',
-        title: `Pengaturan ${key} Diperbarui`,
-        details: `Mengubah konfigurasi ${key}`,
-        metadata: { key, value }
+      action: "UPDATE_SETTINGS",
+      title: `Setting ${key} Updated`,
+      details: `Changed configuration for ${key}`,
+      metadata: { key, value }
     });
 
     return { success: true };
   } catch (error) {
     console.error(`Error updating setting ${key}:`, error);
-    return { success: false, error: 'Gagal memperbarui pengaturan' };
+    return { 
+      success: false, 
+      error: "Failed to update settings" 
+    };
   }
 }
 
-// ==================== Get All Landing Page Settings ====================
 /**
- * Mengambil SEMUA konfigurasi yang diperlukan untuk Landing Page.
- * Menggabungkan General Settings, Holiday, dan Content CMS.
- *
- * Logika:
- * 1. Load setting dasar (General & Holiday).
- * 2. Load konten default/fallback.
- * 3. Load konten dinamis dari CMS (ContentSections).
- * 4. Merge konten CMS ke dalam struktur konten utama.
+ * Retrieves ALL configurations required for the Landing Page.
+ * Combines General Settings, Holiday Settings, and Dynamic CMS Content.
  * 
- * @returns {Object} Gabungan semua setting (general, holiday, content).
+ * @returns Combined settings payload.
  */
-export async function getAllSettings() {
-    const general = await getSetting<GeneralSettings>('general', {
-        garageName: 'NopzGarage',
-        phone: '0812-3456-7890',
-        email: 'info@nopzgarage.com',
-        address: 'Jl. Racing Street No. 88, Jakarta Selatan',
-        openTime: '08:00',
-        closeTime: '17:00',
-        days: ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu']
-    });
+export async function getAllSettings(): Promise<SettingsResult> {
+  const general = await getSetting<GeneralSettings>("general", {
+    garageName: "NopzGarage",
+    phone: "0812-3456-7890",
+    email: "info@nopzgarage.com",
+    address: "Jl. Racing Street No. 88, Jakarta Selatan",
+    openTime: "08:00",
+    closeTime: "17:00",
+    days: ["Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu"]
+  });
 
-    const holiday = await getSetting<HolidaySettings>('holiday', {
-        isHoliday: false,
-        reason: '',
-        openAt: ''
-    });
+  const holiday = await getSetting<HolidaySettings>("holiday", {
+    isHoliday: false,
+    reason: "",
+    openAt: ""
+  });
 
-    // Base Content (Default Fallback)
-    const defaultContent: LandingPageContent = {
-        stats: {
-            motors: "5000+",
-            satisfaction: "98%",
-            experience: "15+",
-            support: "24/7"
-        },
-        features: [
-            { title: "Garansi Resmi", desc: "Setiap pengerjaan dilindungi garansi resmi. Kami jamin kepuasan dan kualitas maksimal." },
-            { title: "Teknisi Bersertifikat", desc: "Tim mekanik profesional dengan sertifikasi resmi dan pengalaman 15+ tahun." },
-            { title: "Spare Parts Original", desc: "Hanya menggunakan spare parts original dan berkualitas tinggi dari distributor resmi." }
-        ],
-        hero: {
-            title1: "Servis Motor",
-            title2: "Cepat & Terpercaya",
-            subtitle: "Teknisi berpengalaman, peralatan modern, dan layanan berkualitas MotoGP standard untuk motor kesayangan Anda"
-        },
-        promos: [],
-        services: [
-            { title: "Fast Lane Service", desc: "Servis kilat untuk perawatan rutin. Ganti oli, tune up, dan pemeriksaan standar dalam 30 menit." },
-            { title: "Project Custom", desc: "Modifikasi body, cat, dan custom part sesuai keinginan. Dikerjakan oleh ahli dengan detail tinggi." },
-            { title: "Performance Upgrade", desc: "Tingkatkan performa motor dengan upgrade mesin, exhaust, dan tuning profesional." }
-        ],
-        testimonials: [
-            { name: "Budi Santoso", role: "Pemilik Yamaha R15", comment: "Servis cepat, harga transparan, hasil memuaskan! Motor jadi lebih responsif dan irit. Recommended!", rating: 5 },
-            { name: "Dian Pratama", role: "Pemilik Honda CBR", comment: "Project custom body motor saya dikerjakan dengan sangat detail dan presisi. Hasilnya beyond expectation!", rating: 5 },
-            { name: "Rizky Aditya", role: "Pemilik Kawasaki Ninja", comment: "Booking online memudahkan, bisa track progress real-time. Teknisinya ramah dan profesional. Top!", rating: 5 }
-        ],
-        cta: {
-            title: "Siap Upgrade Motor Anda?",
-            subtitle: "Booking sekarang dan dapatkan konsultasi gratis untuk servis pertama!"
-        },
-        footer: {
-            description: "Bengkel motor premium dengan standar MotoGP. Kepercayaan Anda adalah prioritas kami.",
-            quickLinks: [
-                { label: "Booking Online", href: "#booking" },
-                { label: "Cek Status Motor", href: "/status" },
-                { label: "Price List", href: "#services" }
-            ],
-            social: {
-                instagram: "#",
-                facebook: "#",
-                whatsapp: "#"
-            }
-        }
+  const defaultContent: LandingPageContent = {
+    stats: {
+      motors: "5000+",
+      satisfaction: "98%",
+      experience: "15+",
+      support: "24/7"
+    },
+    features: [
+      { 
+        title: "Garansi Resmi", 
+        desc: "Setiap pengerjaan dilindungi garansi resmi. Kami jamin kepuasan dan kualitas maksimal." 
+      },
+      { 
+        title: "Teknisi Bersertifikat", 
+        desc: "Tim mekanik profesional dengan sertifikasi resmi dan pengalaman 15+ tahun." 
+      },
+      { 
+        title: "Spare Parts Original", 
+        desc: "Hanya menggunakan spare parts original dan berkualitas tinggi dari distributor resmi." 
+      }
+    ],
+    hero: {
+      title1: "Servis Motor",
+      title2: "Cepat & Terpercaya",
+      subtitle: "Teknisi berpengalaman, peralatan modern, dan layanan berkualitas MotoGP standard untuk motor kesayangan Anda"
+    },
+    promos: [],
+    services: DEFAULT_SERVICES,
+    testimonials: [
+      { 
+        name: "Budi Santoso", 
+        role: "Pemilik Yamaha R15", 
+        comment: "Servis cepat, harga transparan, hasil memuaskan! Motor jadi lebih responsif dan irit. Recommended!", 
+        rating: 5 
+      },
+      { 
+        name: "Dian Pratama", 
+        role: "Pemilik Honda CBR", 
+        comment: "Project custom body motor saya dikerjakan dengan sangat detail dan presisi. Hasilnya beyond expectation!", 
+        rating: 5 
+      },
+      { 
+        name: "Rizky Aditya", 
+        role: "Pemilik Kawasaki Ninja", 
+        comment: "Booking online memudahkan, bisa track progress real-time. Teknisinya ramah dan profesional. Top!", 
+        rating: 5 
+      }
+    ],
+    cta: {
+      title: "Siap Upgrade Motor Anda?",
+      subtitle: "Booking sekarang dan dapatkan konsultasi gratis untuk servis pertama!"
+    },
+    footer: {
+      description: "Bengkel motor premium dengan standar MotoGP. Kepercayaan Anda adalah prioritas kami.",
+      quickLinks: [
+        { label: "Booking Online", href: "#booking" },
+        { label: "Cek Status Motor", href: "/status" },
+        { label: "Price List", href: "#services" }
+      ],
+      social: {
+        instagram: "#",
+        facebook: "#",
+        whatsapp: "#"
+      }
+    }
+  };
+
+  const savedContent = await getSetting<LandingPageContent>("landing_content", defaultContent);
+  
+  const allSections = await prisma.contentSection.findMany();
+
+  const dynamicSections = allSections.reduce((acc: Record<string, unknown>, sec) => {
+    acc[sec.sectionKey] = {
+      ...sec,
+      updatedAt: sec.updatedAt instanceof Date ? sec.updatedAt.toISOString() : sec.updatedAt,
+      content: sec.content || {} 
     };
+    return acc;
+  }, {} as Record<string, unknown>);
 
-    // Load from old SystemSetting if exists (Legacy Fallback)
-    const savedContent = await getSetting<LandingPageContent>('landing_content', defaultContent);
-    
-    // Fetch All Dynamic Content Sections (New CMS System)
-    const allSections = await prisma.contentSection.findMany();
+  const content = { ...savedContent, ...dynamicSections } as LandingPageContent;
 
-    // Map Dynamic Sections to Object
-    const dynamicSections = allSections.reduce((acc: Record<string, any>, sec: any) => {
-        acc[sec.sectionKey] = {
-            ...sec,
-            updatedAt: sec.updatedAt instanceof Date ? sec.updatedAt.toISOString() : sec.updatedAt,
-            // Prisma JSON type is automatically parsed, but we ensure structure
-            content: sec.content || {} 
-        };
-        return acc;
-    }, {} as Record<string, any>);
-
-    // Merge: Dynamic Sections override Default/Saved content
-    // Note: old 'features' was array, new 'features' is object { title, content: { items: [] } }
-    // We should handle this gracefully in page.tsx or normalize here.
-    // For now, we simply merge, so content['features'] might become the new object type.
-    const content = { ...savedContent, ...dynamicSections };
-
-    // HELPER: Normalize 'features' for backward compatibility if needed
-    // If 'features' comes from Dynamic Section, it has .content.items
-    // But page.tsx expects array content.features inside map? 
-    // Wait, page.tsx recently updated to check content['features']?.length > 0 directly for array
-    // OR content['features']?.content?.items
-    // Let's ensure page.tsx logic (which I checked) handles array directly.
-    // Actually, in previous step I saw: content.features.map(...)
-    // So if content.features is an OBJECT from CMS, map will fail.
-    
-    // FIX: If dynamic 'features' exists, assume we want its items as the array for 'features' prop
-    if (dynamicSections['features']?.content?.items) {
-        content.features = dynamicSections['features'].content.items;
+  if (dynamicSections["features"] && typeof dynamicSections["features"] === "object") {
+    const featSection = dynamicSections["features"] as { content?: { items?: unknown[] } };
+    if (featSection.content?.items && Array.isArray(featSection.content.items)) {
+      content.features = featSection.content.items;
     }
+  }
 
-    // FIX: Normalize 'stats' to flatten fields (motors, etc) to top level so content.stats.motors works
-    if (dynamicSections['stats']?.content) {
-        content.stats = {
-            ...dynamicSections['stats'],
-            ...dynamicSections['stats'].content
-        };
+  if (dynamicSections["stats"] && typeof dynamicSections["stats"] === "object") {
+    const statsSection = dynamicSections["stats"] as { content?: Record<string, unknown> };
+    if (statsSection.content) {
+      content.stats = {
+        ...content.stats,
+        ...statsSection.content
+      } as StatsSection;
     }
+  }
 
-    // FIX: Normalize 'hero' so ctaText is accessible at content.hero.ctaText
-    if (dynamicSections['hero']?.content) {
-        content.hero = {
-            ...dynamicSections['hero'],
-            ...dynamicSections['hero'].content
-        };
+  if (dynamicSections["hero"] && typeof dynamicSections["hero"] === "object") {
+    const heroSection = dynamicSections["hero"] as { content?: Record<string, unknown> };
+    if (heroSection.content) {
+      content.hero = {
+        ...content.hero,
+        ...heroSection.content
+      };
     }
+  }
 
-    return { general, holiday, content };
+  return { general, holiday, content };
 }

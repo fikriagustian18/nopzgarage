@@ -4,6 +4,21 @@ import { useState } from "react";
 import { useForm, ControllerRenderProps } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
+import { 
+  CheckCircle2, 
+  Loader2, 
+  User, 
+  Phone, 
+  Bike, 
+  PenTool, 
+  Wrench, 
+  CalendarCheck, 
+  Zap, 
+  Star 
+} from "lucide-react";
+import { motion } from "framer-motion";
+import { toast } from "sonner";
+
 import { createBooking } from "@/lib/actions/orders";
 import { Button } from "@/components/ui/Button";
 import {
@@ -23,13 +38,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/Select";
-import { Card, CardContent } from "@/components/ui/Card";
-import { CheckCircle2, Loader2, User, Phone, Bike, PenTool, Wrench, CalendarCheck, Zap } from "lucide-react";
-import { motion } from "framer-motion";
-import { toast } from "sonner";
 import { formatWhatsAppNumber } from "@/lib/utils";
+import { 
+  DEFAULT_SERVICE_OPTIONS, 
+  DefaultServiceOption 
+} from "@/lib/constants/serviceDefaults";
 
-// ==================== Validation Schema ====================
 const bookingSchema = z.object({
   custName: z.string().min(3, "Nama minimal 3 karakter"),
   custPhone: z
@@ -43,22 +57,33 @@ const bookingSchema = z.object({
   scheduledAt: z.string().min(1, "Tanggal & Jam Booking harus diisi"),
 });
 
-type BookingFormData = z.infer<typeof bookingSchema>;
+export type BookingFormData = z.infer<typeof bookingSchema>;
 
-interface BookingFormProps {
-    serviceOptions?: any[]; // [{ title, description, serviceType, icon }]
-    garagePhone?: string;
+export interface BookingOrderResult {
+  id?: string;
+  queueNumber?: string;
+  custName: string;
+  custPhone: string;
+  vehicle: string;
+  plateNumber?: string;
+  scheduledAt: string;
+  serviceType: "LIGHT_SERVICE" | "MODIFICATION";
+  complaint: string;
 }
 
-export function BookingForm({ serviceOptions = [], garagePhone }: BookingFormProps) {
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [successValues, setSuccessValues] = useState<any | null>(null);
+export interface BookingFormProps {
+  serviceOptions?: DefaultServiceOption[];
+  garagePhone?: string;
+}
 
-  // Calculate default options if none provided
-  const services = serviceOptions.length > 0 ? serviceOptions : [
-        { title: "Fast Lane Service", description: "Servis ringan, ganti oli, tune up", serviceType: "LIGHT_SERVICE", icon: "Zap" },
-        { title: "Project Lane / Modifikasi", description: "Turun mesin, modif, bore up", serviceType: "MODIFICATION", icon: "Settings" }
-  ];
+export function BookingForm({ 
+  serviceOptions = [], 
+  garagePhone 
+}: BookingFormProps) {
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [successValues, setSuccessValues] = useState<BookingOrderResult | null>(null);
+
+  const services = serviceOptions.length > 0 ? serviceOptions : DEFAULT_SERVICE_OPTIONS;
 
   const form = useForm<BookingFormData>({
     resolver: zodResolver(bookingSchema),
@@ -73,29 +98,31 @@ export function BookingForm({ serviceOptions = [], garagePhone }: BookingFormPro
     },
   });
 
-  const handleSubmit = async (data: BookingFormData) => {
+  async function handleSubmit(data: BookingFormData) {
     setIsSubmitting(true);
 
     try {
       const result = await createBooking(data);
 
       if (result.success) {
-        setSuccessValues(result.order);
+        setSuccessValues(result.order as BookingOrderResult);
         form.reset();
         toast.success("Booking Berhasil!", {
-            description: "Silakan simpan nomor antrian Anda."
+          description: "Silakan simpan nomor antrian Anda."
         });
       } else {
         toast.error("Gagal", {
-            description: result.error || "Terjadi kesalahan sistem."
+          description: result.error || "Terjadi kesalahan sistem."
         });
       }
-    } catch (err) {
-      toast.error("Error", { description: "Gagal mengirim booking." });
+    } catch {
+      toast.error("Error", { 
+        description: "Gagal mengirim booking." 
+      });
     } finally {
       setIsSubmitting(false);
     }
-  };
+  }
 
   if (successValues) {
     const formattedDate = successValues.scheduledAt
@@ -107,7 +134,6 @@ export function BookingForm({ serviceOptions = [], garagePhone }: BookingFormPro
 
     const cleanPhone = formatWhatsAppNumber(garagePhone || "0812-3456-7890");
 
-    // Generate WhatsApp text
     const waText = encodeURIComponent(
       `Halo NopzGarage, saya ingin mengonfirmasi booking service:\n\n` +
       `*No. Antrian:* ${successValues.queueNumber || "-"}\n` +
@@ -121,289 +147,269 @@ export function BookingForm({ serviceOptions = [], garagePhone }: BookingFormPro
     );
 
     return (
-        <motion.div 
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="bg-card border border-green-200 dark:border-green-900 rounded-2xl p-8 text-left shadow-lg relative overflow-hidden"
-        >
-            <div className="absolute top-0 left-0 w-full h-2 bg-green-500" />
-            
-            <div className="text-center mb-6">
-                <div className="mx-auto w-16 h-16 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center mb-4">
-                    <CheckCircle2 className="h-8 w-8 text-green-600 dark:text-green-400" />
-                </div>
-                <h3 className="text-2xl font-bold text-foreground">Booking Diterima!</h3>
-                <p className="text-muted-foreground text-sm">
-                    Silakan simpan nomor antrian Anda sebagai identitas booking.
-                </p>
+      <motion.div 
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        className="bg-card border border-green-200 dark:border-green-900 rounded-2xl p-8 text-left shadow-lg relative overflow-hidden"
+      >
+        <div className="absolute top-0 left-0 w-full h-2 bg-green-500" />
+        <div className="flex items-center gap-4 mb-6">
+          <div className="bg-green-100 dark:bg-green-900/40 p-3 rounded-full text-green-600 dark:text-green-400">
+            <CheckCircle2 className="w-8 h-8" />
+          </div>
+          <div>
+            <h3 className="text-xl font-bold text-foreground">Booking Berhasil Dikirim!</h3>
+            <p className="text-sm text-muted-foreground">Silakan simpan nomor antrian berikut untuk tracking.</p>
+          </div>
+        </div>
+
+        <div className="bg-muted/40 border rounded-xl p-5 mb-6 space-y-3">
+          <div className="flex justify-between items-center pb-3 border-b border-border/50">
+            <span className="text-xs uppercase font-bold text-muted-foreground tracking-wider">No. Antrian</span>
+            <span className="text-2xl font-black text-primary font-mono">{successValues.queueNumber || "QT-PENDING"}</span>
+          </div>
+          <div className="grid grid-cols-2 gap-2 text-xs">
+            <div>
+              <span className="text-muted-foreground block">Pelanggan:</span>
+              <span className="font-semibold text-foreground">{successValues.custName}</span>
             </div>
-
-            {/* Receipt Details */}
-            <div className="border border-border/85 rounded-xl p-5 bg-muted/30 space-y-4 mb-6 relative font-mono text-xs">
-                {/* Decorative border cutouts */}
-                <div className="absolute -left-2 top-1/2 -translate-y-1/2 w-4 h-4 rounded-full bg-background border-r border-border" />
-                <div className="absolute -right-2 top-1/2 -translate-y-1/2 w-4 h-4 rounded-full bg-background border-l border-border" />
-
-                <div className="flex justify-between items-center border-b border-dashed border-border pb-3">
-                    <span className="text-muted-foreground">NOMOR ANTRIAN</span>
-                    <span className="text-lg font-black text-primary tracking-wider">{successValues.queueNumber || "Q-XX"}</span>
-                </div>
-
-                <div className="space-y-2.5">
-                    <div className="flex justify-between">
-                        <span className="text-muted-foreground">Pelanggan:</span>
-                        <span className="font-bold text-right">{successValues.custName}</span>
-                    </div>
-                    <div className="flex justify-between">
-                        <span className="text-muted-foreground">Kendaraan:</span>
-                        <span className="font-bold text-right">{successValues.vehicle} {successValues.plateNumber ? `(${successValues.plateNumber})` : ""}</span>
-                    </div>
-                    <div className="flex justify-between">
-                        <span className="text-muted-foreground">Jenis Layanan:</span>
-                        <span className="font-bold text-right">{successValues.serviceType === "LIGHT_SERVICE" ? "Servis Ringan" : "Modifikasi"}</span>
-                    </div>
-                    <div className="flex justify-between">
-                        <span className="text-muted-foreground">Jadwal Kedatangan:</span>
-                        <span className="font-bold text-right">{formattedDate}</span>
-                    </div>
-                    <div className="border-t border-dashed border-border pt-2">
-                        <span className="text-muted-foreground block mb-1">Catatan/Keluhan:</span>
-                        <p className="font-medium text-foreground bg-background/50 p-2 rounded border border-border/50 break-words leading-relaxed whitespace-pre-wrap">{successValues.complaint}</p>
-                    </div>
-                </div>
+            <div>
+              <span className="text-muted-foreground block">Kendaraan:</span>
+              <span className="font-semibold text-foreground">{successValues.vehicle} ({successValues.plateNumber || "-"})</span>
             </div>
-
-            {/* Action Buttons */}
-            <div className="flex flex-col gap-3">
-                <Button 
-                    onClick={() => window.open(`https://wa.me/${cleanPhone}?text=${waText}`, "_blank")} 
-                    className="w-full h-12 bg-[#25D366] hover:bg-[#20BA56] text-white font-bold gap-2"
-                >
-                    <Zap className="h-4 w-4 fill-white" />
-                    Kirim Konfirmasi WhatsApp
-                </Button>
-                
-                <div className="grid grid-cols-2 gap-3">
-                    <Button
-                      onClick={() => window.location.href = "/status"}
-                      variant="outline"
-                      className="h-11 text-xs font-bold"
-                    >
-                        Cek Status Antrian
-                    </Button>
-                    <Button
-                      onClick={() => setSuccessValues(null)}
-                      variant="ghost"
-                      className="h-11 text-xs font-bold border border-border"
-                    >
-                        Booking Baru
-                    </Button>
-                </div>
+            <div className="col-span-2 pt-2 border-t border-border/30">
+              <span className="text-muted-foreground block">Jadwal Kedatangan:</span>
+              <span className="font-semibold text-foreground">{formattedDate}</span>
             </div>
-        </motion.div>
+          </div>
+        </div>
+
+        <div className="space-y-3">
+          <a
+            href={`https://wa.me/${cleanPhone}?text=${waText}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="w-full flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 px-4 rounded-xl shadow-md transition-all text-sm"
+          >
+            Konfirmasi via WhatsApp
+          </a>
+          <Button 
+            variant="outline" 
+            onClick={() => setSuccessValues(null)}
+            className="w-full text-xs font-semibold py-2"
+          >
+            Buat Booking Lain
+          </Button>
+        </div>
+      </motion.div>
     );
   }
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
-        
-        {/* SECTION 1: Personal Info */}
-        <div className="space-y-4">
-            <h4 className="flex items-center gap-2 text-xs font-black text-muted-foreground uppercase tracking-[0.2em] mb-4">
-                <User className="w-4 h-4 text-primary" /> Data Diri
-            </h4>
-            <div className="grid md:grid-cols-2 gap-5">
-                <FormField
-                control={form.control}
-                name="custName"
-                render={({ field }) => (
-                    <FormItem>
-                    <FormLabel className="text-xs font-bold uppercase tracking-wide">Nama Lengkap</FormLabel>
-                    <FormControl>
-                        <div className="relative group">
-                            <User className="absolute left-4 top-3.5 h-4 w-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
-                            <Input placeholder="Nama Anda" className="pl-11 h-12 bg-background/50 border-input group-hover:border-primary/50 transition-colors" {...field} />
-                        </div>
-                    </FormControl>
-                    <FormMessage />
-                    </FormItem>
-                )}
-                />
-
-                <FormField
-                control={form.control}
-                name="custPhone"
-                render={({ field }) => (
-                    <FormItem>
-                    <FormLabel className="text-xs font-bold uppercase tracking-wide">Nomor WhatsApp</FormLabel>
-                    <FormControl>
-                        <div className="relative group">
-                            <Phone className="absolute left-4 top-3.5 h-4 w-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
-                            <Input placeholder="08xxxxx" className="pl-11 h-12 bg-background/50 border-input group-hover:border-primary/50 transition-colors" {...field} />
-                        </div>
-                    </FormControl>
-                    <FormMessage />
-                    </FormItem>
-                )}
-                />
-            </div>
+      <form 
+        onSubmit={form.handleSubmit(handleSubmit)} 
+        className="space-y-6 text-left"
+      >
+        <div className="space-y-3">
+          <label className="text-xs font-bold text-foreground uppercase tracking-wider flex items-center gap-2">
+            <Wrench className="w-4 h-4 text-primary" />
+            Pilih Paket / Jenis Layanan
+          </label>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {services.map((srv, idx) => {
+              const isSelected = form.watch("serviceType") === srv.serviceType;
+              return (
+                <div 
+                  key={idx}
+                  onClick={() => {
+                    form.setValue("serviceType", srv.serviceType);
+                    const currentVal = form.getValues("complaint");
+                    if (!currentVal.includes(srv.title)) {
+                      form.setValue("complaint", `[Layanan: ${srv.title}] ${currentVal}`);
+                    }
+                  }}
+                  className={`p-3.5 rounded-xl border transition-all cursor-pointer relative ${
+                    isSelected 
+                      ? "border-primary bg-primary/10 shadow-sm" 
+                      : "border-border/60 hover:border-primary/40 bg-card/60"
+                  }`}
+                >
+                  <div className="flex items-start gap-3">
+                    <div className={`p-2 rounded-lg ${isSelected ? "bg-primary text-white" : "bg-muted text-muted-foreground"}`}>
+                      {srv.icon === "Zap" ? (
+                        <Zap className="w-4 h-4" />
+                      ) : srv.icon === "Star" ? (
+                        <Star className="w-4 h-4" />
+                      ) : (
+                        <Wrench className="w-4 h-4" />
+                      )}
+                    </div>
+                    <div className="space-y-0.5 overflow-hidden">
+                      <h5 className="font-bold text-xs text-foreground truncate">{srv.title}</h5>
+                      <p className="text-[10px] text-muted-foreground line-clamp-2 leading-tight">{srv.description}</p>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         </div>
 
-        <div className="h-px bg-border/50 border-t border-dashed border-border" />
-
-        {/* SECTION 2: Vehicle Info */}
-        <div className="space-y-4">
-            <h4 className="flex items-center gap-2 text-xs font-black text-muted-foreground uppercase tracking-[0.2em] mb-4">
-                <Bike className="w-4 h-4 text-primary" /> Data Kendaraan
-            </h4>
-            <div className="grid md:grid-cols-2 gap-5">
-                <FormField
-                control={form.control}
-                name="vehicle"
-                render={({ field }) => (
-                    <FormItem>
-                    <FormLabel className="text-xs font-bold uppercase tracking-wide">Merk & Tipe Motor</FormLabel>
-                    <FormControl>
-                        <div className="relative group">
-                            <Bike className="absolute left-4 top-3.5 h-4 w-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
-                            <Input placeholder="Contoh: Honda Vario 150" className="pl-11 h-12 bg-background/50 border-input group-hover:border-primary/50 transition-colors" {...field} />
-                        </div>
-                    </FormControl>
-                    <FormMessage />
-                    </FormItem>
-                )}
-                />
-
-                <FormField
-                control={form.control}
-                name="plateNumber"
-                render={({ field }) => (
-                    <FormItem>
-                    <FormLabel className="text-xs font-bold uppercase tracking-wide">Plat Nomor (Opsional)</FormLabel>
-                    <FormControl>
-                        <div className="relative group">
-                            <PenTool className="absolute left-4 top-3.5 h-4 w-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
-                            <Input placeholder="B 1234 ABC" className="pl-11 h-12 bg-background/50 border-input group-hover:border-primary/50 transition-colors uppercase" {...field} />
-                        </div>
-                    </FormControl>
-                    <FormMessage />
-                    </FormItem>
-                )}
-                />
-            </div>
-        </div>
-
-        <div className="h-px bg-border/50 border-t border-dashed border-border" />
-
-        {/* SECTION 3: Service Details */}
-        <div className="space-y-4">
-            <h4 className="flex items-center gap-2 text-xs font-black text-muted-foreground uppercase tracking-[0.2em] mb-4">
-                <Wrench className="w-4 h-4 text-primary" /> Detail Servis
-            </h4>
-            
-            <div className="grid md:grid-cols-2 gap-5">
-                <FormField
-                control={form.control}
-                name="serviceType"
-                render={({ field }) => (
-                    <FormItem>
-                    <FormLabel className="text-xs font-bold uppercase tracking-wide">Jenis Layanan</FormLabel>
-                    <Select 
-                        onValueChange={(val) => {
-                             const idx = parseInt(val);
-                             const selected = services[idx];
-                             if (selected) {
-                                 field.onChange(selected.serviceType || "LIGHT_SERVICE");
-                                 const currentComplaint = form.getValues("complaint") || "";
-                                 const serviceTag = `[${selected.title}]`;
-                                 if (!currentComplaint.includes(selected.title)) {
-                                     form.setValue("complaint", `${serviceTag} ${currentComplaint}`);
-                                 }
-                             }
-                        }} 
-                    >
-                        <FormControl>
-                        <SelectTrigger className="h-12 bg-background/50 border-input hover:border-primary/50 transition-colors">
-                            <SelectValue placeholder="Pilih Layanan Disini" />
-                        </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                            {services.map((svc: any, idx: number) => {
-                                const svcType = (svc.serviceType === "LIGHT_SERVICE" || svc.serviceType === "MODIFICATION") 
-                                    ? svc.serviceType 
-                                    : "LIGHT_SERVICE";
-                                    
-                                const isLight = svcType === "LIGHT_SERVICE";
-                                const badgeColor = isLight ? "bg-blue-500/10 text-blue-600" : "bg-primary/10 text-primary";
-                                
-                                return (
-                                    <SelectItem key={idx} value={String(idx)}>
-                                        <div className="flex items-center gap-3 py-1">
-                                            <div className={`p-1.5 rounded-md ${badgeColor} w-8 h-8 flex items-center justify-center text-sm font-bold border border-current/20`}>
-                                                {isLight ? <Zap className="h-4 w-4" /> : <Wrench className="h-4 w-4" />}
-                                            </div>
-                                            <div>
-                                                <div className="font-bold text-sm">{svc.title}</div>
-                                                <div className="text-[10px] text-muted-foreground uppercase tracking-wide opacity-80">{svc.desc || svc.description?.substring(0, 40)}...</div>
-                                            </div>
-                                        </div>
-                                    </SelectItem>
-                                );
-                            })}
-                        </SelectContent>
-                    </Select>
-                    <FormMessage />
-                    </FormItem>
-                )}
-                />
-
-                <FormField
-                control={form.control}
-                name="scheduledAt"
-                render={({ field }) => (
-                    <FormItem>
-                    <FormLabel className="text-xs font-bold uppercase tracking-wide">Tanggal & Jam Booking</FormLabel>
-                    <FormControl>
-                        <div className="relative group">
-                            <CalendarCheck className="absolute left-4 top-3.5 h-4 w-4 text-muted-foreground group-focus-within:text-primary transition-colors z-10" />
-                            <Input 
-                                type="datetime-local" 
-                                className="pl-11 h-12 bg-background/50 border-input group-hover:border-primary/50 transition-colors block w-full text-foreground" 
-                                {...field} 
-                            />
-                        </div>
-                    </FormControl>
-                    <FormMessage />
-                    </FormItem>
-                )}
-                />
-            </div>
-
-            <FormField
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <FormField
             control={form.control}
-            name="complaint"
-            render={({ field }) => (
-                <FormItem>
-                <FormLabel className="text-xs font-bold uppercase tracking-wide">Keluhan / Catatan</FormLabel>
+            name="custName"
+            render={({ field }: { field: ControllerRenderProps<BookingFormData, "custName"> }) => (
+              <FormItem>
+                <FormLabel className="text-xs font-semibold flex items-center gap-1.5">
+                  <User className="w-3.5 h-3.5 text-muted-foreground" /> Nama Lengkap
+                </FormLabel>
                 <FormControl>
-                    <Textarea
-                    placeholder="Jelaskan keluhan motor atau request servis Anda..."
-                    className="min-h-[120px] resize-none bg-background/50 border-input hover:border-primary/50 transition-colors"
-                    {...field}
-                    />
+                  <Input 
+                    placeholder="Contoh: Budi Santoso" 
+                    className="h-10 text-xs bg-muted/20" 
+                    {...field} 
+                  />
                 </FormControl>
-                <FormMessage />
-                </FormItem>
+                <FormMessage className="text-[10px]" />
+              </FormItem>
             )}
-            />
+          />
+
+          <FormField
+            control={form.control}
+            name="custPhone"
+            render={({ field }: { field: ControllerRenderProps<BookingFormData, "custPhone"> }) => (
+              <FormItem>
+                <FormLabel className="text-xs font-semibold flex items-center gap-1.5">
+                  <Phone className="w-3.5 h-3.5 text-muted-foreground" /> Nomor HP / WhatsApp
+                </FormLabel>
+                <FormControl>
+                  <Input 
+                    placeholder="08123456789" 
+                    className="h-10 text-xs bg-muted/20" 
+                    {...field} 
+                  />
+                </FormControl>
+                <FormMessage className="text-[10px]" />
+              </FormItem>
+            )}
+          />
         </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <FormField
+            control={form.control}
+            name="vehicle"
+            render={({ field }: { field: ControllerRenderProps<BookingFormData, "vehicle"> }) => (
+              <FormItem>
+                <FormLabel className="text-xs font-semibold flex items-center gap-1.5">
+                  <Bike className="w-3.5 h-3.5 text-muted-foreground" /> Merk & Tipe Motor
+                </FormLabel>
+                <FormControl>
+                  <Input 
+                    placeholder="Contoh: Honda Vario 160 / NMAX" 
+                    className="h-10 text-xs bg-muted/20" 
+                    {...field} 
+                  />
+                </FormControl>
+                <FormMessage className="text-[10px]" />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="plateNumber"
+            render={({ field }: { field: ControllerRenderProps<BookingFormData, "plateNumber"> }) => (
+              <FormItem>
+                <FormLabel className="text-xs font-semibold flex items-center gap-1.5">
+                  <PenTool className="w-3.5 h-3.5 text-muted-foreground" /> Plat Nomor (Opsional)
+                </FormLabel>
+                <FormControl>
+                  <Input 
+                    placeholder="B 1234 ABC" 
+                    className="h-10 text-xs bg-muted/20" 
+                    {...field} 
+                  />
+                </FormControl>
+                <FormMessage className="text-[10px]" />
+              </FormItem>
+            )}
+          />
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <FormField
+            control={form.control}
+            name="serviceType"
+            render={({ field }: { field: ControllerRenderProps<BookingFormData, "serviceType"> }) => (
+              <FormItem>
+                <FormLabel className="text-xs font-semibold">Kategori Servis System</FormLabel>
+                <Select 
+                  onValueChange={field.onChange} 
+                  defaultValue={field.value} 
+                  value={field.value}
+                >
+                  <FormControl>
+                    <SelectTrigger className="h-10 text-xs bg-muted/20">
+                      <SelectValue placeholder="Pilih Kategori" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    <SelectItem value="LIGHT_SERVICE">Fast Lane / Servis Ringan</SelectItem>
+                    <SelectItem value="MODIFICATION">Project Lane / Modifikasi & Berat</SelectItem>
+                  </SelectContent>
+                </Select>
+                <FormMessage className="text-[10px]" />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="scheduledAt"
+            render={({ field }: { field: ControllerRenderProps<BookingFormData, "scheduledAt"> }) => (
+              <FormItem>
+                <FormLabel className="text-xs font-semibold flex items-center gap-1.5">
+                  <CalendarCheck className="w-3.5 h-3.5 text-muted-foreground" /> Rencana Tanggal & Jam Kedatangan
+                </FormLabel>
+                <FormControl>
+                  <Input 
+                    type="datetime-local" 
+                    className="h-10 text-xs bg-muted/20" 
+                    {...field} 
+                  />
+                </FormControl>
+                <FormMessage className="text-[10px]" />
+              </FormItem>
+            )}
+          />
+        </div>
+
+        <FormField
+          control={form.control}
+          name="complaint"
+          render={({ field }: { field: ControllerRenderProps<BookingFormData, "complaint"> }) => (
+            <FormItem>
+              <FormLabel className="text-xs font-semibold">Detail Keluhan & Catatan Servis</FormLabel>
+              <FormControl>
+                <Textarea
+                  placeholder="Jelaskan keluhan pada motor Anda (misal: mesin kasar, ganti oli, rem berbunyi)..."
+                  className="resize-none text-xs bg-muted/20 min-h-[90px]"
+                  {...field}
+                />
+              </FormControl>
+              <FormMessage className="text-[10px]" />
+            </FormItem>
+          )}
+        />
 
         <Button
           type="submit"
-          className="w-full h-14 text-lg font-black uppercase tracking-widest shadow-xl shadow-primary/20 hover:scale-[1.02] active:scale-[0.98] transition-all duration-300 rounded-xl"
-          size="lg"
           disabled={isSubmitting}
+          className="w-full h-12 text-sm font-black bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl shadow-lg hover:shadow-primary/25 transition-all uppercase tracking-wide"
         >
           {isSubmitting ? (
             <>
@@ -412,14 +418,14 @@ export function BookingForm({ serviceOptions = [], garagePhone }: BookingFormPro
             </>
           ) : (
             <span className="flex items-center gap-3">
-                <CalendarCheck className="w-5 h-5" />
-                Booking Sekarang
+              <CalendarCheck className="w-5 h-5" />
+              Booking Sekarang
             </span>
           )}
         </Button>
         
         <p className="text-[10px] text-center text-muted-foreground font-medium opacity-60">
-            Dengan menekan tombol di atas, Anda setuju dengan jadwal operasional kami.
+          Dengan menekan tombol di atas, Anda setuju dengan jadwal operasional kami.
         </p>
       </form>
     </Form>

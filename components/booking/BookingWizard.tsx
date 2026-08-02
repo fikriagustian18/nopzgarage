@@ -1,15 +1,9 @@
-// components/BookingWizard.tsx
 "use client";
 
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { createBooking } from "@/lib/actions/orders";
-import { Button } from "@/components/ui/Button";
-import { Input } from "@/components/ui/Input";
-import { Textarea } from "@/components/ui/Textarea";
-import { Card, CardContent } from "@/components/ui/Card";
 import { 
   User, 
   Phone, 
@@ -18,29 +12,36 @@ import {
   Wrench, 
   Calendar, 
   CheckCircle2, 
-  Check,
+  Check, 
   Info, 
   Bike, 
   PenTool, 
   Loader2, 
   ArrowLeft, 
-  ArrowRight,
-  Globe,
-  LogIn,
-  ChevronDown,
-  Gauge,
-  ChevronRight
+  ArrowRight, 
+  LogIn, 
+  Gauge, 
+  ChevronRight 
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
-import { formatWhatsAppNumber } from "@/lib/utils";
 import { format } from "date-fns";
 import { id } from "date-fns/locale";
 import Link from "next/link";
 import Image from "next/image";
-import { ThemeToggle } from "@/components/shared/ThemeToggle";
 
-// ==================== Validation Schemas ====================
+import { Button } from "@/components/ui/Button";
+import { Input } from "@/components/ui/Input";
+import { Textarea } from "@/components/ui/Textarea";
+import { Card, CardContent } from "@/components/ui/Card";
+import { ThemeToggle } from "@/components/shared/ThemeToggle";
+import { createBooking } from "@/lib/actions/orders";
+import { formatWhatsAppNumber } from "@/lib/utils";
+import { 
+  DEFAULT_SERVICE_OPTIONS, 
+  DefaultServiceOption 
+} from "@/lib/constants/serviceDefaults";
+
 const step1Schema = z.object({
   custName: z.string().min(3, "Nama lengkap minimal 3 karakter"),
   custPhone: z
@@ -60,22 +61,55 @@ const step3Schema = z.object({
   complaint: z.string().min(10, "Keluhan minimal 10 karakter"),
 });
 
-type Step1Data = z.infer<typeof step1Schema>;
-type Step3Data = z.infer<typeof step3Schema>;
+export type Step1Data = z.infer<typeof step1Schema>;
+export type Step3Data = z.infer<typeof step3Schema>;
 
-interface BookingWizardProps {
-  serviceOptions?: any[];
-  generalSettings?: any;
-  session?: any;
+export interface BookingWizardUserSession {
+  user: {
+    role: string;
+  };
 }
 
-export function BookingWizard({ serviceOptions = [], generalSettings = {}, session }: BookingWizardProps) {
-  const [step, setStep] = useState(1);
-  const [selectedService, setSelectedService] = useState<any>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [successValues, setSuccessValues] = useState<any | null>(null);
+export interface GeneralSettings {
+  phone?: string;
+  days?: string[];
+  openTime?: string;
+  closeTime?: string;
+}
 
-  // Form states for each step
+export interface SelectedService {
+  id: string;
+  title: string;
+  description?: string;
+  desc?: string;
+  serviceType: "LIGHT_SERVICE" | "MODIFICATION";
+  icon: string;
+}
+
+export interface SuccessValues {
+  queueNumber?: string;
+  custName: string;
+  vehicle: string;
+  plateNumber?: string;
+  scheduledAt: string;
+}
+
+export interface BookingWizardProps {
+  serviceOptions?: DefaultServiceOption[];
+  generalSettings?: GeneralSettings;
+  session?: BookingWizardUserSession | null;
+}
+
+export function BookingWizard({ 
+  serviceOptions = [], 
+  generalSettings = {}, 
+  session 
+}: BookingWizardProps) {
+  const [step, setStep] = useState(1);
+  const [selectedService, setSelectedService] = useState<SelectedService | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [successValues, setSuccessValues] = useState<SuccessValues | null>(null);
+
   const step1Form = useForm<Step1Data>({
     resolver: zodResolver(step1Schema),
     defaultValues: {
@@ -96,61 +130,60 @@ export function BookingWizard({ serviceOptions = [], generalSettings = {}, sessi
     },
   });
 
-  // Services available
-  const services = serviceOptions.length > 0 ? serviceOptions : [
-    { id: "1", title: "Fast Lane Service", description: "Servis ringan, ganti oli, tune up dalam 30 menit", serviceType: "LIGHT_SERVICE" },
-    { id: "2", title: "Project Custom", description: "Modifikasi mesin, body, cat, dan custom parts", serviceType: "MODIFICATION" },
-    { id: "3", title: "Performance Upgrade", description: "Bore up, remap ECU, upgrade CVT & kelistrikan", serviceType: "MODIFICATION" }
-  ];
-
-  // Helper formatting values
+  const services = serviceOptions.length > 0 ? serviceOptions : DEFAULT_SERVICE_OPTIONS;
   const step1Values = step1Form.watch();
   const step3Values = step3Form.watch();
 
-  const handleNextStep1 = async () => {
+  async function handleNextStep1() {
     const isValid = await step1Form.trigger();
     if (isValid) {
       setStep(2);
     }
-  };
+  }
 
-  const handleNextStep2 = () => {
+  function handleNextStep2() {
     if (!selectedService) {
-      toast.error("Pilih Layanan", { description: "Silakan pilih salah satu jenis layanan terlebih dahulu." });
+      toast.error("Pilih Layanan", { 
+        description: "Silakan pilih salah satu jenis layanan terlebih dahulu." 
+      });
       return;
     }
     setStep(3);
-  };
+  }
 
-  const handleNextStep3 = async () => {
+  async function handleNextStep3() {
     const isValid = await step3Form.trigger();
     if (isValid) {
       setStep(4);
     }
-  };
+  }
 
-  const handlePrevStep = () => {
+  function handlePrevStep() {
     if (step > 1) {
       setStep(step - 1);
     }
-  };
+  }
 
-  const formatScheduledDate = (dateStr: string) => {
-    if (!dateStr) return "-";
+  function formatScheduledDate(dateStr: string): string {
+    if (!dateStr) {
+      return "-";
+    }
     try {
       return format(new Date(dateStr), "dd MMMM yyyy, HH:mm", { locale: id });
-    } catch (e) {
+    } catch {
       return dateStr;
     }
-  };
+  }
 
-  const handleSubmitBooking = async () => {
+  async function handleSubmitBooking() {
     setIsSubmitting(true);
     try {
       const data1 = step1Form.getValues();
       const data3 = step3Form.getValues();
       
-      const mappedServiceType = (selectedService?.title?.toLowerCase().includes("fast") || selectedService?.title?.toLowerCase().includes("ringan")) 
+      const isLightService = selectedService?.title?.toLowerCase().includes("fast") || 
+        selectedService?.title?.toLowerCase().includes("ringan");
+      const mappedServiceType: "LIGHT_SERVICE" | "MODIFICATION" = isLightService 
         ? "LIGHT_SERVICE" 
         : "MODIFICATION";
 
@@ -161,7 +194,7 @@ export function BookingWizard({ serviceOptions = [], generalSettings = {}, sessi
         custPhone: data1.custPhone,
         vehicle: data3.vehicle,
         plateNumber: data3.plateNumber || "",
-        serviceType: mappedServiceType as any,
+        serviceType: mappedServiceType,
         scheduledAt: data3.scheduledAt,
         complaint: mergedComplaint,
       };
@@ -169,7 +202,7 @@ export function BookingWizard({ serviceOptions = [], generalSettings = {}, sessi
       const result = await createBooking(submitData);
 
       if (result.success) {
-        setSuccessValues(result.order);
+        setSuccessValues(result.order as SuccessValues);
         toast.success("Booking Berhasil!", {
           description: "Silakan simpan nomor antrian Anda."
         });
@@ -178,18 +211,22 @@ export function BookingWizard({ serviceOptions = [], generalSettings = {}, sessi
           description: result.error || "Terjadi kesalahan sistem."
         });
       }
-    } catch (err) {
-      toast.error("Error", { description: "Gagal mengirim booking." });
+    } catch {
+      toast.error("Error", { 
+        description: "Gagal mengirim booking." 
+      });
     } finally {
       setIsSubmitting(false);
     }
-  };
+  }
 
   const garagePhone = generalSettings.phone || "0812-3456-7890";
   const cleanPhone = formatWhatsAppNumber(garagePhone);
 
-  const getWaText = () => {
-    if (!successValues) return "";
+  function getWaText(): string {
+    if (!successValues) {
+      return "";
+    }
     const formattedDate = successValues.scheduledAt
       ? new Date(successValues.scheduledAt).toLocaleString("id-ID", {
           dateStyle: "medium",
@@ -207,16 +244,17 @@ export function BookingWizard({ serviceOptions = [], generalSettings = {}, sessi
       `*Layanan:* ${selectedService?.title || "Servis"}\n` +
       `Mohon konfirmasinya. Terima kasih!`
     );
-  };
+  }
 
   return (
     <div className="min-h-screen bg-background text-foreground overflow-x-hidden antialiased">
-      {/* Header - Enhanced with better visual weight */}
       <header className="sticky top-0 z-50 backdrop-blur-2xl bg-background/90 border-b border-border/50 shadow-sm">
         <div className="container mx-auto px-4 lg:px-6">
           <div className="flex justify-between items-center h-20">
-            {/* Logo - Better spacing and hover effect */}
-            <Link href="/" className="flex flex-col items-start gap-1 group cursor-pointer transition-all duration-300 hover:scale-[1.02]">
+            <Link 
+              href="/" 
+              className="flex flex-col items-start gap-1 group cursor-pointer transition-all duration-300 hover:scale-[1.02]"
+            >
               <div className="relative">
                 <Image 
                   src="/logo.svg" 
@@ -229,11 +267,10 @@ export function BookingWizard({ serviceOptions = [], generalSettings = {}, sessi
                 />
               </div>
               <p className="text-xs md:text-sm text-muted-foreground tracking-[0.2em] pl-0.5 font-nfs uppercase font-bold">
-               REMAP N CUSTOM
+                REMAP N CUSTOM
               </p>
             </Link>
 
-            {/* Navigation - Better spacing and hover states */}
             <nav className="flex gap-3 md:gap-4 items-center">
               <Link 
                 href="/status" 
@@ -267,18 +304,18 @@ export function BookingWizard({ serviceOptions = [], generalSettings = {}, sessi
         </div>
       </header>
 
-      {/* MAIN BODY CONTENT */}
       <main className="container mx-auto px-4 py-8 lg:py-12 max-w-7xl">
-        {/* Back button */}
         <div className="mb-6">
-          <Link href="/" className="inline-flex items-center gap-2 px-4 py-2 border border-border bg-card hover:bg-muted text-foreground text-xs font-bold uppercase tracking-wider rounded-full transition-colors cursor-pointer">
+          <Link 
+            href="/" 
+            className="inline-flex items-center gap-2 px-4 py-2 border border-border bg-card hover:bg-muted text-foreground text-xs font-bold uppercase tracking-wider rounded-full transition-colors cursor-pointer"
+          >
             <ArrowLeft className="h-3.5 w-3.5" />
             <span>Booking Servis</span>
           </Link>
         </div>
 
         {successValues ? (
-          /* SUCCESS SCREEN */
           <motion.div 
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
@@ -330,8 +367,14 @@ export function BookingWizard({ serviceOptions = [], generalSettings = {}, sessi
                 Kirim Konfirmasi WhatsApp
               </Button>
               <div className="grid grid-cols-2 gap-3">
-                <Link href="/status" className="w-full">
-                  <Button variant="outline" className="w-full h-11 text-xs font-bold rounded-xl">
+                <Link 
+                  href="/status" 
+                  className="w-full"
+                >
+                  <Button 
+                    variant="outline" 
+                    className="w-full h-11 text-xs font-bold rounded-xl"
+                  >
                     Cek Status Antrian
                   </Button>
                 </Link>
@@ -352,11 +395,8 @@ export function BookingWizard({ serviceOptions = [], generalSettings = {}, sessi
             </div>
           </motion.div>
         ) : (
-          /* WORKFLOW LAYOUT (2 COLUMNS) */
           <div className="grid lg:grid-cols-3 gap-8 items-start">
-            {/* Left Content Area (Columns 2 span) */}
             <div className="lg:col-span-2 space-y-8">
-              {/* Stepper Headline */}
               <div className="space-y-3">
                 <h1 className="text-3xl sm:text-4xl md:text-5xl font-black tracking-tight leading-none text-foreground">
                   Siap untuk Performa Puncak?
@@ -366,7 +406,6 @@ export function BookingWizard({ serviceOptions = [], generalSettings = {}, sessi
                 </p>
               </div>
 
-              {/* Mockup Horizontal Stepper */}
               <div className="relative py-4">
                 <div className="absolute top-1/2 left-0 right-0 h-0.5 bg-muted -translate-y-1/2 -z-10" />
                 <div className="flex justify-between items-center w-full">
@@ -380,15 +419,26 @@ export function BookingWizard({ serviceOptions = [], generalSettings = {}, sessi
                     const isActive = step === s.num;
 
                     return (
-                      <div key={s.num} className="flex flex-col items-center gap-2 relative bg-background px-3">
-                        <div className={`h-10 w-10 rounded-full flex items-center justify-center border-2 transition-all duration-300 font-bold ${
-                          isCompleted ? "bg-primary border-primary text-primary-foreground" :
-                          isActive ? "bg-foreground border-foreground text-background" :
-                          "bg-background border-muted-foreground/35 text-muted-foreground"
-                        }`}>
+                      <div 
+                        key={s.num} 
+                        className="flex flex-col items-center gap-2 relative bg-background px-3"
+                      >
+                        <div 
+                          className={`h-10 w-10 rounded-full flex items-center justify-center border-2 transition-all duration-300 font-bold ${
+                            isCompleted 
+                              ? "bg-primary border-primary text-primary-foreground" 
+                              : isActive 
+                              ? "bg-foreground border-foreground text-background" 
+                              : "bg-background border-muted-foreground/35 text-muted-foreground"
+                          }`}
+                        >
                           {isCompleted ? <Check className="h-4.5 w-4.5" /> : s.num}
                         </div>
-                        <span className={`text-xs font-bold tracking-tight ${isActive ? "text-foreground" : "text-muted-foreground"}`}>
+                        <span 
+                          className={`text-xs font-bold tracking-tight ${
+                            isActive ? "text-foreground" : "text-muted-foreground"
+                          }`}
+                        >
                           {s.label}
                         </span>
                       </div>
@@ -397,7 +447,6 @@ export function BookingWizard({ serviceOptions = [], generalSettings = {}, sessi
                 </div>
               </div>
 
-              {/* Step Forms */}
               <Card className="bg-card border border-border shadow-sm rounded-2xl">
                 <CardContent className="p-6 md:p-8">
                   <AnimatePresence mode="wait">
@@ -495,7 +544,7 @@ export function BookingWizard({ serviceOptions = [], generalSettings = {}, sessi
                           {services.map((svc) => (
                             <div 
                               key={svc.id}
-                              onClick={() => setSelectedService(svc)}
+                              onClick={() => setSelectedService(svc as SelectedService)}
                               className={`border-2 rounded-2xl p-5 cursor-pointer transition-all duration-300 relative overflow-hidden ${
                                 selectedService?.id === svc.id 
                                   ? "border-primary bg-primary/5 shadow-md scale-[1.02]" 
@@ -503,7 +552,7 @@ export function BookingWizard({ serviceOptions = [], generalSettings = {}, sessi
                               }`}
                             >
                               <div className="flex justify-between items-start mb-3">
-                                <span className={`p-2 rounded-xl text-primary bg-primary/10`}>
+                                <span className="p-2 rounded-xl text-primary bg-primary/10">
                                   <Wrench className="h-5 w-5" />
                                 </span>
                                 {selectedService?.id === svc.id && (
@@ -513,7 +562,7 @@ export function BookingWizard({ serviceOptions = [], generalSettings = {}, sessi
                                 )}
                               </div>
                               <h3 className="font-bold text-sm text-foreground mb-1">{svc.title}</h3>
-                              <p className="text-xs text-muted-foreground line-clamp-3 leading-relaxed">{svc.description || svc.desc}</p>
+                              <p className="text-xs text-muted-foreground line-clamp-3 leading-relaxed">{svc.description}</p>
                             </div>
                           ))}
                         </div>
@@ -638,7 +687,6 @@ export function BookingWizard({ serviceOptions = [], generalSettings = {}, sessi
                     )}
                   </AnimatePresence>
 
-                  {/* Navigation Buttons inside Form Container */}
                   <div className="flex items-center justify-between border-t border-border pt-6 mt-8">
                     {step > 1 ? (
                       <Button
@@ -650,28 +698,40 @@ export function BookingWizard({ serviceOptions = [], generalSettings = {}, sessi
                       </Button>
                     ) : (
                       <Link href="/">
-                        <Button variant="outline" className="h-11 px-5 text-xs font-bold rounded-xl">
+                        <Button 
+                          variant="outline" 
+                          className="h-11 px-5 text-xs font-bold rounded-xl"
+                        >
                           Batal
                         </Button>
                       </Link>
                     )}
 
                     {step === 1 && (
-                      <Button onClick={handleNextStep1} className="gap-2 h-11 px-5 text-xs font-bold rounded-xl">
+                      <Button 
+                        onClick={handleNextStep1} 
+                        className="gap-2 h-11 px-5 text-xs font-bold rounded-xl"
+                      >
                         <span>Selanjutnya</span>
                         <ArrowRight className="h-3.5 w-3.5" />
                       </Button>
                     )}
 
                     {step === 2 && (
-                      <Button onClick={handleNextStep2} className="gap-2 h-11 px-5 text-xs font-bold rounded-xl">
+                      <Button 
+                        onClick={handleNextStep2} 
+                        className="gap-2 h-11 px-5 text-xs font-bold rounded-xl"
+                      >
                         <span>Selanjutnya</span>
                         <ArrowRight className="h-3.5 w-3.5" />
                       </Button>
                     )}
 
                     {step === 3 && (
-                      <Button onClick={handleNextStep3} className="gap-2 h-11 px-5 text-xs font-bold rounded-xl">
+                      <Button 
+                        onClick={handleNextStep3} 
+                        className="gap-2 h-11 px-5 text-xs font-bold rounded-xl"
+                      >
                         <span>Selanjutnya</span>
                         <ArrowRight className="h-3.5 w-3.5" />
                       </Button>
@@ -701,9 +761,7 @@ export function BookingWizard({ serviceOptions = [], generalSettings = {}, sessi
               </Card>
             </div>
 
-            {/* Right Side Sticky Sidebar Column */}
             <div className="space-y-6">
-              {/* CARD 1: RINGKASAN BOOKING */}
               <Card className="border border-border bg-card shadow-sm rounded-2xl overflow-hidden">
                 <div className="p-4 bg-muted/40 border-b border-border">
                   <h3 className="text-xs font-black uppercase tracking-wider text-foreground flex items-center gap-2">
@@ -712,7 +770,6 @@ export function BookingWizard({ serviceOptions = [], generalSettings = {}, sessi
                   </h3>
                 </div>
                 <CardContent className="p-5 space-y-4">
-                  {/* Nama Lengkap */}
                   <div className="space-y-1">
                     <div className="flex items-center gap-2 text-[10px] uppercase font-bold text-muted-foreground tracking-wider">
                       <User className="h-3 w-3" />
@@ -721,7 +778,6 @@ export function BookingWizard({ serviceOptions = [], generalSettings = {}, sessi
                     <p className="text-xs font-semibold text-foreground pl-5 truncate">{step1Values.custName || "-"}</p>
                   </div>
 
-                  {/* WhatsApp */}
                   <div className="space-y-1">
                     <div className="flex items-center gap-2 text-[10px] uppercase font-bold text-muted-foreground tracking-wider">
                       <Phone className="h-3 w-3" />
@@ -732,7 +788,6 @@ export function BookingWizard({ serviceOptions = [], generalSettings = {}, sessi
 
                   <div className="h-px bg-border border-t border-dashed" />
 
-                  {/* Data Kendaraan */}
                   <div className="space-y-3">
                     <span className="text-[10px] uppercase font-black text-muted-foreground tracking-widest block">DATA KENDARAAN</span>
                     <div className="space-y-2 pl-2">
@@ -754,7 +809,6 @@ export function BookingWizard({ serviceOptions = [], generalSettings = {}, sessi
 
                   <div className="h-px bg-border border-t border-dashed" />
 
-                  {/* Detail Servis */}
                   <div className="space-y-3">
                     <span className="text-[10px] uppercase font-black text-muted-foreground tracking-widest block font-bold">DETAIL SERVIS</span>
                     <div className="space-y-3 pl-2">
@@ -781,13 +835,11 @@ export function BookingWizard({ serviceOptions = [], generalSettings = {}, sessi
 
                   <div className="h-px bg-border/80 border-t border-dashed" />
 
-                  {/* Price disclaimer */}
                   <div className="flex justify-between items-center pt-2">
                     <span className="text-xs font-bold text-foreground">Total</span>
                     <span className="text-sm font-black text-green-600 dark:text-green-400">GRATIS</span>
                   </div>
 
-                  {/* Info alert box */}
                   <div className="flex items-start gap-2 bg-muted/60 border border-border p-3 rounded-xl text-[10px] text-muted-foreground leading-relaxed mt-2">
                     <Info className="h-3.5 w-3.5 shrink-0 text-primary mt-0.5" />
                     <p>Anda tidak akan dikenakan biaya saat melakukan booking.</p>
@@ -795,7 +847,6 @@ export function BookingWizard({ serviceOptions = [], generalSettings = {}, sessi
                 </CardContent>
               </Card>
 
-              {/* CARD 2: BUTUH BANTUAN? */}
               <Card className="border border-border bg-card shadow-sm rounded-2xl overflow-hidden">
                 <div className="p-4 bg-muted/40 border-b border-border">
                   <h3 className="text-xs font-black uppercase tracking-wider text-foreground">
@@ -803,10 +854,6 @@ export function BookingWizard({ serviceOptions = [], generalSettings = {}, sessi
                   </h3>
                 </div>
                 <CardContent className="p-5 space-y-3.5 text-xs font-medium">
-                  <div className="flex items-center gap-3">
-                    <Phone className="h-4 w-4 text-primary shrink-0" />
-                    <span>{generalSettings.phone || "0812-3456-7890"}</span>
-                  </div>
                   <div className="flex items-center gap-3">
                     <Phone className="h-4 w-4 text-primary shrink-0" />
                     <span>{generalSettings.phone || "0812-3456-7890"}</span>
