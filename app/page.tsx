@@ -1,48 +1,46 @@
-import Link from "next/link";
-import Image from "next/image";
 import { ComponentType } from "react";
+import Image from "next/image";
+import Link from "next/link";
 import { 
-  Wrench, 
-  Clock, 
-  Calendar, 
-  Zap, 
-  Shield, 
-  Award, 
-  CheckCircle, 
-  Phone, 
-  Mail, 
-  Star,
-  Gauge, 
-  Target, 
   AlertOctagon, 
-  Megaphone, 
-  Share2, 
-  ChevronRight, 
-  LogIn, 
-  Heart, 
-  Sparkles, 
   ArrowRight, 
-  ImagePlus, 
-  Instagram,
-  Settings
+  Award, 
+  Calendar, 
+  CheckCircle, 
+  ChevronRight, 
+  Clock, 
+  Gauge, 
+  Heart, 
+  Instagram, 
+  LogIn, 
+  Mail, 
+  Megaphone, 
+  Phone, 
+  Settings, 
+  Share2, 
+  Shield, 
+  Sparkles, 
+  Star, 
+  Target, 
+  Wrench, 
+  Zap 
 } from "lucide-react";
 
 import { LiveQueueList } from "@/components/shared/LiveQueueList";
+import { SocialEmbedsDisplay } from "@/components/shared/SocialEmbedsDisplay";
 import { ThemeToggle } from "@/components/shared/ThemeToggle";
 import { Button } from "@/components/ui/Button";
-import { MediaGalleryDisplay } from "@/components/shared/MediaGalleryDisplay";
-import { SocialEmbedsDisplay } from "@/components/shared/SocialEmbedsDisplay";
-import { auth } from "@/lib/auth";
+
 import { getAllSettings } from "@/lib/actions/settings";
-import { getMediaGallery } from "@/lib/actions/mediaGallery";
 import { getSocialEmbeds } from "@/lib/actions/socialEmbeds";
+import { auth } from "@/lib/auth";
+
 import { 
   DEFAULT_SERVICE_ITEMS, 
   DefaultServiceItem 
 } from "@/lib/constants/serviceDefaults";
 
 export const dynamic = "force-dynamic";
-
 
 export interface LandingPromo {
   title: string;
@@ -81,27 +79,23 @@ export default async function Page() {
   const settings = await getAllSettings();
   const { holiday, general, content } = settings;
 
-  const galleryItems = await getMediaGallery("GALLERY");
-  const posterItems = await getMediaGallery("POSTER");
-  const bannerItems = await getMediaGallery("BANNER");
-  const carouselItems = await getMediaGallery("CAROUSEL");
   const socialEmbeds = await getSocialEmbeds();
 
-  const servicesConfig = (content["services"] as { content?: { items?: DefaultServiceItem[] } })?.content || {};
+  const servicesConfig = (content["services"] as { content?: { items?: DefaultServiceItem[] } })?.content ?? {};
   const serviceItems: DefaultServiceItem[] = Array.isArray(servicesConfig.items) 
     ? servicesConfig.items 
     : DEFAULT_SERVICE_ITEMS;
 
-  const footerConfig = (content["footer"] as { content?: LandingFooterConfig })?.content || {};
+  const footerConfig = (content["footer"] as { content?: LandingFooterConfig })?.content ?? {};
 
   const promosContent = content["promos"] as { content?: { items?: LandingPromo[] } } | undefined;
-  const promos: LandingPromo[] = promosContent?.content?.items || [];
+  const promos: LandingPromo[] = promosContent?.content?.items ?? [];
   const activePromo = promos.find((promo) => promo.isActive);
 
-  const themeConfig = (content["theme_config"] as { content?: { primaryColor?: string; secondaryColor?: string; fontScale?: number } })?.content || {};
-  const primaryColor = themeConfig.primaryColor || "#6e2e72";
-  const secondaryColor = themeConfig.secondaryColor || "#fe6804";
-  const fontScale = themeConfig.fontScale || 1;
+  const themeConfig = (content["theme_config"] as { content?: { primaryColor?: string; secondaryColor?: string; fontScale?: number } })?.content ?? {};
+  const primaryColor = themeConfig.primaryColor ?? "#6e2e72";
+  const secondaryColor = themeConfig.secondaryColor ?? "#fe6804";
+  const fontScale = themeConfig.fontScale ?? 1;
 
   const themeStyle = `
     :root {
@@ -185,7 +179,7 @@ export default async function Page() {
             <AlertOctagon className="h-6 w-6 animate-pulse" />
             <span className="font-black uppercase tracking-wider text-lg">BENGKEL SEDANG TUTUP</span>
             <span className="hidden md:inline mx-3 opacity-40">•</span>
-            <span className="text-sm font-semibold opacity-95">{holiday.reason || "Libur Sementara"}</span>
+            <span className="text-sm font-semibold opacity-95">{holiday.reason ?? "Libur Sementara"}</span>
             {holiday.openAt && (
               <span className="text-sm bg-white/25 backdrop-blur-sm px-3 py-1 rounded-lg ml-2 font-mono font-bold">
                 Buka: {holiday.openAt}
@@ -210,15 +204,15 @@ export default async function Page() {
               </div>
               
               <h1 className="text-5xl sm:text-6xl md:text-7xl lg:text-8xl xl:text-9xl font-black text-foreground leading-[0.9] tracking-tighter animate-in fade-in-0 slide-in-from-bottom-5 duration-1000 delay-100">
-                {heroConfig.title || "NOPZ GARAGE"}
+                {heroConfig.title ?? "NOPZ GARAGE"}
                 <br />
                 <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary via-primary/80 to-secondary drop-shadow-2xl">
-                  {heroConfig.highlightText || heroConfig.subtitle?.split(" ")[0] || "PREMIUM"}
+                  {heroConfig.highlightText ?? heroConfig.subtitle?.split(" ")[0] ?? "PREMIUM"}
                 </span>
               </h1>
               
               <p className="text-lg md:text-xl lg:text-2xl text-muted-foreground max-w-3xl mx-auto leading-relaxed font-medium animate-in fade-in-0 slide-in-from-bottom-5 duration-1000 delay-200">
-                {heroConfig.subtitle || "Teknisi berpengalaman, peralatan modern, dan layanan berkualitas MotoGP standard."}
+                {heroConfig.subtitle ?? "Teknisi berpengalaman, peralatan modern, dan layanan berkualitas MotoGP standard."}
               </p>
               
               <div className="pt-6 flex flex-col sm:flex-row items-center justify-center gap-4 animate-in fade-in-0 slide-in-from-bottom-5 duration-1000 delay-300">
@@ -227,7 +221,7 @@ export default async function Page() {
                   className="group w-full sm:w-auto px-8 py-4 bg-primary text-primary-foreground text-base md:text-lg font-bold rounded-2xl hover:scale-[1.02] active:scale-[0.98] transition-all duration-300 shadow-2xl shadow-primary/40 hover:shadow-primary/60 flex items-center justify-center gap-2.5 border-2 border-primary/20"
                 >
                   <Calendar className="h-5 w-5 transition-transform duration-300 group-hover:scale-110" />
-                  <span>{heroConfig.ctaText || "Booking Sekarang"}</span>
+                  <span>{heroConfig.ctaText ?? "Booking Sekarang"}</span>
                   <ArrowRight className="h-5 w-5 transition-transform duration-300 group-hover:translate-x-1" />
                 </Link>
                 <Link 
@@ -272,7 +266,7 @@ export default async function Page() {
 
       {activePromo && (
         <section className="py-5 bg-gradient-to-r from-primary via-secondary to-primary bg-[length:200%_auto] animate-gradient text-white overflow-hidden shadow-xl relative">
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,_rgba(255,255,255,0.1),transparent_50%)]" />
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,_rgb(255_255_255_/_0.1),transparent_50%)]" />
           <div className="container mx-auto px-4 flex items-center justify-center gap-4 relative z-10">
             <Megaphone className="h-6 w-6 animate-bounce" />
             <span className="font-bold text-base md:text-lg text-center">
@@ -294,16 +288,16 @@ export default async function Page() {
                 Layanan Kami
               </div>
               <h2 className="text-4xl md:text-5xl lg:text-6xl font-black text-foreground tracking-tight leading-tight">
-                {(content["services"] as { title?: string })?.title || "Layanan Unggulan"}
+                {(content["services"] as { title?: string })?.title ?? "Layanan Unggulan"}
               </h2>
               <p className="text-muted-foreground text-lg md:text-xl leading-relaxed font-medium">
-                {(content["services"] as { subtitle?: string })?.subtitle || "Pilih layanan terbaik untuk performa maksimal motor Anda"}
+                {(content["services"] as { subtitle?: string })?.subtitle ?? "Pilih layanan terbaik untuk performa maksimal motor Anda"}
               </p>
             </div>
 
             <div className={`grid md:grid-cols-${Math.min(serviceItems.length, 2)} lg:grid-cols-${Math.min(serviceItems.length, 3)} gap-6 lg:gap-8 max-w-7xl mx-auto`}>
               {serviceItems.map((item, idx) => {
-                const IconComp = ICON_MAP[item.icon] || Zap;
+                const IconComp = ICON_MAP[item.icon] ?? Zap;
                 return (
                   <div 
                     key={idx} 
@@ -329,7 +323,7 @@ export default async function Page() {
                         {item.title}
                       </h3>
                       <p className="text-muted-foreground text-sm lg:text-base mb-8 leading-relaxed font-medium">
-                        {item.description || item.desc}
+                        {item.description ?? item.desc}
                       </p>
 
                       <div className="mt-auto space-y-4 pt-8 border-t-2 border-dashed border-border/50">
@@ -350,30 +344,6 @@ export default async function Page() {
                 );
               })}
             </div>
-          </div>
-        </section>
-      )}
-
-      {carouselItems.length > 0 && (
-        <section className="py-24 bg-background relative border-t-2 border-border/50">
-          <div className="container mx-auto px-4 lg:px-6">
-            <div className="text-center mb-16 space-y-4">
-              <div className="inline-flex items-center gap-2 px-4 py-2 bg-primary/10 border border-primary/20 rounded-full text-primary text-xs font-bold uppercase tracking-widest">
-                <Sparkles className="h-4 w-4" />
-                Highlights
-              </div>
-              <h2 className="text-3xl md:text-5xl font-black text-foreground">
-                Featured <span className="text-primary">Content</span>
-              </h2>
-              <p className="text-muted-foreground font-medium max-w-2xl mx-auto">
-                Sorotan utama dan momen terbaik terbaru
-              </p>
-            </div>
-            <MediaGalleryDisplay
-              items={carouselItems}
-              columns={1}
-              className="max-w-4xl mx-auto"
-            />
           </div>
         </section>
       )}
@@ -493,77 +463,6 @@ export default async function Page() {
         </div>
       </section>
 
-      {bannerItems.length > 0 && (
-        <section className="py-24 bg-muted/20 relative">
-          <div className="container mx-auto px-4 lg:px-6">
-            <div className="text-center mb-16 space-y-4">
-              <div className="inline-flex items-center gap-2 px-4 py-2 bg-secondary/10 border border-secondary/20 rounded-full text-secondary text-xs font-bold uppercase tracking-widest">
-                <Megaphone className="h-4 w-4" />
-                Special Offers
-              </div>
-              <h2 className="text-3xl md:text-5xl font-black text-foreground">
-                Promo & <span className="text-secondary">Events</span>
-              </h2>
-              <p className="text-muted-foreground font-medium text-lg max-w-2xl mx-auto">
-                Jangan lewatkan penawaran spesial dan event menarik
-              </p>
-            </div>
-            <MediaGalleryDisplay
-              items={bannerItems}
-              columns={1}
-              className="max-w-5xl mx-auto"
-            />
-          </div>
-        </section>
-      )}
-
-      {galleryItems.length > 0 && (
-        <section className="py-24 md:py-32 bg-gradient-to-b from-background to-muted/20 relative">
-          <div className="container mx-auto px-4 lg:px-6">
-            <div className="text-center mb-20 space-y-6">
-              <div className="inline-flex items-center gap-2 px-4 py-2 bg-primary/10 border border-primary/20 rounded-full text-primary text-xs font-bold uppercase tracking-widest">
-                <ImagePlus className="h-4 w-4" />
-                Gallery
-              </div>
-              <h2 className="text-4xl md:text-5xl lg:text-6xl font-black text-foreground tracking-tight">
-                Our <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-secondary">Projects</span>
-              </h2>
-              <p className="text-muted-foreground text-lg md:text-xl font-medium max-w-2xl mx-auto">
-                Lihat koleksi hasil kerja dan project terbaik kami
-              </p>
-            </div>
-
-            <MediaGalleryDisplay 
-              items={galleryItems} 
-              columns={3} 
-            />
-          </div>
-        </section>
-      )}
-
-      {posterItems.length > 0 && (
-        <section className="py-24 md:py-32 bg-gradient-to-b from-muted/20 to-background relative">
-          <div className="container mx-auto px-4 lg:px-6">
-            <div className="text-center mb-16 space-y-4">
-              <div className="inline-flex items-center gap-2 px-4 py-2 bg-primary/10 border border-primary/20 rounded-full text-primary text-xs font-bold uppercase tracking-widest">
-                <Award className="h-4 w-4" />
-                Latest Updates
-              </div>
-              <h2 className="text-3xl md:text-5xl font-black text-foreground">
-                Posters & <span className="text-primary">Flyers</span>
-              </h2>
-              <p className="text-muted-foreground font-medium text-lg max-w-2xl mx-auto">
-                Informasi detail tentang layanan dan event mendatang
-              </p>
-            </div>
-            <MediaGalleryDisplay 
-              items={posterItems} 
-              columns={2} 
-            />
-          </div>
-        </section>
-      )}
-
       {socialEmbeds.length > 0 && (
         <section className="py-24 md:py-32 bg-gradient-to-b from-background to-muted/20 border-y-2 border-border/50">
           <div className="container mx-auto px-4 lg:px-6">
@@ -602,7 +501,7 @@ export default async function Page() {
                   className="h-12 w-auto"
                 />
                 <p className="text-sm text-muted-foreground leading-relaxed font-medium mt-2">
-                  {footerConfig.description || "Fokus kami membereskan masalah, bukan menambah masalah baru. Datang, sampaikan keluhannya, biar tim kami yang cari sumber penyakitnya secara detail. Solusi yang kami tawarkan selalu berdasarkan data dan kondisi real motor. Kerja tuntas, transparan, dan bertanggung jawab."}
+                  {footerConfig.description ?? "Fokus kami membereskan masalah, bukan menambah masalah baru. Datang, sampaikan keluhannya, biar tim kami yang cari sumber penyakitnya secara detail. Solusi yang kami tawarkan selalu berdasarkan data dan kondisi real motor. Kerja tuntas, transparan, dan bertanggung jawab."}
                 </p>
               </div>
 
@@ -751,7 +650,7 @@ export default async function Page() {
                     <Phone className="h-5 w-5 text-primary" />
                   </div>
                   <span className="text-muted-foreground text-sm leading-relaxed font-medium pt-1">
-                    {general.address || "Jl. Raya Otomotif No. 88, Jakarta Selatan, Indonesia"}
+                    {general.address ?? "Jl. Raya Otomotif No. 88, Jakarta Selatan, Indonesia"}
                   </span>
                 </li>
                 <li className="flex items-center gap-4">
@@ -759,7 +658,7 @@ export default async function Page() {
                     <Phone className="h-5 w-5 text-primary" />
                   </div>
                   <span className="text-muted-foreground text-sm font-bold">
-                    {general.phone || "0812-3456-7890"}
+                    {general.phone ?? "0812-3456-7890"}
                   </span>
                 </li>
                 <li className="flex items-center gap-4">
@@ -767,7 +666,7 @@ export default async function Page() {
                     <Mail className="h-5 w-5 text-primary" />
                   </div>
                   <span className="text-muted-foreground text-sm font-semibold">
-                    {general.email || "info@nopzgarage.com"}
+                    {general.email ?? "info@nopzgarage.com"}
                   </span>
                 </li>
               </ul>
