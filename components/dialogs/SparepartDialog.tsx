@@ -14,7 +14,12 @@ import { Input } from "@/components/ui/Input";
 import { Label } from "@/components/ui/Label";
 import { toast } from "@/hooks/useToast";
 import { notifySparepartAdded, notifySparepartUpdated } from "@/hooks/useNotification";
-import { createSparePart, updateSparePart, CreateSparePartInput } from "@/lib/actions/inventory";
+import {
+  createSparePart,
+  updateSparePart,
+  generateNextSparePartCode,
+} from "@/lib/actions/inventory";
+import type { CreateSparePartInput } from "@/lib/actions/inventory";
 
 interface SparePart {
   id: string;
@@ -56,29 +61,40 @@ export function SparepartDialog({
   });
 
   useEffect(() => {
-    if (sparepart && mode === "edit") {
-      setFormData({
-        code: sparepart.code,
-        name: sparepart.name,
-        category: sparepart.category || "Oli",
-        stock: sparepart.stock,
-        minStock: sparepart.minStock,
-        unit: sparepart.unit,
-        buyPrice: sparepart.buyPrice,
-        sellPrice: sparepart.sellPrice,
-      });
-    } else {
-      setFormData({
-        code: "",
-        name: "",
-        category: "Oli",
-        stock: 0,
-        minStock: 5,
-        unit: "Pcs",
-        buyPrice: 0,
-        sellPrice: 0,
-      });
+    let isMounted = true;
+    if (open) {
+      if (sparepart && mode === "edit") {
+        setFormData({
+          code: sparepart.code,
+          name: sparepart.name,
+          category: sparepart.category || "Oli",
+          stock: sparepart.stock,
+          minStock: sparepart.minStock,
+          unit: sparepart.unit,
+          buyPrice: sparepart.buyPrice,
+          sellPrice: sparepart.sellPrice,
+        });
+      } else {
+        setFormData({
+          code: "Memuat...",
+          name: "",
+          category: "Oli",
+          stock: 0,
+          minStock: 5,
+          unit: "Pcs",
+          buyPrice: 0,
+          sellPrice: 0,
+        });
+        generateNextSparePartCode().then((res) => {
+          if (isMounted && res.success && res.code) {
+            setFormData((prev) => ({ ...prev, code: res.code }));
+          }
+        });
+      }
     }
+    return () => {
+      isMounted = false;
+    };
   }, [sparepart, mode, open]);
 
   async function handleSubmit(e: React.FormEvent) {
@@ -86,45 +102,47 @@ export function SparepartDialog({
     setLoading(true);
 
     try {
-      let result;
-      const payload = {
+      const payload: CreateSparePartInput = {
         ...formData,
         stock: Number(formData.stock) || 0,
         minStock: Number(formData.minStock) || 0,
         buyPrice: Number(formData.buyPrice) || 0,
         sellPrice: Number(formData.sellPrice) || 0,
       };
-      
-      if (mode === "create") {
-        result = await createSparePart(payload);
-      } else if (sparepart) {
-        result = await updateSparePart(sparepart.id, payload);
-      }
 
-      if (result && result.success) {
-        toast({
-          title: "✅ Berhasil!",
-          description: mode === "create" 
-            ? "Produk berhasil ditambahkan" 
-            : "Produk berhasil diupdate",
-        });
-        
-        if (mode === "create" && result.sparePart) {
-          notifySparepartAdded(formData.name, result.sparePart.id);
-        } else if (mode === "edit" && sparepart) {
-          notifySparepartUpdated(formData.name, sparepart.id);
-        }
+      const result =
+        mode === "create"
+          ? await createSparePart(payload)
+          : sparepart
+          ? await updateSparePart(sparepart.id, payload)
+          : null;
 
-        onOpenChange(false);
-        if (onSuccess) {
-          onSuccess();
-        }
-      } else {
+      if (!result || !result.success) {
         toast({
           variant: "destructive",
           title: "❌ Gagal",
           description: result?.error || "Terjadi kesalahan",
         });
+        return;
+      }
+
+      toast({
+        title: "✅ Berhasil!",
+        description:
+          mode === "create"
+            ? "Produk berhasil ditambahkan"
+            : "Produk berhasil diupdate",
+      });
+
+      if (mode === "create" && result.sparePart) {
+        notifySparepartAdded(formData.name, result.sparePart.id);
+      } else if (mode === "edit" && sparepart) {
+        notifySparepartUpdated(formData.name, sparepart.id);
+      }
+
+      onOpenChange(false);
+      if (onSuccess) {
+        onSuccess();
       }
     } catch (error) {
       toast({
@@ -160,18 +178,21 @@ export function SparepartDialog({
         >
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="code">Kode Barang <span className="text-red-500">*</span></Label>
+              <Label htmlFor="code">Kode Barang</Label>
               <Input
                 id="code"
-                placeholder="Contoh: BRG-0001"
                 value={formData.code}
-                onChange={(e) => setFormData({ ...formData, code: e.target.value })}
-                required
+                readOnly
+                disabled
+                className="bg-muted text-muted-foreground font-mono font-semibold cursor-not-allowed"
               />
+              <p className="text-[11px] text-muted-foreground">Otomatis dibuat oleh sistem</p>
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="name">Nama Barang <span className="text-red-500">*</span></Label>
+              <Label htmlFor="name">
+                Nama Barang <span className="text-red-500">*</span>
+              </Label>
               <Input
                 id="name"
                 placeholder="Contoh: Oli Mesin Federal Matic 10W-30"
@@ -184,7 +205,9 @@ export function SparepartDialog({
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="category">Kategori <span className="text-red-500">*</span></Label>
+              <Label htmlFor="category">
+                Kategori <span className="text-red-500">*</span>
+              </Label>
               <select
                 id="category"
                 className="w-full h-10 px-3 rounded-md border border-input bg-background text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
@@ -204,7 +227,9 @@ export function SparepartDialog({
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="unit">Satuan <span className="text-red-500">*</span></Label>
+              <Label htmlFor="unit">
+                Satuan <span className="text-red-500">*</span>
+              </Label>
               <Input
                 id="unit"
                 placeholder="Botol, Pcs, Set, Dus"
@@ -223,7 +248,9 @@ export function SparepartDialog({
                 type="number"
                 min="0"
                 value={formData.stock}
-                onChange={(e) => setFormData({ ...formData, stock: e.target.value as any })}
+                onChange={(e) =>
+                  setFormData({ ...formData, stock: Number(e.target.value) || 0 })
+                }
                 required
               />
             </div>
@@ -234,7 +261,9 @@ export function SparepartDialog({
                 type="number"
                 min="0"
                 value={formData.minStock}
-                onChange={(e) => setFormData({ ...formData, minStock: e.target.value as any })}
+                onChange={(e) =>
+                  setFormData({ ...formData, minStock: Number(e.target.value) || 0 })
+                }
                 required
               />
             </div>
@@ -248,7 +277,9 @@ export function SparepartDialog({
                 type="number"
                 min="0"
                 value={formData.buyPrice}
-                onChange={(e) => setFormData({ ...formData, buyPrice: e.target.value as any })}
+                onChange={(e) =>
+                  setFormData({ ...formData, buyPrice: Number(e.target.value) || 0 })
+                }
                 required
               />
             </div>
@@ -259,7 +290,9 @@ export function SparepartDialog({
                 type="number"
                 min="0"
                 value={formData.sellPrice}
-                onChange={(e) => setFormData({ ...formData, sellPrice: e.target.value as any })}
+                onChange={(e) =>
+                  setFormData({ ...formData, sellPrice: Number(e.target.value) || 0 })
+                }
                 required
               />
             </div>
@@ -275,8 +308,8 @@ export function SparepartDialog({
             >
               Batal
             </Button>
-            <Button 
-              type="submit" 
+            <Button
+              type="submit"
               disabled={loading}
               className="flex-1 gap-2"
             >

@@ -1,11 +1,11 @@
-// app/actions/inventory.ts
+// lib/actions/inventory.ts
 'use server';
 
 import { prisma } from '@/lib/prisma';
 import { revalidatePath } from 'next/cache';
 import { createLog } from './logs';
 
-export type CreateSparePartInput = {
+export interface CreateSparePartInput {
   code: string;
   name: string;
   category?: string;
@@ -15,22 +15,95 @@ export type CreateSparePartInput = {
   buyPrice: number;
   sellPrice: number;
   isActive?: boolean;
-};
+}
+
+interface OrderHistoryItem {
+  id: string;
+  quantity: number;
+  order?: {
+    id: string;
+    vehicle: string;
+    custName: string;
+    plateNumber?: string | null;
+    mechanic?: { name: string } | null;
+    createdAt: Date | string;
+  } | null;
+}
 
 /**
- * Menambahkan Sparepart baru ke sistem.
+ * Generates the next sequential code for a SparePart (e.g. BRG-0001, BRG-0002).
+ */
+export async function generateNextSparePartCode() {
+  try {
+    const brgParts = await prisma.sparePart.findMany({
+      where: { code: { startsWith: 'BRG-' } },
+      select: { code: true }
+    });
+
+    let maxNum = 0;
+    const brgRegex = /^BRG-(\d+)$/i;
+
+    for (const part of brgParts) {
+      const match = part.code.match(brgRegex);
+      if (match) {
+        const num = parseInt(match[1], 10);
+        if (num > maxNum) {
+          maxNum = num;
+        }
+      }
+    }
+
+    let nextNum = maxNum + 1;
+    let candidateCode = `BRG-${nextNum.toString().padStart(4, '0')}`;
+    const existingCodes = new Set(brgParts.map((p) => p.code));
+    while (existingCodes.has(candidateCode)) {
+      nextNum++;
+      candidateCode = `BRG-${nextNum.toString().padStart(4, '0')}`;
+    }
+
+    return { success: true, code: candidateCode };
+  } catch (error) {
+    console.error('Generate spare part code error:', error);
+    return { success: false, error: 'Gagal membuat kode barang' };
+  }
+}
+
+/**
+ * Adds a new Sparepart to the system.
  * 
- * Jika produk ditambahkan dengan stok awal > 0:
- * - Otomatis membuat Jurnal Penyesuaian: Debit Persediaan, Kredit Modal.
+ * If the product is added with initial stock > 0:
+ * - Automatically creates an Adjustment Journal: Debit Inventory, Credit Capital.
  * 
- * @param {CreateSparePartInput} data - Data sparepart.
- * @returns {Object} Data sparepart baru.
+ * @param {CreateSparePartInput} data - Spare part data.
+ * @returns {Promise<Object>} New spare part object or error message.
  */
 export async function createSparePart(data: CreateSparePartInput) {
   try {
+    let code = data.code;
+    if (!code || code.trim() === '' || code === 'Memuat...') {
+      const generated = await generateNextSparePartCode();
+      if (generated.success && generated.code) {
+        code = generated.code;
+      }
+    }
+
+    // Safety check for duplicate code collision
+    const existing = await prisma.sparePart.findUnique({
+      where: { code },
+      select: { id: true }
+    });
+
+    if (existing) {
+      const generated = await generateNextSparePartCode();
+      if (generated.success && generated.code) {
+        code = generated.code;
+      }
+    }
+
     const sparePart = await prisma.sparePart.create({
       data: {
         ...data,
+        code,
         category: data.category || 'Oli',
         buyPrice: data.buyPrice,
         sellPrice: data.sellPrice,
@@ -38,7 +111,7 @@ export async function createSparePart(data: CreateSparePartInput) {
       },
     });
 
-    // Jika ada stok awal, buat jurnal persediaan
+    // If initial stock exists, create inventory journal entry
     if (data.stock > 0) {
       const initialValue = data.stock * data.buyPrice;
       
@@ -61,8 +134,8 @@ export async function createSparePart(data: CreateSparePartInput) {
           reference: sparePart.id,
           items: {
             create: [
-              { accountId: inventoryAccount.id, debit: initialValue, credit: 0 },  // Debit: Persediaan
-              { accountId: capitalAccount.id, debit: 0, credit: initialValue }  // Kredit: Modal
+              { accountId: inventoryAccount.id, debit: initialValue, credit: 0 },
+              { accountId: capitalAccount.id, debit: 0, credit: initialValue }
             ]
           }
         }
@@ -73,13 +146,13 @@ export async function createSparePart(data: CreateSparePartInput) {
     revalidatePath('/admin/inventory');
     
     await createLog({
-        action: "CREATE_SPAREPART",
-        title: "Product Added",
-        details: `Product ${data.name} (${data.code}) added to inventory.`,
-        metadata: { sparePartId: sparePart.id },
-        userName: "Admin",
-        role: "ADMIN"
-      });
+      action: "CREATE_SPAREPART",
+      title: "Product Added",
+      details: `Product ${data.name} (${data.code}) added to inventory.`,
+      metadata: { sparePartId: sparePart.id },
+      userName: "Admin",
+      role: "ADMIN"
+    });
 
     const serialized = {
       ...sparePart,
@@ -97,19 +170,18 @@ export async function createSparePart(data: CreateSparePartInput) {
 }
 
 /**
- * Mengupdate data sparepart (nama, harga, stok manual).
+ * Updates spare part details (name, price, manual stock adjustment).
  * 
- * Jika ada penambahan stok manual:
- * - Dianggap sebagai PEMBELIAN (Kulakan).
- * - Otomatis membuat jurnal: Debit Persediaan, Kredit Kas (Pembelian Tunai).
+ * If manual stock is added:
+ * - Treated as PURCHASE.
+ * - Automatically creates journal: Debit Inventory, Credit Cash.
  * 
- * @param {string} id - ID Sparepart.
- * @param {Partial<CreateSparePartInput>} data - Data update.
- * @returns {Object} Data updated.
+ * @param {string} id - Spare part ID.
+ * @param {Partial<CreateSparePartInput>} data - Update data payload.
+ * @returns {Promise<Object>} Updated spare part object or error message.
  */
 export async function updateSparePart(id: string, data: Partial<CreateSparePartInput>) {
   try {
-    // Cek perubahan stok
     const existingPart = await prisma.sparePart.findUnique({ where: { id } });
     if (!existingPart) {
       return { success: false, error: 'Produk tidak ditemukan' };
@@ -125,12 +197,9 @@ export async function updateSparePart(id: string, data: Partial<CreateSparePartI
       },
     });
 
-    // Jika ada penambahan stok, buat jurnal pembelian
+    // If stock increased, create purchase journal entry
     if (stockChange > 0) {
       const purchaseValue = stockChange * buyPrice;
-      
-      // Debit: Persediaan Sparepart (111)
-      // Kredit: Kas (101) - asumsi pembelian tunai
       
       const inventoryAccount = await prisma.account.upsert({
         where: { code: '111' },
@@ -151,8 +220,8 @@ export async function updateSparePart(id: string, data: Partial<CreateSparePartI
           reference: sparePart.id,
           items: {
             create: [
-              { accountId: inventoryAccount.id, debit: purchaseValue, credit: 0 },  // Debit: Persediaan
-              { accountId: cashAccount.id, debit: 0, credit: purchaseValue }  // Kredit: Kas
+              { accountId: inventoryAccount.id, debit: purchaseValue, credit: 0 },
+              { accountId: cashAccount.id, debit: 0, credit: purchaseValue }
             ]
           }
         }
@@ -162,14 +231,14 @@ export async function updateSparePart(id: string, data: Partial<CreateSparePartI
     revalidatePath('/admin/products');
     revalidatePath('/admin/inventory');
     
-      await createLog({
-        action: "UPDATE_SPAREPART",
-        title: "Product Updated",
-        details: `Product ${data.name || sparePart.name} updated.${stockChange > 0 ? ` Stock increased by ${stockChange}.` : ''}`,
-        metadata: { sparePartId: sparePart.id, stockChange },
-        userName: "Admin",
-        role: "ADMIN"
-      });
+    await createLog({
+      action: "UPDATE_SPAREPART",
+      title: "Product Updated",
+      details: `Product ${data.name || sparePart.name} updated.${stockChange > 0 ? ` Stock increased by ${stockChange}.` : ''}`,
+      metadata: { sparePartId: sparePart.id, stockChange },
+      userName: "Admin",
+      role: "ADMIN"
+    });
 
     const serialized = {
       ...sparePart,
@@ -187,31 +256,29 @@ export async function updateSparePart(id: string, data: Partial<CreateSparePartI
 }
 
 /**
- * Nonaktifkan produk (Soft Delete).
+ * Deactivates a product (Soft Delete).
  * 
- * @param {string} id - ID Produk.
- * @returns {Object} Status sukses.
+ * @param {string} id - Product ID.
+ * @returns {Promise<Object>} Success status or error.
  */
 export async function deleteSparePart(id: string) {
-  // Soft delete (Non-aktifkan) lebih aman daripada hard delete
-  // jika sudah ada relasi
   try {
-    const sparePart = await prisma.sparePart.update({
-        where: { id },
-        data: { isActive: false }
+    await prisma.sparePart.update({
+      where: { id },
+      data: { isActive: false }
     });
     
     revalidatePath('/admin/products');
     revalidatePath('/admin/inventory');
     
     await createLog({
-        action: "DEACTIVATE_SPAREPART",
-        title: "Product Deactivated",
-        details: `Product ${id} has been deactivated.`,
-        metadata: { sparePartId: id },
-        userName: "Admin",
-        role: "ADMIN"
-      });
+      action: "DEACTIVATE_SPAREPART",
+      title: "Product Deactivated",
+      details: `Product ${id} has been deactivated.`,
+      metadata: { sparePartId: id },
+      userName: "Admin",
+      role: "ADMIN"
+    });
 
     return { success: true };
   } catch (error) {
@@ -221,42 +288,42 @@ export async function deleteSparePart(id: string) {
 }
 
 /**
- * Mengaktifkan kembali produk yang non-aktif.
+ * Reactivates an inactive product.
  * 
- * @param {string} id - ID Produk.
- * @returns {Object} Status sukses.
+ * @param {string} id - Product ID.
+ * @returns {Promise<Object>} Success status or error.
  */
 export async function reactivateSparePart(id: string) {
-    try {
-      const sparePart = await prisma.sparePart.update({
-          where: { id },
-          data: { isActive: true }
-      });
-      
-      revalidatePath('/admin/products');
+  try {
+    await prisma.sparePart.update({
+      where: { id },
+      data: { isActive: true }
+    });
+    
+    revalidatePath('/admin/products');
     revalidatePath('/admin/inventory');
-      
-      await createLog({
-          action: "REACTIVATE_SPAREPART",
-          title: "Product Reactivated",
-          details: `Product ${id} has been reactivated.`,
-          metadata: { sparePartId: id },
-          userName: "Admin",
-          role: "ADMIN"
-        });
-  
-      return { success: true };
-    } catch (error) {
-      console.error('Reactivate spare part error:', error);
-      return { success: false, error: 'Gagal mengaktifkan produk' };
-    }
+    
+    await createLog({
+      action: "REACTIVATE_SPAREPART",
+      title: "Product Reactivated",
+      details: `Product ${id} has been reactivated.`,
+      metadata: { sparePartId: id },
+      userName: "Admin",
+      role: "ADMIN"
+    });
+
+    return { success: true };
+  } catch (error) {
+    console.error('Reactivate spare part error:', error);
+    return { success: false, error: 'Gagal mengaktifkan produk' };
   }
+}
 
 /**
- * Mengambil daftar produk sparepart.
+ * Retrieves the list of spare parts.
  * 
- * @param {boolean} includeInactive - Jika true, tampilkan juga yang non-aktif.
- * @returns {Object} Daftar produk.
+ * @param {boolean} includeInactive - If true, includes inactive products.
+ * @returns {Promise<Object>} Spare parts array or error.
  */
 export async function getSpareParts(includeInactive = false) {
   try {
@@ -265,7 +332,7 @@ export async function getSpareParts(includeInactive = false) {
       orderBy: { name: 'asc' },
     });
     
-    const serialized = spareParts.map(p => ({
+    const serialized = spareParts.map((p) => ({
       ...p,
       buyPrice: p.buyPrice.toNumber(),
       sellPrice: p.sellPrice.toNumber(),
@@ -279,82 +346,83 @@ export async function getSpareParts(includeInactive = false) {
   }
 }
 
-// NEW: Get Product Detail with Sales History
 /**
- * Mengambil detail produk beserta riwayat penjualannya.
+ * Retrieves spare part details along with sales history.
  * 
- * @param {string} id - ID Produk.
- * @returns {Object} Detail produk + statistik penjualan.
+ * @param {string} id - Product ID.
+ * @returns {Promise<Object>} Product details with sales statistics or error.
  */
 export async function getSparePartDetail(id: string) {
-    try {
-      const sparePart = await prisma.sparePart.findUnique({
-        where: { id },
-        include: {
-            orderItems: {
-                include: {
-                    order: {
-                        select: {
-                            id: true,
-                            vehicle: true,
-                            custName: true,
-                            plateNumber: true,
-                            mechanic: { select: { name: true } }, // Siapa yang mengelola (Lead Mechanic)
-                            createdAt: true
-                        }
-                    }
-                },
-                orderBy: { createdAt: 'desc' },
-                take: 20
+  try {
+    const sparePart = await prisma.sparePart.findUnique({
+      where: { id },
+      include: {
+        orderItems: {
+          include: {
+            order: {
+              select: {
+                id: true,
+                vehicle: true,
+                custName: true,
+                plateNumber: true,
+                mechanic: { select: { name: true } },
+                createdAt: true
+              }
             }
+          },
+          orderBy: { createdAt: 'desc' },
+          take: 20
         }
-      });
-  
-      if (!sparePart) return { success: false, error: 'Produk tidak ditemukan' };
+      }
+    });
 
-      // Calculate Total Sold Statistics
-      const stats = await prisma.orderItem.aggregate({
-          where: { sparePartId: id },
-          _sum: { quantity: true, totalPrice: true },
-          _count: { id: true }
-      });
-
-      const serialized = {
-        ...sparePart,
-        buyPrice: sparePart.buyPrice.toNumber(),
-        sellPrice: sparePart.sellPrice.toNumber(),
-        createdAt: sparePart.createdAt instanceof Date ? sparePart.createdAt.toISOString() : sparePart.createdAt,
-        updatedAt: sparePart.updatedAt instanceof Date ? sparePart.updatedAt.toISOString() : sparePart.updatedAt,
-        history: sparePart.orderItems.map((item: any) => ({
-            id: item.id,
-            vehicle: item.order?.vehicle,
-            custName: item.order?.custName,
-            plateNumber: item.order?.plateNumber,
-            pic: item.order?.mechanic?.name || 'Unassigned',
-            quantity: item.quantity,
-            date: item.order?.createdAt instanceof Date ? item.order?.createdAt.toISOString() : item.order?.createdAt,
-        })),
-        stats: {
-            totalSold: stats._sum.quantity || 0,
-            revenue: stats._sum.totalPrice?.toNumber() || 0,
-            usageCount: stats._count.id
-        }
-      };
-      return { success: true, sparePart: serialized };
-    } catch (error) {
-      console.error('Get spare part detail error:', error);
-      return { success: false, error: 'Gagal load detail produk' };
+    if (!sparePart) {
+      return { success: false, error: 'Produk tidak ditemukan' };
     }
+
+    const stats = await prisma.orderItem.aggregate({
+      where: { sparePartId: id },
+      _sum: { quantity: true, totalPrice: true },
+      _count: { id: true }
+    });
+
+    const serialized = {
+      ...sparePart,
+      buyPrice: sparePart.buyPrice.toNumber(),
+      sellPrice: sparePart.sellPrice.toNumber(),
+      createdAt: sparePart.createdAt instanceof Date ? sparePart.createdAt.toISOString() : sparePart.createdAt,
+      updatedAt: sparePart.updatedAt instanceof Date ? sparePart.updatedAt.toISOString() : sparePart.updatedAt,
+      history: sparePart.orderItems.map((item: OrderHistoryItem) => ({
+        id: item.id,
+        vehicle: item.order?.vehicle,
+        custName: item.order?.custName,
+        plateNumber: item.order?.plateNumber,
+        pic: item.order?.mechanic?.name || 'Unassigned',
+        quantity: item.quantity,
+        date: item.order?.createdAt instanceof Date ? item.order.createdAt.toISOString() : item.order?.createdAt,
+      })),
+      stats: {
+        totalSold: stats._sum.quantity || 0,
+        revenue: stats._sum.totalPrice?.toNumber() || 0,
+        usageCount: stats._count.id
+      }
+    };
+    return { success: true, sparePart: serialized };
+  } catch (error) {
+    console.error('Get spare part detail error:', error);
+    return { success: false, error: 'Gagal load detail produk' };
   }
+}
 
 /**
- * Menambahkan stok barang (Stok Masuk).
+ * Increases spare part stock (Stock In).
  * 
- * @param {string} sparePartId - ID sparepart.
- * @param {number} quantity - Jumlah stok masuk.
- * @param {string} supplier - Nama penyuplai.
- * @param {number} buyPrice - Harga beli per unit.
- * @param {string|Date} date - Tanggal masuk.
+ * @param {string} sparePartId - Spare part ID.
+ * @param {number} quantity - Quantity to add.
+ * @param {string} supplier - Supplier name.
+ * @param {number} buyPrice - Purchase price per unit.
+ * @param {string|Date} date - Date of transaction.
+ * @returns {Promise<Object>} Success status or error.
  */
 export async function addStock(
   sparePartId: string,
@@ -377,7 +445,6 @@ export async function addStock(
       }
     });
 
-    // Create journal entry for purchase value
     const purchaseValue = quantity * buyPrice;
     const inventoryAccount = await prisma.account.upsert({
       where: { code: '111' },
@@ -417,19 +484,21 @@ export async function addStock(
     });
 
     return { success: true, sparePart: updated };
-  } catch (error: any) {
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Gagal menambahkan stok';
     console.error('Add stock error:', error);
-    return { success: false, error: error.message || 'Gagal menambahkan stok' };
+    return { success: false, error: message };
   }
 }
 
 /**
- * Mengurangi stok barang (Stok Keluar).
+ * Decreases spare part stock (Stock Out).
  * 
- * @param {string} sparePartId - ID sparepart.
- * @param {number} quantity - Jumlah stok keluar.
- * @param {string} description - Keterangan/Keperluan stok keluar.
- * @param {string|Date} date - Tanggal keluar.
+ * @param {string} sparePartId - Spare part ID.
+ * @param {number} quantity - Quantity to decrease.
+ * @param {string} description - Purpose/customer note.
+ * @param {string|Date} date - Date of transaction.
+ * @returns {Promise<Object>} Success status or error.
  */
 export async function reduceStock(
   sparePartId: string,
@@ -466,8 +535,9 @@ export async function reduceStock(
     });
 
     return { success: true, sparePart: updated };
-  } catch (error: any) {
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Gagal mengurangi stok';
     console.error('Reduce stock error:', error);
-    return { success: false, error: error.message || 'Gagal mengurangi stok' };
+    return { success: false, error: message };
   }
 }

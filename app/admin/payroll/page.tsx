@@ -84,6 +84,17 @@ interface Payroll {
   };
 }
 
+interface BankAccount {
+  id: string;
+  bankName: string;
+  accountNumber: string;
+  isActive: boolean;
+}
+
+interface RawPayroll extends Omit<Payroll, "detailsParsed"> {
+  detailsParsed?: Payroll["detailsParsed"];
+}
+
 export default function Page() {
   const { data: session } = useSession();
   const userRole = session?.user?.role;
@@ -91,7 +102,7 @@ export default function Page() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [payrolls, setPayrolls] = useState<Payroll[]>([]);
-  const [banks, setBanks] = useState<any[]>([]);
+  const [banks, setBanks] = useState<BankAccount[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("ALL");
 
@@ -132,12 +143,12 @@ export default function Page() {
       ]);
 
       if (payrollRes.success && payrollRes.payrolls) {
-        const formatted = payrollRes.payrolls.map((p: any) => {
+        const formatted: Payroll[] = (payrollRes.payrolls as RawPayroll[]).map((p) => {
           let detailsParsed = p.detailsParsed || null;
           if (!detailsParsed && p.details) {
             try {
               detailsParsed = JSON.parse(p.details);
-            } catch (e) {
+            } catch (error) {
               detailsParsed = { bonusNote: p.details };
             }
           }
@@ -146,16 +157,16 @@ export default function Page() {
             detailsParsed,
           };
         });
-        setPayrolls(formatted as Payroll[]);
+        setPayrolls(formatted);
       }
 
       if (bankRes.success && bankRes.data) {
-        setBanks(bankRes.data.filter((b: any) => b.isActive));
+        setBanks(bankRes.data.filter((b: BankAccount) => b.isActive));
       }
     } catch (error) {
       console.error("Failed to load payroll data", error);
       toast.error("Gagal memuat data payroll");
-    } fontally: {
+    } finally {
       setLoading(false);
     }
   }
@@ -193,15 +204,17 @@ export default function Page() {
         new Date(genEndDate)
       );
 
-      if (res.success) {
-        toast.success(`Berhasil membuat slip gaji untuk ${res.results?.length || 0} karyawan`);
-        setGenerateOpen(false);
-        fetchData();
-      } else {
+      if (!res.success) {
         toast.error(res.error || "Gagal melakukan generate payroll");
+        return;
       }
-    } catch (error: any) {
-      toast.error("Terjadi kesalahan: " + error.message);
+
+      toast.success(`Berhasil membuat slip gaji untuk ${res.results?.length || 0} karyawan`);
+      setGenerateOpen(false);
+      fetchData();
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      toast.error("Terjadi kesalahan: " + message);
     } finally {
       setGenerating(false);
     }
@@ -230,15 +243,17 @@ export default function Page() {
         bonusNote: bonusNote,
       });
 
-      if (res.success) {
-        toast.success("Rincian bonus & slip gaji berhasil diperbarui");
-        setEditOpen(false);
-        fetchData();
-      } else {
+      if (!res.success) {
         toast.error(res.error || "Gagal memperbarui payroll");
+        return;
       }
-    } catch (error: any) {
-      toast.error("Terjadi kesalahan: " + error.message);
+
+      toast.success("Rincian bonus & slip gaji berhasil diperbarui");
+      setEditOpen(false);
+      fetchData();
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      toast.error("Terjadi kesalahan: " + message);
     } finally {
       setUpdating(false);
     }
@@ -288,15 +303,17 @@ export default function Page() {
         bankAccountId: payMethod === "TRANSFER" ? selectedBankId : undefined,
       });
 
-      if (res.success) {
-        toast.success(`Berhasil mencairkan gaji sebesar ${formatMoney(payAmountNum)}`);
-        setPayOpen(false);
-        fetchData();
-      } else {
+      if (!res.success) {
         toast.error(res.error || "Gagal memproses pembayaran");
+        return;
       }
-    } catch (error: any) {
-      toast.error("Terjadi kesalahan: " + error.message);
+
+      toast.success(`Berhasil mencairkan gaji sebesar ${formatMoney(payAmountNum)}`);
+      setPayOpen(false);
+      fetchData();
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      toast.error("Terjadi kesalahan: " + message);
     } finally {
       setPaying(false);
     }
@@ -310,14 +327,16 @@ export default function Page() {
 
     try {
       const res = await deletePayroll(id);
-      if (res.success) {
-        toast.success("Slip gaji berhasil dihapus");
-        fetchData();
-      } else {
+      if (!res.success) {
         toast.error(res.error || "Gagal menghapus slip gaji");
+        return;
       }
-    } catch (error: any) {
-      toast.error("Terjadi kesalahan: " + error.message);
+
+      toast.success("Slip gaji berhasil dihapus");
+      fetchData();
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      toast.error("Terjadi kesalahan: " + message);
     }
   }
 
@@ -373,7 +392,10 @@ export default function Page() {
   });
 
   // Calculate totals
-  const totalUnpaid = payrolls.reduce((sum, p) => sum + (Number(p.totalEarned) - Number(p.totalPaid)), 0);
+  const totalUnpaid = payrolls.reduce(
+    (sum, p) => sum + (Number(p.totalEarned) - Number(p.totalPaid)),
+    0
+  );
   const totalPaid = payrolls.reduce((sum, p) => sum + Number(p.totalPaid), 0);
   const totalEarned = payrolls.reduce((sum, p) => sum + Number(p.totalEarned), 0);
   const pendingCount = payrolls.filter((p) => p.status !== "PAID").length;
@@ -388,8 +410,8 @@ export default function Page() {
               {isOwner ? "Gaji & Payroll" : "Slip Gaji Saya"}
             </h1>
             <p className="text-muted-foreground mt-1">
-              {isOwner 
-                ? "Manajemen gaji harian, bagi hasil komisi mekanik, persetujuan dan slip pembayaran." 
+              {isOwner
+                ? "Manajemen gaji harian, bagi hasil komisi mekanik, persetujuan dan slip pembayaran."
                 : "Riwayat dan rincian slip gaji Anda."}
             </p>
           </div>
@@ -415,14 +437,22 @@ export default function Page() {
         </div>
 
         {/* Financial Recap Widgets */}
-        <div className={`grid grid-cols-1 ${isOwner ? "md:grid-cols-4" : "md:grid-cols-3"} gap-6`}>
+        <div
+          className={`grid grid-cols-1 ${
+            isOwner ? "md:grid-cols-4" : "md:grid-cols-3"
+          } gap-6`}
+        >
           <Card className="border-border bg-card border-t-4 border-t-destructive">
             <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Gaji Terhutang (Liability)</CardTitle>
+              <CardTitle className="text-sm font-medium text-muted-foreground">
+                Gaji Terhutang (Liability)
+              </CardTitle>
               <Wallet className="h-4 w-4 text-destructive" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-destructive">{formatMoney(totalUnpaid)}</div>
+              <div className="text-2xl font-bold text-destructive">
+                {formatMoney(totalUnpaid)}
+              </div>
               <p className="text-xs text-muted-foreground mt-1">
                 {isOwner ? "Total gaji belum dicairkan" : "Gaji Anda yang belum dicairkan"}
               </p>
@@ -431,11 +461,15 @@ export default function Page() {
 
           <Card className="border-border bg-card border-t-4 border-t-green-500">
             <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Total Terbayar</CardTitle>
+              <CardTitle className="text-sm font-medium text-muted-foreground">
+                Total Terbayar
+              </CardTitle>
               <CheckCircle className="h-4 w-4 text-green-500" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-green-500">{formatMoney(totalPaid)}</div>
+              <div className="text-2xl font-bold text-green-500">
+                {formatMoney(totalPaid)}
+              </div>
               <p className="text-xs text-muted-foreground mt-1">
                 {isOwner ? "Akumulasi gaji keluar" : "Total gaji yang sudah diterima"}
               </p>
@@ -444,11 +478,15 @@ export default function Page() {
 
           <Card className="border-border bg-card border-t-4 border-t-primary">
             <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Total Anggaran Gaji</CardTitle>
+              <CardTitle className="text-sm font-medium text-muted-foreground">
+                Total Anggaran Gaji
+              </CardTitle>
               <DollarSign className="h-4 w-4 text-primary" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-foreground">{formatMoney(totalEarned)}</div>
+              <div className="text-2xl font-bold text-foreground">
+                {formatMoney(totalEarned)}
+              </div>
               <p className="text-xs text-muted-foreground mt-1">
                 {isOwner ? "Pokok + bonus + komisi" : "Total pendapatan kotor Anda"}
               </p>
@@ -458,11 +496,15 @@ export default function Page() {
           {isOwner && (
             <Card className="border-border bg-card border-t-4 border-t-orange-500">
               <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">Menunggu Pembayaran</CardTitle>
+                <CardTitle className="text-sm font-medium text-muted-foreground">
+                  Menunggu Pembayaran
+                </CardTitle>
                 <Users className="h-4 w-4 text-orange-500" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold text-foreground">{pendingCount} Karyawan</div>
+                <div className="text-2xl font-bold text-foreground">
+                  {pendingCount} Karyawan
+                </div>
                 <p className="text-xs text-muted-foreground mt-1">Belum lunas / parsial</p>
               </CardContent>
             </Card>
@@ -505,8 +547,14 @@ export default function Page() {
               onExport={async (format, orientation) => {
                 const summaryData: PayrollSummary = {
                   period: `Periode Rekap Gaji`,
-                  startDate: filteredPayrolls.length > 0 ? filteredPayrolls[filteredPayrolls.length - 1].startDate : new Date(),
-                  endDate: filteredPayrolls.length > 0 ? filteredPayrolls[0].endDate : new Date(),
+                  startDate:
+                    filteredPayrolls.length > 0
+                      ? filteredPayrolls[filteredPayrolls.length - 1].startDate
+                      : new Date(),
+                  endDate:
+                    filteredPayrolls.length > 0
+                      ? filteredPayrolls[0].endDate
+                      : new Date(),
                   entries: filteredPayrolls.map((p) => ({
                     employeeId: p.employeeId.slice(-6).toUpperCase(),
                     employeeName: p.employee.name,
@@ -516,9 +564,14 @@ export default function Page() {
                     deductions: 0,
                     netSalary: Number(p.totalEarned),
                   })),
-                  totalSalary: filteredPayrolls.reduce((sum, p) => sum + Number(p.totalEarned), 0),
+                  totalSalary: filteredPayrolls.reduce(
+                    (sum, p) => sum + Number(p.totalEarned),
+                    0
+                  ),
                 };
-                const { exportPayrollSummary } = await import("@/lib/export/reports/payrollExport");
+                const { exportPayrollSummary } = await import(
+                  "@/lib/export/reports/payrollExport"
+                );
                 return await exportPayrollSummary(summaryData, format, orientation);
               }}
             />
@@ -571,11 +624,15 @@ export default function Page() {
                                 variant="outline"
                                 className="text-[10px] uppercase font-mono mt-0.5"
                               >
-                                {p.employee.salaryType === "DAILY" ? "Gaji Harian" : "Komisi / Hasil"}
+                                {p.employee.salaryType === "DAILY"
+                                  ? "Gaji Harian"
+                                  : "Komisi / Hasil"}
                               </Badge>
                             </div>
                           </TableCell>
-                          <TableCell className="text-muted-foreground font-medium">{p.employee.role}</TableCell>
+                          <TableCell className="text-muted-foreground font-medium">
+                            {p.employee.role}
+                          </TableCell>
                           <TableCell className="text-sm">
                             <span className="font-medium">
                               {formatDateStr(p.startDate)} - {formatDateStr(p.endDate)}
@@ -586,7 +643,9 @@ export default function Page() {
                           </TableCell>
                           <TableCell className="text-right font-medium text-foreground">
                             {p.bonus > 0 ? (
-                              <span className="text-green-600 font-bold">+{formatMoney(p.bonus)}</span>
+                              <span className="text-green-600 font-bold">
+                                +{formatMoney(p.bonus)}
+                              </span>
                             ) : (
                               <span className="text-muted-foreground">-</span>
                             )}
@@ -766,7 +825,9 @@ export default function Page() {
               <div className="grid gap-4 py-4">
                 {selectedPayroll && (
                   <div className="space-y-1">
-                    <p className="text-sm font-semibold">Nama: {selectedPayroll.employee.name}</p>
+                    <p className="text-sm font-semibold">
+                      Nama: {selectedPayroll.employee.name}
+                    </p>
                     <p className="text-xs text-muted-foreground">
                       Gaji Pokok Terhitung: {formatMoney(selectedPayroll.baseSalary)}
                     </p>
@@ -837,20 +898,29 @@ export default function Page() {
                   <div className="p-3 bg-muted/40 rounded-lg border space-y-1.5 text-sm">
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">Penerima:</span>
-                      <span className="font-bold text-foreground">{selectedPayroll.employee.name}</span>
+                      <span className="font-bold text-foreground">
+                        {selectedPayroll.employee.name}
+                      </span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">Posisi:</span>
-                      <span className="font-semibold text-foreground">{selectedPayroll.employee.role}</span>
+                      <span className="font-semibold text-foreground">
+                        {selectedPayroll.employee.role}
+                      </span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">Total Gaji Bersih:</span>
-                      <span className="font-bold text-foreground">{formatMoney(selectedPayroll.totalEarned)}</span>
+                      <span className="font-bold text-foreground">
+                        {formatMoney(selectedPayroll.totalEarned)}
+                      </span>
                     </div>
                     <div className="flex justify-between border-t pt-1.5 font-bold">
                       <span className="text-destructive">Sisa Terhutang:</span>
                       <span className="text-destructive">
-                        {formatMoney(Number(selectedPayroll.totalEarned) - Number(selectedPayroll.totalPaid))}
+                        {formatMoney(
+                          Number(selectedPayroll.totalEarned) -
+                            Number(selectedPayroll.totalPaid)
+                        )}
                       </span>
                     </div>
                   </div>
@@ -959,7 +1029,9 @@ export default function Page() {
           <DialogContent className="sm:max-w-[550px]">
             <DialogHeader>
               <DialogTitle>Tinjau Slip Gaji</DialogTitle>
-              <DialogDescription>Rincian data penggajian mekanik secara mendalam.</DialogDescription>
+              <DialogDescription>
+                Rincian data penggajian mekanik secara mendalam.
+              </DialogDescription>
             </DialogHeader>
 
             {selectedPayroll && (
@@ -971,13 +1043,27 @@ export default function Page() {
                 >
                   <div
                     className="header"
-                    style={{ textAlign: "center", borderBottom: "2px dashed #333", paddingBottom: "12px", marginBottom: "15px" }}
+                    style={{
+                      textAlign: "center",
+                      borderBottom: "2px dashed #333",
+                      paddingBottom: "12px",
+                      marginBottom: "15px",
+                    }}
                   >
-                    <h2 style={{ margin: 0, fontSize: "18px", fontWeight: "bold" }}>NOPZ GARAGE</h2>
+                    <h2 style={{ margin: 0, fontSize: "18px", fontWeight: "bold" }}>
+                      NOPZ GARAGE
+                    </h2>
                     <p style={{ margin: "2px 0 0", fontSize: "11px", color: "#666" }}>
                       Sistem Manajemen Antrian & Keuangan Bengkel
                     </p>
-                    <h3 style={{ margin: "10px 0 0", fontSize: "14px", fontWeight: "bold", textTransform: "uppercase" }}>
+                    <h3
+                      style={{
+                        margin: "10px 0 0",
+                        fontSize: "14px",
+                        fontWeight: "bold",
+                        textTransform: "uppercase",
+                      }}
+                    >
                       SLIP GAJI KARYAWAN
                     </h3>
                   </div>
@@ -985,7 +1071,9 @@ export default function Page() {
                   <div className="space-y-1.5 text-sm">
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">ID Slip:</span>
-                      <span className="font-mono font-bold">#{selectedPayroll.id.toUpperCase().slice(-8)}</span>
+                      <span className="font-mono font-bold">
+                        #{selectedPayroll.id.toUpperCase().slice(-8)}
+                      </span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">Nama Karyawan:</span>
@@ -998,35 +1086,56 @@ export default function Page() {
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">Periode:</span>
                       <span>
-                        {formatDateStr(selectedPayroll.startDate)} - {formatDateStr(selectedPayroll.endDate)}
+                        {formatDateStr(selectedPayroll.startDate)} -{" "}
+                        {formatDateStr(selectedPayroll.endDate)}
                       </span>
                     </div>
                   </div>
 
-                  <div style={{ borderTop: "1px dashed #333", marginTop: "15px", paddingTop: "12px" }}>
-                    <h4 className="font-bold text-xs uppercase tracking-wider text-muted-foreground mb-2">Rincian Pendapatan</h4>
+                  <div
+                    style={{
+                      borderTop: "1px dashed #333",
+                      marginTop: "15px",
+                      paddingTop: "12px",
+                    }}
+                  >
+                    <h4 className="font-bold text-xs uppercase tracking-wider text-muted-foreground mb-2">
+                      Rincian Pendapatan
+                    </h4>
                     <div className="space-y-1 text-sm">
                       <div className="flex justify-between">
                         <span>
-                          Gaji Pokok / Komisi 
+                          Gaji Pokok / Komisi
                           {selectedPayroll.employee.salaryType === "DAILY" ? (
-                            <span className="text-xs text-muted-foreground"> ({selectedPayroll.detailsParsed?.workDays || 0} Hari Kerja)</span>
+                            <span className="text-xs text-muted-foreground">
+                              {" "}
+                              ({selectedPayroll.detailsParsed?.workDays || 0} Hari Kerja)
+                            </span>
                           ) : (
-                            <span className="text-xs text-muted-foreground"> ({selectedPayroll.detailsParsed?.motorCount || 0} Unit Selesai)</span>
+                            <span className="text-xs text-muted-foreground">
+                              {" "}
+                              ({selectedPayroll.detailsParsed?.motorCount || 0} Unit Selesai)
+                            </span>
                           )}
                         </span>
-                        <span className="font-medium">{formatMoney(selectedPayroll.baseSalary)}</span>
+                        <span className="font-medium">
+                          {formatMoney(selectedPayroll.baseSalary)}
+                        </span>
                       </div>
-                      
+
                       <div className="flex justify-between">
                         <span>
-                          Bonus 
+                          Bonus
                           {selectedPayroll.detailsParsed?.bonusNote && (
-                            <span className="text-xs text-muted-foreground block italic">Note: {selectedPayroll.detailsParsed.bonusNote}</span>
+                            <span className="text-xs text-muted-foreground block italic">
+                              Note: {selectedPayroll.detailsParsed.bonusNote}
+                            </span>
                           )}
                         </span>
                         <span className="font-medium text-green-600">
-                          {selectedPayroll.bonus > 0 ? `+${formatMoney(selectedPayroll.bonus)}` : "-"}
+                          {selectedPayroll.bonus > 0
+                            ? `+${formatMoney(selectedPayroll.bonus)}`
+                            : "-"}
                         </span>
                       </div>
                     </div>
@@ -1034,11 +1143,18 @@ export default function Page() {
 
                   <div
                     className="total-box"
-                    style={{ borderTop: "2px dashed #333", borderBottom: "2px dashed #333", padding: "10px 0", marginTop: "15px" }}
+                    style={{
+                      borderTop: "2px dashed #333",
+                      borderBottom: "2px dashed #333",
+                      padding: "10px 0",
+                      marginTop: "15px",
+                    }}
                   >
                     <div className="flex justify-between font-bold text-base">
                       <span>Total Gaji Bersih (Net):</span>
-                      <span className="text-primary">{formatMoney(selectedPayroll.totalEarned)}</span>
+                      <span className="text-primary">
+                        {formatMoney(selectedPayroll.totalEarned)}
+                      </span>
                     </div>
                     <div className="flex justify-between text-sm mt-1 text-green-600 font-semibold">
                       <span>Total Terbayar:</span>
@@ -1046,15 +1162,28 @@ export default function Page() {
                     </div>
                     <div className="flex justify-between text-sm mt-0.5 text-destructive font-bold">
                       <span>Sisa Terhutang:</span>
-                      <span>{formatMoney(Number(selectedPayroll.totalEarned) - Number(selectedPayroll.totalPaid))}</span>
+                      <span>
+                        {formatMoney(
+                          Number(selectedPayroll.totalEarned) -
+                            Number(selectedPayroll.totalPaid)
+                        )}
+                      </span>
                     </div>
                   </div>
 
                   <div
                     className="footer"
-                    style={{ textAlign: "center", marginTop: "25px", fontSize: "10px", color: "#888", borderTop: "1px dashed #ccc", paddingTop: "8px" }}
+                    style={{
+                      textAlign: "center",
+                      marginTop: "25px",
+                      fontSize: "10px",
+                      color: "#888",
+                      borderTop: "1px dashed #ccc",
+                      paddingTop: "8px",
+                    }}
                   >
-                    Tanda bukti pembayaran sah yang dikeluarkan oleh NopzGarage secara digital.<br />
+                    Tanda bukti pembayaran sah yang dikeluarkan oleh NopzGarage secara digital.
+                    <br />
                     Dicetak pada: {new Date().toLocaleString("id-ID")}
                   </div>
                 </div>
