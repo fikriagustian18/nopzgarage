@@ -28,15 +28,25 @@ import { getContent } from "@/lib/actions/content";
 import { toast } from "@/hooks/useToast";
 import { notifyOrderCreated, notifyOrderUpdated } from "@/hooks/useNotification";
 import { DEFAULT_SERVICES, type DefaultService } from "@/lib/constants/serviceDefaults";
+import { formatDetailDate, formatOrderNo } from "@/lib/utils";
 
 interface OrderItemData {
   id: string;
   custName: string;
-  custPhone: string;
+  custPhone?: string;
   vehicle: string;
   plateNumber: string | null;
-  complaint: string;
-  serviceType: ServiceType;
+  complaint?: string;
+  serviceType?: ServiceType;
+  status?: string;
+  createdAt?: string | Date;
+  updatedAt?: string | Date;
+  scheduledAt?: string | Date | null;
+  mechanic?: {
+    id?: string;
+    name: string;
+    role?: string;
+  } | null;
 }
 
 interface OrderDialogProps {
@@ -59,24 +69,15 @@ interface OrderActionResult {
   };
 }
 
+interface DetailRowProps {
+  label: string;
+  children: React.ReactNode;
+  align?: "center" | "start";
+}
+
 const SERVICE_HEADER_REGEX = /^\[Layanan:\s*([^\]]+)\]/m;
 const CUSTOM_PREFIX = "custom-";
 const NO_SERVICE = "NONE";
-
-/** Extract service title from complaint e.g. "[Layanan: Fast Lane Service]\nKeluhan..." */
-function extractServiceTitle(complaint: string): string | null {
-  if (!complaint) return null;
-  const match = complaint.match(SERVICE_HEADER_REGEX);
-  return match ? match[1].trim() : null;
-}
-
-/** Add, update or remove [Layanan: ...] header in complaint string */
-function formatComplaintWithService(complaint: string, serviceTitle: string | null): string {
-  // Remove existing header (always at the start, possibly followed by whitespace/newline)
-  const clean = complaint.replace(/^\[Layanan:\s*[^\]]+\]\s*/m, "").trim();
-  if (!serviceTitle) return clean;
-  return clean ? `[Layanan: ${serviceTitle}]\n${clean}` : `[Layanan: ${serviceTitle}]`;
-}
 
 export function OrderDialog({
   open,
@@ -114,7 +115,9 @@ export function OrderDialog({
 
   // Reset form when dialog opens or order/mode changes (NOT when services load)
   useEffect(() => {
-    if (!open) return;
+    if (!open) {
+      return;
+    }
 
     if (order && mode !== "create") {
       setFormData({
@@ -140,7 +143,9 @@ export function OrderDialog({
 
   // Sync selectedServiceId when services are loaded or order changes
   useEffect(() => {
-    if (!open || !order || mode === "create" || services.length === 0) return;
+    if (!open || !order || mode === "create" || services.length === 0) {
+      return;
+    }
 
     const extractedTitle = extractServiceTitle(order.complaint || "");
     if (extractedTitle) {
@@ -181,7 +186,9 @@ export function OrderDialog({
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     
-    if (mode === "view") return;
+    if (mode === "view") {
+      return;
+    }
 
     setLoading(true);
 
@@ -194,7 +201,11 @@ export function OrderDialog({
           plateNumber: formData.plateNumber || undefined,
         });
       } else {
-        result = await updateOrder(order!.id, {
+        if (!order) {
+          setLoading(false);
+          return;
+        }
+        result = await updateOrder(order.id, {
           ...formData,
           plateNumber: formData.plateNumber || undefined,
         });
@@ -216,7 +227,9 @@ export function OrderDialog({
         }
         
         onOpenChange(false);
-        if (onSuccess) onSuccess();
+        if (onSuccess) {
+          onSuccess();
+        }
       } else {
         toast({
           variant: "destructive",
@@ -235,21 +248,102 @@ export function OrderDialog({
     }
   }
 
-  const isReadOnly = mode === "view";
+  if (mode === "view" && order) {
+    const orderId = formatOrderNo(order.id);
+    const statusText = getStatusBadgeText(order.status);
+    const isFinished = ["READY", "COMPLETED"].includes(order.status || "");
+
+    return (
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="sm:max-w-[650px] max-h-[90vh] overflow-y-auto p-0 border rounded-2xl overflow-hidden">
+          {/* Card Header matching mock */}
+          <div className="p-5 border-b border-border bg-card flex justify-between items-center">
+            <h2 className="text-base font-extrabold tracking-wider text-foreground uppercase">
+              DETAIL ORDER
+            </h2>
+          </div>
+
+          <div className="p-6 space-y-6 bg-card">
+            {/* 2 Column Details */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-3.5 text-sm">
+              {/* Left Column */}
+              <div className="space-y-3.5">
+                <DetailRow label="No. Order">
+                  <span className="font-bold text-foreground">{orderId}</span>
+                </DetailRow>
+                <DetailRow label="Pelanggan">
+                  <span className="font-bold text-foreground">{order.custName || "-"}</span>
+                </DetailRow>
+                <DetailRow label="No. Polisi">
+                  <span className="font-bold text-foreground uppercase">{order.plateNumber || "-"}</span>
+                </DetailRow>
+                <DetailRow label="Kendaraan">
+                  <span className="font-bold text-foreground">{order.vehicle || "-"}</span>
+                </DetailRow>
+                <DetailRow label="Tanggal Order">
+                  <span className="font-bold text-foreground">{formatDetailDate(order.createdAt)}</span>
+                </DetailRow>
+              </div>
+
+              {/* Right Column */}
+              <div className="space-y-3.5">
+                <DetailRow label="Mekanik">
+                  <span className="font-bold text-foreground">{order.mechanic?.name || "-"}</span>
+                </DetailRow>
+                <DetailRow label="Status Terakhir">
+                  <div>
+                    <span className="px-3 py-1 rounded-md bg-neutral-900 text-white dark:bg-neutral-100 dark:text-neutral-900 font-bold text-xs inline-block">
+                      {statusText}
+                    </span>
+                  </div>
+                </DetailRow>
+                <DetailRow label="Estimasi Selesai">
+                  <span className="font-bold text-foreground">{formatDetailDate(order.scheduledAt || order.createdAt)}</span>
+                </DetailRow>
+                <DetailRow label="Selesai">
+                  <span className="font-bold text-foreground">
+                    {isFinished ? formatDetailDate(order.updatedAt) : "-"}
+                  </span>
+                </DetailRow>
+              </div>
+            </div>
+
+            {/* Complaint / Catatan if present */}
+            {order.complaint && (
+              <div className="pt-4 border-t border-border text-sm">
+                <DetailRow label="Keluhan / Catatan" align="start">
+                  <span className="font-medium text-foreground leading-relaxed whitespace-pre-line">
+                    {order.complaint}
+                  </span>
+                </DetailRow>
+              </div>
+            )}
+
+            {/* Close Button */}
+            <div className="pt-4 border-t border-border flex justify-end">
+              <Button 
+                variant="outline" 
+                onClick={() => onOpenChange(false)} 
+                className="px-6 font-semibold"
+              >
+                Tutup
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+    );
+  }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="text-2xl font-bold">
-            {mode === "create" && " Buat Order Baru"}
-            {mode === "edit" && "Edit Order"}
-            {mode === "view" && "Detail Order"}
+            {mode === "create" ? "Buat Order Baru" : "Edit Order"}
           </DialogTitle>
           <DialogDescription>
-            {mode === "create" && "Buat order servis baru untuk pelanggan"}
-            {mode === "edit" && "Update informasi order pelanggan"}
-            {mode === "view" && "Informasi detail order pelanggan"}
+            {mode === "create" ? "Buat order servis baru untuk pelanggan" : "Update informasi order pelanggan"}
           </DialogDescription>
         </DialogHeader>
 
@@ -273,8 +367,6 @@ export function OrderDialog({
                     setFormData({ ...formData, custName: e.target.value })
                   }
                   required
-                  disabled={isReadOnly}
-                  className={isReadOnly ? "bg-gray-50" : ""}
                 />
               </div>
 
@@ -291,8 +383,6 @@ export function OrderDialog({
                     setFormData({ ...formData, custPhone: e.target.value })
                   }
                   required
-                  disabled={isReadOnly}
-                  className={isReadOnly ? "bg-gray-50" : ""}
                 />
               </div>
             </div>
@@ -317,8 +407,6 @@ export function OrderDialog({
                     setFormData({ ...formData, vehicle: e.target.value })
                   }
                   required
-                  disabled={isReadOnly}
-                  className={isReadOnly ? "bg-gray-50" : ""}
                 />
               </div>
 
@@ -331,8 +419,6 @@ export function OrderDialog({
                   onChange={(e) =>
                     setFormData({ ...formData, plateNumber: e.target.value })
                   }
-                  disabled={isReadOnly}
-                  className={isReadOnly ? "bg-gray-50" : ""}
                 />
               </div>
             </div>
@@ -350,9 +436,8 @@ export function OrderDialog({
               <Select
                 value={selectedServiceId}
                 onValueChange={handleServiceSelect}
-                disabled={isReadOnly}
               >
-                <SelectTrigger className={isReadOnly ? "bg-gray-50" : ""}>
+                <SelectTrigger>
                   <SelectValue placeholder="Pilih dari daftar layanan..." />
                 </SelectTrigger>
                 <SelectContent>
@@ -380,9 +465,8 @@ export function OrderDialog({
                 onValueChange={(value: ServiceType) =>
                   setFormData({ ...formData, serviceType: value })
                 }
-                disabled={isReadOnly}
               >
-                <SelectTrigger className={isReadOnly ? "bg-gray-50" : ""}>
+                <SelectTrigger>
                   <SelectValue placeholder="Pilih jenis servis" />
                 </SelectTrigger>
                 <SelectContent>
@@ -408,15 +492,13 @@ export function OrderDialog({
                   setFormData({ ...formData, complaint: e.target.value })
                 }
                 required
-                disabled={isReadOnly}
-                className={`min-h-[120px] ${isReadOnly ? "bg-gray-50" : ""}`}
+                className="min-h-[120px]"
               />
             </div>
           </div>
 
           {/* Action Buttons */}
-          {!isReadOnly && (
-            <div className="flex gap-3 pt-4 border-t">
+          <div className="flex gap-3 pt-4 border-t">
               <Button
                 type="button"
                 variant="outline"
@@ -434,10 +516,54 @@ export function OrderDialog({
                 {loading && <Loader2 className="h-4 w-4 animate-spin" />}
                 {mode === "create" ? "Buat Order" : "Simpan Perubahan"}
               </Button>
-            </div>
-          )}
+          </div>
         </form>
       </DialogContent>
     </Dialog>
   );
 }
+
+/** Reusable row component for detail view grids */
+function DetailRow({ label, children, align = "center" }: DetailRowProps) {
+  return (
+    <div className={`grid grid-cols-[130px_16px_1fr] items-${align}`}>
+      <span className="text-muted-foreground font-medium">{label}</span>
+      <span className="text-muted-foreground font-medium">:</span>
+      {children}
+    </div>
+  );
+}
+
+function getStatusBadgeText(status?: string): string {
+  const statusMap: Record<string, string> = {
+    PENDING: "Pending",
+    ESTIMATED: "Diestimasi",
+    CONFIRMED: "Menunggu Servis",
+    QUEUE: "Dalam Antrian",
+    IN_PROGRESS: "Diproses",
+    READY: "Siap Diambil",
+    COMPLETED: "Selesai",
+    CANCELLED: "Dibatalkan",
+  };
+  return status ? (statusMap[status] || status) : "-";
+}
+
+/** Extract service title from complaint e.g. "[Layanan: Fast Lane Service]\nKeluhan..." */
+function extractServiceTitle(complaint: string): string | null {
+  if (!complaint) {
+    return null;
+  }
+  const match = complaint.match(SERVICE_HEADER_REGEX);
+  return match ? match[1].trim() : null;
+}
+
+/** Add, update or remove [Layanan: ...] header in complaint string */
+function formatComplaintWithService(complaint: string, serviceTitle: string | null): string {
+  // Remove existing header (always at the start, possibly followed by whitespace/newline)
+  const clean = complaint.replace(/^\[Layanan:\s*[^\]]+\]\s*/m, "").trim();
+  if (!serviceTitle) {
+    return clean;
+  }
+  return clean ? `[Layanan: ${serviceTitle}]\n${clean}` : `[Layanan: ${serviceTitle}]`;
+}
+

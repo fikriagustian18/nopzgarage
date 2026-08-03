@@ -1,55 +1,97 @@
-// components/StatusPageClient.tsx
 "use client";
 
 import { useState } from "react";
-import { searchOrderByPlate } from "@/lib/actions/orderStatus";
-import { Button } from "@/components/ui/Button";
-import { Input } from "@/components/ui/Input";
-import { Card, CardContent } from "@/components/ui/Card";
-import { Badge } from "@/components/ui/Badge";
+import Link from "next/link";
+import Image from "next/image";
 import { 
   Search, 
   Gauge, 
   ArrowLeft, 
   Loader2, 
   AlertCircle, 
-  CheckCircle2, 
   Clock, 
-  Wrench, 
   Settings,
-  User,
   Phone,
   Calendar,
-  Bike,
-  PenTool,
-  FileText,
   Info,
-  Globe,
   LogIn,
-  ChevronDown,
   ChevronRight,
   Check
 } from "lucide-react";
-import Link from "next/link";
-import Image from "next/image";
 import { format } from "date-fns";
 import { id } from "date-fns/locale";
+
+import { Button } from "@/components/ui/Button";
+import { Input } from "@/components/ui/Input";
+import { Card, CardContent } from "@/components/ui/Card";
 import { ThemeToggle } from "./ThemeToggle";
 
+import { searchOrderByPlate } from "@/lib/actions/orderStatus";
+import { formatDetailDate, formatOrderNo } from "@/lib/utils";
+
+interface GeneralSettings {
+  phone?: string;
+  days?: string[];
+  openTime?: string;
+  closeTime?: string;
+}
+
+interface UserSession {
+  user: {
+    role?: string;
+    name?: string;
+    email?: string;
+  };
+}
+
+interface StatusOrderMechanic {
+  id?: string;
+  name: string;
+  role?: string;
+}
+
+interface StatusOrder {
+  id: string;
+  custName: string;
+  plateNumber: string | null;
+  vehicle: string;
+  status: string;
+  createdAt: string | Date;
+  updatedAt: string | Date;
+  scheduledAt?: string | Date | null;
+  complaint?: string | null;
+  mechanic?: StatusOrderMechanic | null;
+}
+
 interface StatusPageClientProps {
-  generalSettings?: any;
-  session?: any;
+  generalSettings?: GeneralSettings;
+  session?: UserSession | null;
+}
+
+interface DetailRowProps {
+  label: string;
+  children: React.ReactNode;
+  align?: "center" | "start";
+}
+
+interface MilestoneItem {
+  step: number;
+  title: string;
+  label: string;
+  time: string;
 }
 
 export function StatusPageClient({ generalSettings = {}, session }: StatusPageClientProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [orders, setOrders] = useState<any[]>([]);
+  const [orders, setOrders] = useState<StatusOrder[]>([]);
 
   async function handleSearch(e: React.FormEvent) {
     e.preventDefault();
-    if (!searchQuery.trim()) return;
+    if (!searchQuery.trim()) {
+      return;
+    }
 
     setError("");
     setOrders([]);
@@ -59,67 +101,16 @@ export function StatusPageClient({ generalSettings = {}, session }: StatusPageCl
       const result = await searchOrderByPlate(searchQuery);
       setLoading(false);
 
-      if (result.success && result.orders) {
-        setOrders(result.orders);
-      } else {
+      if (!result.success || !result.orders) {
         setError(result.error || "Data tidak ditemukan.");
+        return;
       }
+
+      setOrders(result.orders as StatusOrder[]);
     } catch (err) {
       setLoading(false);
       setError("Terjadi kesalahan sistem saat mencari data.");
     }
-  }
-
-  function getStatusLabel(status: string) {
-    const statusMap: any = {
-      'PENDING': 'MENUNGGU KONFIRMASI',
-      'ESTIMATED': 'SUDAH DIESTIMASI',
-      'CONFIRMED': 'MENUNGGU SERVIS',
-      'QUEUE': 'DALAM ANTRIAN',
-      'IN_PROGRESS': 'DIPROSES',
-      'READY': 'SIAP DIAMBIL',
-      'COMPLETED': 'SELESAI',
-      'CANCELLED': 'DIBATALKAN',
-    };
-    return statusMap[status] || status;
-  }
-
-  function maskPhone(phone: string) {
-    if (!phone) return "-";
-    const cleaned = phone.trim();
-    if (cleaned.length <= 6) return cleaned;
-    return cleaned.slice(0, 4) + "-****-" + cleaned.slice(-4);
-  }
-
-  function formatScheduledDate(dateStr: any) {
-    if (!dateStr) return "-";
-    try {
-      return format(new Date(dateStr), "dd MMMM yyyy, HH:mm", { locale: id });
-    } catch (e) {
-      return "-";
-    }
-  }
-
-  // Stepper milestones helper
-  function getMilestoneState(status: string, stepNum: number) {
-    // 1: Booking Diterima, 2: Antrian Servis, 3: Sedang Dikerjakan, 4: Selesai
-    if (status === "CANCELLED") return "inactive";
-
-    const statusWeights: Record<string, number> = {
-      'PENDING': 1,
-      'ESTIMATED': 1,
-      'CONFIRMED': 1,
-      'QUEUE': 2,
-      'IN_PROGRESS': 3,
-      'READY': 4,
-      'COMPLETED': 4
-    };
-
-    const currentWeight = statusWeights[status] || 1;
-
-    if (currentWeight > stepNum) return "completed";
-    if (currentWeight === stepNum) return "active";
-    return "inactive";
   }
 
   return (
@@ -129,7 +120,10 @@ export function StatusPageClient({ generalSettings = {}, session }: StatusPageCl
         <div className="container mx-auto px-4 lg:px-6">
           <div className="flex justify-between items-center h-20">
             {/* Logo */}
-            <Link href="/" className="flex flex-col items-start gap-1 group cursor-pointer transition-all duration-300 hover:scale-[1.02]">
+            <Link 
+              href="/" 
+              className="flex flex-col items-start gap-1 group cursor-pointer transition-all duration-300 hover:scale-[1.02]"
+            >
               <div className="relative">
                 <Image 
                   src="/logo.svg" 
@@ -184,7 +178,10 @@ export function StatusPageClient({ generalSettings = {}, session }: StatusPageCl
       <main className="container mx-auto px-4 py-8 lg:py-12 max-w-7xl">
         {/* Back Link */}
         <div className="mb-6">
-          <Link href="/" className="inline-flex items-center gap-2 px-4 py-2 border border-border bg-card hover:bg-muted text-foreground text-xs font-bold uppercase tracking-wider rounded-full transition-colors cursor-pointer">
+          <Link 
+            href="/" 
+            className="inline-flex items-center gap-2 px-4 py-2 border border-border bg-card hover:bg-muted text-foreground text-xs font-bold uppercase tracking-wider rounded-full transition-colors cursor-pointer"
+          >
             <ArrowLeft className="h-3.5 w-3.5" />
             <span>Kembali ke Beranda</span>
           </Link>
@@ -260,6 +257,33 @@ export function StatusPageClient({ generalSettings = {}, session }: StatusPageCl
               const currentStatus = order.status;
               const statusLabel = getStatusLabel(currentStatus);
 
+              const milestones: MilestoneItem[] = [
+                { 
+                  step: 1, 
+                  title: "1. Booking Diterima", 
+                  label: "Booking Anda telah diterima.", 
+                  time: formatScheduledDate(order.createdAt)
+                },
+                { 
+                  step: 2, 
+                  title: "2. Antrian Servis", 
+                  label: "Menunggu giliran servis.", 
+                  time: getMilestoneState(currentStatus, 2) !== "inactive" ? formatScheduledDate(order.createdAt) : "-" 
+                },
+                { 
+                  step: 3, 
+                  title: "3. Sedang Dikerjakan", 
+                  label: "Mekanik sedang mengerjakan kendaraan Anda.", 
+                  time: getMilestoneState(currentStatus, 3) !== "inactive" ? formatScheduledDate(order.updatedAt) : "-" 
+                },
+                { 
+                  step: 4, 
+                  title: "4. Selesai", 
+                  label: "Servis telah selesai dan siap diambil.", 
+                  time: (currentStatus === "READY" || currentStatus === "COMPLETED") ? formatScheduledDate(order.updatedAt) : "Estimasi selesai segera" 
+                }
+              ];
+
               return (
                 <div key={order.id} className="space-y-6 animate-in fade-in-0 duration-300">
                   
@@ -267,7 +291,7 @@ export function StatusPageClient({ generalSettings = {}, session }: StatusPageCl
                   <Card className="border border-border bg-card shadow-sm rounded-2xl overflow-hidden">
                     <div className="p-4 bg-muted/40 border-b border-border flex justify-between items-center">
                       <h3 className="text-xs font-black uppercase tracking-wider text-foreground">
-                        Detail Order
+                        DETAIL ORDER
                       </h3>
                       <div className="flex items-center gap-3">
                         <span className="text-[10px] font-bold text-muted-foreground uppercase">Status Saat Ini</span>
@@ -278,91 +302,63 @@ export function StatusPageClient({ generalSettings = {}, session }: StatusPageCl
                       </div>
                     </div>
                     
-                    <CardContent className="p-6">
-                      <div className="grid md:grid-cols-3 gap-6 text-xs leading-relaxed">
-                        
-                        {/* Col 1 */}
-                        <div className="space-y-4">
-                          <div className="space-y-1">
-                            <div className="flex items-center gap-2 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
-                              <FileText className="h-3.5 w-3.5" />
-                              <span>Nomor Order</span>
-                            </div>
-                            <p className="font-bold text-foreground pl-5.5">#ORD-{order.id.slice(-8).toUpperCase()}</p>
-                          </div>
-                          <div className="space-y-1">
-                            <div className="flex items-center gap-2 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
-                              <User className="h-3.5 w-3.5" />
-                              <span>Nama Pelanggan</span>
-                            </div>
-                            <p className="font-bold text-foreground pl-5.5">{order.custName}</p>
-                          </div>
-                          <div className="space-y-1">
-                            <div className="flex items-center gap-2 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
-                              <Phone className="h-3.5 w-3.5" />
-                              <span>No. WhatsApp</span>
-                            </div>
-                            <p className="font-bold text-foreground pl-5.5">{maskPhone(order.custPhone)}</p>
-                          </div>
+                    <CardContent className="p-6 space-y-6">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-3.5 text-sm">
+                        {/* Left Column */}
+                        <div className="space-y-3.5">
+                          <DetailRow label="No. Order">
+                            <span className="font-bold text-foreground">{formatOrderNo(order.id)}</span>
+                          </DetailRow>
+                          <DetailRow label="Pelanggan">
+                            <span className="font-bold text-foreground">{order.custName || "-"}</span>
+                          </DetailRow>
+                          <DetailRow label="No. Polisi">
+                            <span className="font-bold text-foreground uppercase">{order.plateNumber || "-"}</span>
+                          </DetailRow>
+                          <DetailRow label="Kendaraan">
+                            <span className="font-bold text-foreground">{order.vehicle || "-"}</span>
+                          </DetailRow>
+                          <DetailRow label="Tanggal Order">
+                            <span className="font-bold text-foreground">{formatDetailDate(order.createdAt)}</span>
+                          </DetailRow>
                         </div>
 
-                        {/* Col 2 */}
-                        <div className="space-y-4">
-                          <div className="space-y-1">
-                            <div className="flex items-center gap-2 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
-                              <Calendar className="h-3.5 w-3.5" />
-                              <span>Tanggal Booking</span>
+                        {/* Right Column */}
+                        <div className="space-y-3.5">
+                          <DetailRow label="Mekanik">
+                            <span className="font-bold text-foreground">{order.mechanic?.name || "-"}</span>
+                          </DetailRow>
+                          <DetailRow label="Status Terakhir">
+                            <div>
+                              <span className="px-3 py-1 rounded-md bg-neutral-900 text-white dark:bg-neutral-100 dark:text-neutral-900 font-bold text-xs inline-block">
+                                {statusLabel}
+                              </span>
                             </div>
-                            <p className="font-bold text-foreground pl-5.5">{formatScheduledDate(order.createdAt)}</p>
-                          </div>
-                          <div className="space-y-1">
-                            <div className="flex items-center gap-2 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
-                              <Calendar className="h-3.5 w-3.5" />
-                              <span>Tanggal Servis</span>
-                            </div>
-                            <p className="font-bold text-foreground pl-5.5">{formatScheduledDate(order.scheduledAt)}</p>
-                          </div>
-                          <div className="space-y-1">
-                            <div className="flex items-center gap-2 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
-                              <Wrench className="h-3.5 w-3.5" />
-                              <span>Jenis Layanan</span>
-                            </div>
-                            <p className="font-bold text-foreground pl-5.5 uppercase">
-                              {order.serviceType === "LIGHT_SERVICE" ? "Servis Ringan" : "Modifikasi"}
-                            </p>
-                          </div>
+                          </DetailRow>
+                          <DetailRow label="Estimasi Selesai">
+                            <span className="font-bold text-foreground">{formatDetailDate(order.scheduledAt || order.createdAt)}</span>
+                          </DetailRow>
+                          <DetailRow label="Selesai">
+                            <span className="font-bold text-foreground">
+                              {["READY", "COMPLETED"].includes(order.status || "") ? formatDetailDate(order.updatedAt) : "-"}
+                            </span>
+                          </DetailRow>
                         </div>
-
-                        {/* Col 3 */}
-                        <div className="space-y-4">
-                          <div className="space-y-1">
-                            <div className="flex items-center gap-2 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
-                              <Bike className="h-3.5 w-3.5" />
-                              <span>Kendaraan</span>
-                            </div>
-                            <p className="font-bold text-foreground pl-5.5">{order.vehicle}</p>
-                          </div>
-                          <div className="space-y-1">
-                            <div className="flex items-center gap-2 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
-                              <PenTool className="h-3.5 w-3.5" />
-                              <span>No. Polisi</span>
-                            </div>
-                            <p className="font-bold text-foreground pl-5.5 uppercase">{order.plateNumber || "-"}</p>
-                          </div>
-                          <div className="space-y-1">
-                            <div className="flex items-center gap-2 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
-                              <FileText className="h-3.5 w-3.5" />
-                              <span>Keluhan / Catatan</span>
-                            </div>
-                            <p className="font-bold text-foreground pl-5.5 line-clamp-3">{order.complaint}</p>
-                          </div>
-                        </div>
-
                       </div>
+
+                      {order.complaint && (
+                        <div className="pt-4 border-t border-border text-sm">
+                          <DetailRow label="Keluhan / Catatan" align="start">
+                            <span className="font-medium text-foreground leading-relaxed whitespace-pre-line">
+                              {order.complaint}
+                            </span>
+                          </DetailRow>
+                        </div>
+                      )}
                     </CardContent>
                   </Card>
 
-                  {/* 2. Progres Pengerjaan Card */}
+                  {/* 2. Work Progress Card */}
                   <Card className="border border-border bg-card shadow-sm rounded-2xl overflow-hidden">
                     <div className="p-4 bg-muted/40 border-b border-border">
                       <h3 className="text-xs font-black uppercase tracking-wider text-foreground">
@@ -373,32 +369,7 @@ export function StatusPageClient({ generalSettings = {}, session }: StatusPageCl
                       {/* Horizontal Stepper Timeline */}
                       <div className="grid grid-cols-1 md:grid-cols-4 gap-6 relative">
                         {/* Stepper Steps */}
-                        {[
-                          { 
-                            step: 1, 
-                            title: "1. Booking Diterima", 
-                            label: "Booking Anda telah diterima.", 
-                            time: formatScheduledDate(order.createdAt)
-                          },
-                          { 
-                            step: 2, 
-                            title: "2. Antrian Servis", 
-                            label: "Menunggu giliran servis.", 
-                            time: getMilestoneState(currentStatus, 2) !== "inactive" ? formatScheduledDate(order.createdAt) : "-" 
-                          },
-                          { 
-                            step: 3, 
-                            title: "3. Sedang Dikerjakan", 
-                            label: "Mekanik sedang mengerjakan kendaraan Anda.", 
-                            time: getMilestoneState(currentStatus, 3) !== "inactive" ? formatScheduledDate(order.updatedAt) : "-" 
-                          },
-                          { 
-                            step: 4, 
-                            title: "4. Selesai", 
-                            label: "Servis telah selesai dan siap diambil.", 
-                            time: (currentStatus === "READY" || currentStatus === "COMPLETED") ? formatScheduledDate(order.updatedAt) : "Estimasi selesai segera" 
-                          }
-                        ].map((m) => {
+                        {milestones.map((m) => {
                           const state = getMilestoneState(currentStatus, m.step);
 
                           return (
@@ -430,7 +401,7 @@ export function StatusPageClient({ generalSettings = {}, session }: StatusPageCl
           {/* Right Sidebar Column */}
           <div className="space-y-6">
             
-            {/* CARD 1: BUTUH BANTUAN */}
+            {/* CARD 1: NEED HELP */}
             <Card className="border border-border bg-card shadow-sm rounded-2xl overflow-hidden">
               <div className="p-4 bg-muted/40 border-b border-border">
                 <h3 className="text-xs font-black uppercase tracking-wider text-foreground">
@@ -458,7 +429,7 @@ export function StatusPageClient({ generalSettings = {}, session }: StatusPageCl
               </CardContent>
             </Card>
 
-            {/* CARD 2: CATATAN WARNING */}
+            {/* CARD 2: NOTES */}
             <Card className="border border-border bg-card shadow-sm rounded-2xl overflow-hidden">
               <div className="p-4 bg-muted/40 border-b border-border flex items-center gap-2">
                 <Info className="h-4 w-4 text-primary" />
@@ -478,3 +449,68 @@ export function StatusPageClient({ generalSettings = {}, session }: StatusPageCl
     </div>
   );
 }
+
+/** Reusable row component for detail view grids */
+function DetailRow({ label, children, align = "center" }: DetailRowProps) {
+  return (
+    <div className={`grid grid-cols-[130px_16px_1fr] items-${align}`}>
+      <span className="text-muted-foreground font-medium">{label}</span>
+      <span className="text-muted-foreground font-medium">:</span>
+      {children}
+    </div>
+  );
+}
+
+function getStatusLabel(status: string): string {
+  const statusMap: Record<string, string> = {
+    PENDING: "MENUNGGU KONFIRMASI",
+    ESTIMATED: "SUDAH DIESTIMASI",
+    CONFIRMED: "MENUNGGU SERVIS",
+    QUEUE: "DALAM ANTRIAN",
+    IN_PROGRESS: "DIPROSES",
+    READY: "SIAP DIAMBIL",
+    COMPLETED: "SELESAI",
+    CANCELLED: "DIBATALKAN",
+  };
+  return statusMap[status] || status;
+}
+
+function formatScheduledDate(dateStr: string | Date | null | undefined): string {
+  if (!dateStr) {
+    return "-";
+  }
+  try {
+    return format(new Date(dateStr), "dd MMMM yyyy, HH:mm", { locale: id });
+  } catch (e) {
+    return "-";
+  }
+}
+
+/** Stepper milestones helper function */
+function getMilestoneState(status: string, stepNum: number): "completed" | "active" | "inactive" {
+  // 1: Booking Diterima, 2: Antrian Servis, 3: Sedang Dikerjakan, 4: Selesai
+  if (status === "CANCELLED") {
+    return "inactive";
+  }
+
+  const statusWeights: Record<string, number> = {
+    PENDING: 1,
+    ESTIMATED: 1,
+    CONFIRMED: 1,
+    QUEUE: 2,
+    IN_PROGRESS: 3,
+    READY: 4,
+    COMPLETED: 4,
+  };
+
+  const currentWeight = statusWeights[status] || 1;
+
+  if (currentWeight > stepNum) {
+    return "completed";
+  }
+  if (currentWeight === stepNum) {
+    return "active";
+  }
+  return "inactive";
+}
+
