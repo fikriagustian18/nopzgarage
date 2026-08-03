@@ -1,7 +1,9 @@
-// components/OrderDialog.tsx
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
+import { Loader2 } from "lucide-react";
+import { ServiceType } from "@prisma/client";
+
 import {
   Dialog,
   DialogContent,
@@ -20,41 +22,58 @@ import {
   SelectValue,
 } from "@/components/ui/Select";
 import { Textarea } from "@/components/ui/Textarea";
-import { ServiceType } from "@prisma/client";
+
 import { createOrder, updateOrder } from "@/lib/actions/orders";
-import { getContent } from "@/lib/actions/content"; // Added import
+import { getContent } from "@/lib/actions/content";
 import { toast } from "@/hooks/useToast";
-import { Loader2 } from "lucide-react";
 import { notifyOrderCreated, notifyOrderUpdated } from "@/hooks/useNotification";
+import { DEFAULT_SERVICES, type DefaultService } from "@/lib/constants/serviceDefaults";
 
-import { DEFAULT_SERVICES } from "@/lib/constants/serviceDefaults";
+interface OrderItemData {
+  id: string;
+  custName: string;
+  custPhone: string;
+  vehicle: string;
+  plateNumber: string | null;
+  complaint: string;
+  serviceType: ServiceType;
+}
 
-type OrderDialogProps = {
+interface OrderDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   mode: "create" | "edit" | "view";
+  order?: OrderItemData;
+  onSuccess?: () => void;
+}
+
+interface ServiceContentData {
+  items?: DefaultService[];
+}
+
+interface OrderActionResult {
+  success: boolean;
+  error?: string;
   order?: {
     id: string;
-    custName: string;
-    custPhone: string;
-    vehicle: string;
-    plateNumber: string | null;
-    complaint: string;
-    serviceType: ServiceType;
   };
-  onSuccess?: () => void;
-};
+}
 
-// Helper: Extract service title from complaint e.g. "[Layanan: Fast Lane Service]\nKeluhan..."
+const SERVICE_HEADER_REGEX = /^\[Layanan:\s*([^\]]+)\]/m;
+const CUSTOM_PREFIX = "custom-";
+const NO_SERVICE = "NONE";
+
+/** Extract service title from complaint e.g. "[Layanan: Fast Lane Service]\nKeluhan..." */
 function extractServiceTitle(complaint: string): string | null {
   if (!complaint) return null;
-  const match = complaint.match(/^\[Layanan:\s*([^\]]+)\]/m);
+  const match = complaint.match(SERVICE_HEADER_REGEX);
   return match ? match[1].trim() : null;
 }
 
-// Helper: Add, update or remove [Layanan: ...] header in complaint string cleanly
+/** Add, update or remove [Layanan: ...] header in complaint string */
 function formatComplaintWithService(complaint: string, serviceTitle: string | null): string {
-  const clean = complaint.replace(/^\[Layanan:\s*[^\]]+\]\s*/g, "").trim();
+  // Remove existing header (always at the start, possibly followed by whitespace/newline)
+  const clean = complaint.replace(/^\[Layanan:\s*[^\]]+\]\s*/m, "").trim();
   if (!serviceTitle) return clean;
   return clean ? `[Layanan: ${serviceTitle}]\n${clean}` : `[Layanan: ${serviceTitle}]`;
 }
@@ -67,8 +86,8 @@ export function OrderDialog({
   onSuccess,
 }: OrderDialogProps) {
   const [loading, setLoading] = useState(false);
-  const [services, setServices] = useState<any[]>([]); 
-  const [selectedServiceId, setSelectedServiceId] = useState<string>("NONE");
+  const [services, setServices] = useState<DefaultService[]>([]);
+  const [selectedServiceId, setSelectedServiceId] = useState<string>(NO_SERVICE);
   const [formData, setFormData] = useState({
     custName: "",
     custPhone: "",
@@ -81,9 +100,11 @@ export function OrderDialog({
   // Fetch Services from Website Content (with fallback to DEFAULT_SERVICES)
   useEffect(() => {
     const fetchServices = async () => {
-      const result = await getContent('services');
-      if (result.success && result.data && result.data.content && Array.isArray((result.data.content as any).items) && (result.data.content as any).items.length > 0) {
-        setServices((result.data.content as any).items);
+      const result = await getContent("services");
+      const content = result.data?.content as ServiceContentData | undefined;
+
+      if (result.success && content?.items && Array.isArray(content.items) && content.items.length > 0) {
+        setServices(content.items);
       } else {
         setServices(DEFAULT_SERVICES);
       }
@@ -91,45 +112,51 @@ export function OrderDialog({
     fetchServices();
   }, []);
 
+  // Reset form when dialog opens or order/mode changes (NOT when services load)
   useEffect(() => {
-    if (open) {
-      if (order && mode !== "create") {
-        const initialComplaint = order.complaint || "";
-        setFormData({
-          custName: order.custName || "",
-          custPhone: order.custPhone || "",
-          vehicle: order.vehicle || "",
-          plateNumber: order.plateNumber || "",
-          complaint: initialComplaint,
-          serviceType: order.serviceType || "LIGHT_SERVICE",
-        });
+    if (!open) return;
 
-        const extractedTitle = extractServiceTitle(initialComplaint);
-        if (extractedTitle) {
-          const matched = services.find(
-            (s) => s.title?.toLowerCase() === extractedTitle.toLowerCase() || s.id === extractedTitle
-          );
-          setSelectedServiceId(matched ? matched.id : `custom-${extractedTitle}`);
-        } else {
-          setSelectedServiceId("NONE");
-        }
-      } else {
-        setFormData({
-          custName: "",
-          custPhone: "",
-          vehicle: "",
-          plateNumber: "",
-          complaint: "",
-          serviceType: "LIGHT_SERVICE",
-        });
-        setSelectedServiceId("NONE");
-      }
+    if (order && mode !== "create") {
+      setFormData({
+        custName: order.custName || "",
+        custPhone: order.custPhone || "",
+        vehicle: order.vehicle || "",
+        plateNumber: order.plateNumber || "",
+        complaint: order.complaint || "",
+        serviceType: order.serviceType || "LIGHT_SERVICE",
+      });
+    } else {
+      setFormData({
+        custName: "",
+        custPhone: "",
+        vehicle: "",
+        plateNumber: "",
+        complaint: "",
+        serviceType: "LIGHT_SERVICE",
+      });
+      setSelectedServiceId(NO_SERVICE);
+    }
+  }, [order, mode, open]);
+
+  // Sync selectedServiceId when services are loaded or order changes
+  useEffect(() => {
+    if (!open || !order || mode === "create" || services.length === 0) return;
+
+    const extractedTitle = extractServiceTitle(order.complaint || "");
+    if (extractedTitle) {
+      const matched = services.find(
+        (s) => s.title?.toLowerCase() === extractedTitle.toLowerCase() || s.id === extractedTitle
+      );
+      setSelectedServiceId(matched ? matched.id : `${CUSTOM_PREFIX}${extractedTitle}`);
+    } else {
+      setSelectedServiceId(NO_SERVICE);
     }
   }, [order, mode, open, services]);
 
-  const handleServiceSelect = (serviceId: string) => {
+  const handleServiceSelect = useCallback((serviceId: string) => {
     setSelectedServiceId(serviceId);
-    if (serviceId === "NONE" || !serviceId) {
+
+    if (serviceId === NO_SERVICE || !serviceId) {
       setFormData((prev) => ({
         ...prev,
         complaint: formatComplaintWithService(prev.complaint, null),
@@ -137,22 +164,19 @@ export function OrderDialog({
       return;
     }
 
-    let selectedService = services.find((s) => s.id === serviceId);
-    let title = selectedService?.title;
-    let sType = selectedService?.serviceType;
-
-    if (!selectedService && serviceId.startsWith("custom-")) {
-      title = serviceId.replace("custom-", "");
-    }
+    const selectedService = services.find((s) => s.id === serviceId);
+    const title = selectedService?.title
+      ?? (serviceId.startsWith(CUSTOM_PREFIX) ? serviceId.slice(CUSTOM_PREFIX.length) : undefined);
+    const serviceType = selectedService?.serviceType;
 
     if (title) {
       setFormData((prev) => ({
         ...prev,
-        serviceType: (sType as ServiceType) || prev.serviceType || "LIGHT_SERVICE",
+        serviceType: (serviceType as ServiceType) || prev.serviceType || "LIGHT_SERVICE",
         complaint: formatComplaintWithService(prev.complaint, title),
       }));
     }
-  };
+  }, [services]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -162,7 +186,7 @@ export function OrderDialog({
     setLoading(true);
 
     try {
-      let result;
+      let result: OrderActionResult;
       
       if (mode === "create") {
         result = await createOrder({
@@ -209,7 +233,7 @@ export function OrderDialog({
     } finally {
       setLoading(false);
     }
-  };
+  }
 
   const isReadOnly = mode === "view";
 
@@ -230,7 +254,7 @@ export function OrderDialog({
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-6 mt-4">
-          {/* Informasi Pelanggan */}
+          {/* Customer Information */}
           <div className="space-y-4">
             <h3 className="font-semibold text-lg border-b pb-2">
                Informasi Pelanggan
@@ -274,7 +298,7 @@ export function OrderDialog({
             </div>
           </div>
 
-          {/* Informasi Kendaraan */}
+          {/* Vehicle Information */}
           <div className="space-y-4">
             <h3 className="font-semibold text-lg border-b pb-2">
               Informasi Kendaraan
@@ -314,13 +338,13 @@ export function OrderDialog({
             </div>
           </div>
 
-          {/* Detail Servis */}
+          {/* Service Details */}
           <div className="space-y-4">
             <h3 className="font-semibold text-lg border-b pb-2">
                Detail Servis
             </h3>
             
-            {/* Paket Layanan (Dynamic from Website Content) */}
+            {/* Service Package (Dynamic from Website Content) */}
             <div className="space-y-2">
               <Label>Pilih Paket Layanan (Opsional)</Label>
               <Select
@@ -332,15 +356,15 @@ export function OrderDialog({
                   <SelectValue placeholder="Pilih dari daftar layanan..." />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="NONE">-- Tidak Pilih Paket --</SelectItem>
+                  <SelectItem value={NO_SERVICE}>-- Tidak Pilih Paket --</SelectItem>
                   {services.map((service) => (
                     <SelectItem key={service.id} value={service.id}>
-                      {service.title} ({service.serviceType === 'MODIFICATION' ? 'Modifikasi' : 'Ringan'})
+                      {service.title} ({service.serviceType === "MODIFICATION" ? "Modifikasi" : "Ringan"})
                     </SelectItem>
                   ))}
-                  {selectedServiceId && selectedServiceId.startsWith("custom-") && !services.some(s => s.id === selectedServiceId) && (
+                  {selectedServiceId.startsWith(CUSTOM_PREFIX) && !services.some((s) => s.id === selectedServiceId) && (
                     <SelectItem value={selectedServiceId}>
-                      {selectedServiceId.replace("custom-", "")}
+                      {selectedServiceId.slice(CUSTOM_PREFIX.length)}
                     </SelectItem>
                   )}
                 </SelectContent>
