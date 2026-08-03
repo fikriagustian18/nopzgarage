@@ -1,9 +1,14 @@
-// components/NotificationPanel.tsx
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
+import { useSession } from "next-auth/react";
 import { Bell, Check, Trash2, X } from "lucide-react";
+import { formatDistanceToNow } from "date-fns";
+import { id as idLocale } from "date-fns/locale";
+
 import { Button } from "@/components/ui/Button";
+
+import { getRecentLogs } from "@/lib/actions/logs";
 import {
   getNotifications,
   markAsRead,
@@ -11,81 +16,126 @@ import {
   clearNotifications,
   getUnreadCount,
   getNotificationStyle,
-  type Notification,
 } from "@/lib/notifications";
-import { formatDistanceToNow } from "date-fns";
-import { id as idLocale } from "date-fns/locale";
-import { getRecentLogs } from "@/lib/actions/logs"; // Import logs action
+import type { Notification } from "@/lib/notifications";
 
+const MAX_NOTIFICATIONS_COUNT = 50;
+const RECENT_LOGS_LIMIT = 10;
+const POLL_INTERVAL_MS = 5000;
+
+interface ServerLog {
+  id: string;
+  action: string;
+  title: string;
+  details: string;
+  metadata?: Record<string, any>;
+  userId?: string;
+  userName?: string;
+  role?: string;
+  createdAt: string;
+}
+
+/**
+ * Maps a log action string to a visual notification type.
+ *
+ * @param action - Log action name.
+ * @returns Corresponding notification type identifier.
+ */
+function mapActionToType(action: string): Notification["type"] {
+  if (action.includes("CREATE")) {
+    return "success";
+  }
+  if (action.includes("UPDATE")) {
+    return "info";
+  }
+  if (action.includes("DELETE")) {
+    return "error";
+  }
+  if (action.includes("PAYMENT")) {
+    return "success";
+  }
+  return "system";
+}
+
+/**
+ * NotificationPanel component renders a notification bell button and dropdown panel.
+ * Displays combined local notifications and server activity logs for OWNER users.
+ */
 export function NotificationPanel() {
+  const { data: session } = useSession();
   const [isOpen, setIsOpen] = useState(false);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
 
-  async function loadNotifications() {
-    // 1. Get Client notifications (localStorage)
+  const isOwner = session?.user?.role === "OWNER";
+
+  const loadNotifications = useCallback(async () => {
     const clientNotifications = getNotifications();
 
-    // 2. Get Server Logs (Database)
     try {
-      const serverResult = await getRecentLogs(10);
+      const serverResult = await getRecentLogs(RECENT_LOGS_LIMIT);
       if (serverResult.success && serverResult.logs) {
-        // Convert logs to Notification format
-        const serverNotifications: Notification[] = serverResult.logs.map((log: any) => ({
+        const serverNotifications: Notification[] = (
+          serverResult.logs as ServerLog[]
+        ).map((log) => ({
           id: log.id,
           type: mapActionToType(log.action),
           title: log.title,
           message: log.details,
           timestamp: new Date(log.createdAt),
-          read: false, 
+          read: false,
           metadata: log.metadata,
-          actor: log.userName || (log.userId ? "User" : "System")
+          actor: log.userName || (log.userId ? "User" : "System"),
         }));
 
-        const combined = [...clientNotifications, ...serverNotifications];
-        const sorted = combined.sort((a, b) => 
-           new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+        const combinedNotifications = [
+          ...clientNotifications,
+          ...serverNotifications,
+        ];
+        const sortedNotifications = combinedNotifications.sort(
+          (a, b) =>
+            new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
         );
-        
-        setNotifications(sorted.slice(0, 50));
-      } else {
-        setNotifications(clientNotifications);
+
+        setNotifications(sortedNotifications.slice(0, MAX_NOTIFICATIONS_COUNT));
+        setUnreadCount(getUnreadCount());
+        return;
       }
-    } catch (e) {
-      console.error("Failed to load logs", e);
-      setNotifications(clientNotifications);
+    } catch (error) {
+      console.error("Failed to load logs:", error);
     }
 
+    setNotifications(clientNotifications);
     setUnreadCount(getUnreadCount());
-  }
-
-  // Helper to map log action to visual type
-  function mapActionToType(action: string) {
-    if (action.includes("CREATE")) return "success";
-    if (action.includes("UPDATE")) return "info";
-    if (action.includes("DELETE")) return "error";
-    if (action.includes("PAYMENT")) return "success";
-    return "system";
-  }
+  }, []);
 
   useEffect(() => {
+    if (!isOwner) {
+      return;
+    }
+
     loadNotifications();
 
-    // Listen for new notifications
     function handleNewNotification() {
       loadNotifications();
     }
 
     window.addEventListener("notification-added", handleNewNotification);
-    
-    // Poll for updates every 5 seconds
-    const interval = setInterval(loadNotifications, 5000);
+    const interval = setInterval(loadNotifications, POLL_INTERVAL_MS);
 
     return () => {
       window.removeEventListener("notification-added", handleNewNotification);
       clearInterval(interval);
     };
-  }, []);
+  }, [isOwner, loadNotifications]);
+
+  function handleToggleOpen() {
+    setIsOpen((prev) => !prev);
+  }
+
+  function handleClose() {
+    setIsOpen(false);
+  }
 
   function handleMarkAsRead(id: string) {
     markAsRead(id);
@@ -102,13 +152,17 @@ export function NotificationPanel() {
     loadNotifications();
   }
 
+  if (!isOwner) {
+    return null;
+  }
+
   return (
     <div className="relative">
-      {/* Notification Bell */}
+      {/* Notification Bell Toggle Button */}
       <Button
         variant="outline"
         size="icon"
-        onClick={() => setIsOpen(!isOpen)}
+        onClick={handleToggleOpen}
         className="relative w-10 h-10 border-sidebar-border hover:bg-sidebar-accent"
       >
         <Bell className="h-5 w-5 text-muted-foreground" />
@@ -119,16 +173,16 @@ export function NotificationPanel() {
         )}
       </Button>
 
-      {/* Notification Panel */}
+      {/* Notification Dropdown Panel */}
       {isOpen && (
         <>
           {/* Backdrop */}
-          <div 
-            className="fixed inset-0 z-40" 
-            onClick={() => setIsOpen(false)}
+          <div
+            className="fixed inset-0 z-40"
+            onClick={handleClose}
           />
-          
-          {/* Panel */}
+
+          {/* Main Panel Content */}
           <div className="absolute right-0 top-12 w-96 max-h-[500px] bg-card border border-border rounded-xl shadow-2xl z-50 overflow-hidden">
             {/* Header */}
             <div className="flex items-center justify-between p-4 border-b border-border bg-muted/50">
@@ -151,7 +205,7 @@ export function NotificationPanel() {
                 <Button
                   variant="ghost"
                   size="icon"
-                  onClick={() => setIsOpen(false)}
+                  onClick={handleClose}
                   className="h-7 w-7"
                 >
                   <X className="h-4 w-4" />
