@@ -7,6 +7,7 @@ import {
   Search,
   Edit,
   Trash2,
+  XCircle,
   Eye,
   CheckCircle,
   Clock,
@@ -163,7 +164,9 @@ export default function Page() {
 
   // Handle confirmation booking
   async function handleConfirmOrder() {
-    if (!orderToConfirm) return;
+    if (!orderToConfirm) {
+      return;
+    }
     setConfirmLoading(true);
     try {
       const result = await confirmOrder(orderToConfirm.id);
@@ -202,9 +205,13 @@ export default function Page() {
 
   // Helper formatting dates in Indonesian
   function formatIndonesianDate(dateString?: string | Date | null) {
-    if (!dateString) return { dateStr: "-", timeStr: "-" };
+    if (!dateString) {
+      return { dateStr: "-", timeStr: "-" };
+    }
     const date = new Date(dateString);
-    if (isNaN(date.getTime())) return { dateStr: "-", timeStr: "-" };
+    if (isNaN(date.getTime())) {
+      return { dateStr: "-", timeStr: "-" };
+    }
     
     const months = [
       "Januari", "Februari", "Maret", "April", "Mei", "Juni",
@@ -725,19 +732,19 @@ export default function Page() {
                                   />
                                 )}
 
-                                {/* Delete button for cancels/admins */}
-                                {order.status === "PENDING" && (
+                                {/* Batalkan Booking button */}
+                                {order.status !== "COMPLETED" && order.status !== "CANCELLED" && (
                                   <Button
                                     variant="ghost"
                                     size="icon"
-                                    className="h-8 w-8 text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/20 hover:cursor-pointer"
+                                    className="h-8 w-8 text-rose-500 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/20 hover:cursor-pointer"
                                     onClick={() => {
                                       setSelectedOrder(order);
-                                      setDialogOpen(false);
+                                      setDeleteDialogOpen(true);
                                     }}
-                                    title="Hapus Order"
+                                    title="Batalkan Booking"
                                   >
-                                    <Trash2 className="h-4.5 w-4.5" />
+                                    <XCircle className="h-4.5 w-4.5" />
                                   </Button>
                                 )}
                               </div>
@@ -787,7 +794,7 @@ export default function Page() {
                 </Button>
 
                 {/* Page numbers */}
-                {Array.from({ length: totalPages }).map((_, i) => {
+                {Array.from({ length: totalPages }).map((unusedItem, i) => {
                   const pageNum = i + 1;
                   if (
                     pageNum === 1 ||
@@ -861,6 +868,19 @@ export default function Page() {
               open={paymentDialogOpen}
               onOpenChange={setPaymentDialogOpen}
               order={selectedOrder}
+              onSuccess={fetchData}
+            />
+          )}
+
+          {selectedOrder && (
+            <DeleteConfirmDialog
+              open={deleteDialogOpen}
+              onOpenChange={setDeleteDialogOpen}
+              orderId={selectedOrder.id}
+              orderInfo={{
+                custName: selectedOrder.custName,
+                vehicle: selectedOrder.vehicle,
+              }}
               onSuccess={fetchData}
             />
           )}

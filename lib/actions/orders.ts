@@ -7,16 +7,16 @@ import { revalidatePath } from 'next/cache';
 import { createLog } from './logs';
 import { format, startOfDay, endOfDay } from 'date-fns';
 
-// ==================== Types ====================
-export type OrderItem = {
+// ==================== Interfaces ====================
+export interface OrderItem {
   name: string;
   qty: number;
   price: number;
   type: 'service' | 'part' | 'internal_fee';
-  employeeId?: string; // Optional untuk internal_fee
-};
+  employeeId?: string; // Optional for internal_fee
+}
 
-export type CreateOrderInput = {
+export interface CreateOrderInput {
   custName: string;
   custPhone: string;
   vehicle: string;
@@ -24,15 +24,15 @@ export type CreateOrderInput = {
   complaint: string;
   serviceType: ServiceType;
   scheduledAt?: string | Date;
-};
+}
 
-export type UpdateEstimateInput = {
+export interface UpdateEstimateInput {
   orderId: string;
   items: OrderItem[];
   scheduledAt?: Date;
-};
+}
 
-export type ProcessOrderInput = {
+export interface ProcessOrderInput {
   orderId: string;
   items: OrderItem[];
   mechanicId: string;
@@ -40,13 +40,15 @@ export type ProcessOrderInput = {
     employeeId: string;
     name: string;
     amount: number;
-    note?: string; // Tambahan untuk catatan (misal: "Kesulitan Tinggi")
+    note?: string; // Additional note (e.g. "High Difficulty")
   }[];
-};
+}
 
 // ==================== Helper: Serialize Decimal ====================
 function serializeOrder(order: any) {
-  if (!order) return null;
+  if (!order) {
+    return null;
+  }
   return {
     ...order,
     totalPrice: order.totalPrice?.toNumber ? order.totalPrice.toNumber() : 0,
@@ -73,19 +75,19 @@ function serializeOrder(order: any) {
   };
 }
 
-// ==================== Process Order (Estimasi & Assign) ====================
+// ==================== Process Order (Estimation & Assignment) ====================
 /**
- * Memproses order (Step Estimasi & Penugasan).
+ * Processes an order (Estimation & Assignment Step).
  * 
- * Fungsi kompleks ini melakukan:
- * 1. Mengupdate items service/part yang disepakati.
- * 2. Mengurangi stok sparepart secara real-time (jika ada part).
- * 3. Membuat Jurnal HPP (Harga Pokok Penjualan) vs Persediaan.
- * 4. Mencatat komisi/gaji mekanik (Accrual Basis - Hutang Gaji).
- * 5. Update status order menjadi 'IN_PROGRESS'.
+ * This function performs:
+ * 1. Updates agreed service/part items.
+ * 2. Decrements spare part stock in real-time (if parts are included).
+ * 3. Creates Cost of Goods Sold (COGS) vs Inventory journal entries.
+ * 4. Records mechanic commission/fee (Accrual Basis - Fee Payable).
+ * 5. Updates order status to 'IN_PROGRESS'.
  * 
- * @param {ProcessOrderInput} data - Data proses order.
- * @returns {Object} Hasil order yang diproses.
+ * @param {ProcessOrderInput} data - Process order data.
+ * @returns {Object} Result of the processed order.
  */
 export async function processOrder(data: ProcessOrderInput): Promise<
   | { success: true; order: any }
@@ -111,7 +113,7 @@ export async function processOrder(data: ProcessOrderInput): Promise<
       const order = await tx.order.update({
         where: { id: orderId },
         data: {
-          items: customerItems, // Legacy JSON, tetap diisi untuk kemudahan
+          items: customerItems as any, // Legacy JSON, kept for convenience
           totalPrice,
           mechanicId,
           status: 'IN_PROGRESS',
@@ -268,13 +270,13 @@ export async function processOrder(data: ProcessOrderInput): Promise<
   }
 }
 
-// ==================== Finish Order (Selesai Pengerjaan) ====================
+// ==================== Finish Order (Work Completed) ====================
 /**
- * Menandai order sebagai selesai dikerjakan (READY).
- * Kendaraan siap diambil/dibayar oleh customer.
+ * Marks an order as completed (READY).
+ * Vehicle is ready for customer pickup/payment.
  * 
- * @param {string} orderId - ID Order.
- * @returns {Object} Order yang diupdate.
+ * @param {string} orderId - Order ID.
+ * @returns {Object} Updated order.
  */
 export async function finishOrder(orderId: string) {
   try {
@@ -285,7 +287,7 @@ export async function finishOrder(orderId: string) {
     const order = await prisma.order.update({
       where: { id: orderId },
       data: {
-        status: 'READY', // Siap diambil/bayar
+        status: 'READY', // Ready for pickup/payment
       },
       include: {
         mechanic: true,
@@ -312,13 +314,13 @@ export async function finishOrder(orderId: string) {
   }
 }
 
-// ==================== Close Order (Serah Terima / Selesai) ====================
+// ==================== Close Order (Handover / Complete) ====================
 /**
- * Menutup order secara final (COMPLETED).
- * Biasanya dilakukan setelah pembayaran lunas dan kendaraan diserahterimakan.
+ * Closes an order finally (COMPLETED).
+ * Usually done after full payment and vehicle handover.
  * 
- * @param {string} orderId - ID Order.
- * @returns {Object} Order yang diupdate.
+ * @param {string} orderId - Order ID.
+ * @returns {Object} Updated order.
  */
 export async function closeOrder(orderId: string) {
   try {
@@ -329,7 +331,7 @@ export async function closeOrder(orderId: string) {
     const order = await prisma.order.update({
       where: { id: orderId },
       data: {
-        status: 'COMPLETED', // Transaksi selesai, unit diambil
+        status: 'COMPLETED', // Transaction complete, unit handed over
       },
       include: {
         mechanic: true,
@@ -358,11 +360,11 @@ export async function closeOrder(orderId: string) {
 
 // ==================== Public Booking (Landing Page) ====================
 /**
- * Membuat booking baru dari halaman publik (Landing Page).
- * Status awal: PENDING.
+ * Creates a new booking from the public landing page.
+ * Initial status: PENDING.
  * 
- * @param {CreateOrderInput} data - Data booking.
- * @returns {Object} Order baru.
+ * @param {CreateOrderInput} data - Booking data.
+ * @returns {Object} New order.
  */
 export async function createBooking(data: CreateOrderInput) {
   try {
@@ -417,12 +419,12 @@ export async function createBooking(data: CreateOrderInput) {
   }
 }
 
-// ==================== Konfirmasi Order ====================
+// ==================== Confirm Order ====================
 /**
- * Mengkonfirmasi booking yang masuk menjadi antrian aktif (CONFIRMED).
+ * Confirms an incoming booking into the active queue (CONFIRMED).
  * 
- * @param {string} orderId - ID Order.
- * @returns {Object} Order yang diupdate.
+ * @param {string} orderId - Order ID.
+ * @returns {Object} Updated order.
  */
 export async function confirmOrder(orderId: string) {
   try {
@@ -454,15 +456,14 @@ export async function confirmOrder(orderId: string) {
 }
 
 // ==================== Update Status (Kanban) ====================
-// ==================== Update Status (Kanban) ====================
 /**
- * Mengupdate status order (Drag & Drop Kanban).
- * Bisa juga untuk assign/reassign mekanik.
+ * Updates order status (Kanban Drag & Drop).
+ * Can also assign/reassign mechanic.
  * 
- * @param {string} orderId - ID Order.
- * @param {OrderStatus} newStatus - Status baru.
- * @param {string} mechanicId - ID Mekanik baru (opsional).
- * @returns {Object} Order yang diupdate.
+ * @param {string} orderId - Order ID.
+ * @param {OrderStatus} newStatus - New status.
+ * @param {string} mechanicId - Optional new mechanic ID.
+ * @returns {Object} Updated order.
  */
 export async function updateOrderStatus(
   orderId: string, 
@@ -508,11 +509,11 @@ export async function updateOrderStatus(
 
 // ==================== Get All Orders (Admin) ====================
 /**
- * Mengambil daftar order untuk halaman admin.
- * Mendukung filter status, tipe servis, rentang tanggal, dan pencarian.
+ * Retrieves order list for admin page.
+ * Supports filtering by status, service type, date range, and search.
  * 
- * @param {Object} filters - Filter pencarian.
- * @returns {Object} List order.
+ * @param {Object} filters - Search filters.
+ * @returns {Object} Order list.
  */
 export async function getAdminOrders(filters?: {
   status?: OrderStatus;
@@ -545,7 +546,7 @@ export async function getAdminOrders(filters?: {
       ];
     }
 
-    // Default limit 50 untuk mencegah crash (Worker exceeded resource limits)
+    // Default limit 50 to prevent memory limits
     const limit = filters?.limit || 50;
 
     const orders = await prisma.order.findMany({
@@ -569,11 +570,11 @@ export async function getAdminOrders(filters?: {
 
 // ==================== Get Single Order ====================
 /**
- * Mengambil detail lengkap satu order.
- * Termasuk data mekanik, history pembayaran, item sparepart, dan fee komisi.
+ * Retrieves complete details of a single order.
+ * Includes mechanic data, payment history, spare part items, and commission fees.
  * 
- * @param {string} orderId - ID Order.
- * @returns {Object} Detail order.
+ * @param {string} orderId - Order ID.
+ * @returns {Object} Order details.
  */
 export async function getOrderDetail(orderId: string) {
   try {
@@ -596,9 +597,7 @@ export async function getOrderDetail(orderId: string) {
     }
 
     const serializedOrder = serializeOrder(order);
-    // Tambahkan serialize khusus untuk Decimal di orderFees dan orderItems jika perlu
-    // Tapi serializeOrder standard hanya handle top level.
-    // Kita extend sedikit hasilnya:
+    // Additional serialization for Decimal values in orderFees and orderItems
     const detailedOrder = {
       ...serializedOrder,
       orderFees: order.orderFees.map((f: any) => ({ 
@@ -624,11 +623,11 @@ export async function getOrderDetail(orderId: string) {
 
 // ==================== Get Public Kanban ====================
 /**
- * Mengambil data order untuk Kanban Board Publik (di bengkel).
- * Menampilkan antrian, sedang dikerjakan, dan selesai.
- * Nomor plat disensor sebagian demi privasi.
+ * Retrieves order data for public workshop Kanban Board.
+ * Displays queue, in-progress, and ready items.
+ * License plate numbers are partially masked for privacy.
  * 
- * @returns {Object} List order untuk kanban publik.
+ * @returns {Object} Public kanban order list.
  */
 export async function getPublicKanbanOrders() {
   try {
@@ -666,10 +665,10 @@ export async function getPublicKanbanOrders() {
 
 // ==================== Create Order (Admin) ====================
 /**
- * Membuat order manual dari admin dashboard.
+ * Creates an order manually from admin dashboard.
  * 
- * @param {CreateOrderInput} data - Data order.
- * @returns {Object} Order baru.
+ * @param {CreateOrderInput} data - Order data.
+ * @returns {Object} New order.
  */
 export async function createOrder(data: CreateOrderInput) {
   try {
@@ -712,11 +711,11 @@ export async function createOrder(data: CreateOrderInput) {
 
 // ==================== Update Order ====================
 /**
- * Update informasi dasar order.
+ * Updates basic order information.
  * 
- * @param {string} orderId - ID Order.
- * @param {Partial<CreateOrderInput>} data - Data perubahan.
- * @returns {Object} Order updated.
+ * @param {string} orderId - Order ID.
+ * @param {Partial<CreateOrderInput>} data - Updated data.
+ * @returns {Object} Updated order.
  */
 export async function updateOrder(orderId: string, data: Partial<CreateOrderInput>) {
   try {
@@ -757,42 +756,53 @@ export async function updateOrder(orderId: string, data: Partial<CreateOrderInpu
   }
 }
 
-// ==================== Delete Order ====================
+// ==================== Cancel / Batalkan Booking ====================
 /**
- * Menghapus order secara permanen.
+ * Cancels a booking/order (changes status to CANCELLED).
  * 
- * @param {string} orderId - ID Order.
- * @returns {Object} Status sukses.
+ * @param {string} orderId - Order ID.
+ * @returns {Object} Success status.
  */
-export async function deleteOrder(orderId: string) {
+export async function cancelOrder(orderId: string) {
   try {
     const session = await auth();
     if (!session || !['OWNER', 'ADMIN'].includes(session.user?.role || '')) {
-      return { success: false, error: 'Akses ditolak: Hanya Owner dan Admin yang dapat menghapus order.' };
+      return { success: false, error: 'Akses ditolak: Hanya Owner dan Admin yang dapat membatalkan booking.' };
     }
-    await prisma.order.delete({
+    const order = await prisma.order.update({
       where: { id: orderId },
+      data: { status: 'CANCELLED' },
+      include: {
+        mechanic: true,
+        payments: true,
+      },
     });
     revalidatePath('/admin/orders');
+    revalidatePath('/admin/pelayanan');
+    revalidatePath('/admin/orders/kanban');
     
     await createLog({
-        action: "DELETE_ORDER",
-        title: "Order Deleted",
-        details: `Order ${orderId} has been deleted.`,
-        metadata: { orderId },
+        action: "CANCEL_ORDER",
+        title: "Booking Cancelled",
+        details: `Booking #${order.id.slice(-6)} has been cancelled.`,
+        metadata: { orderId: order.id },
         userName: "Admin",
         role: "ADMIN"
       });
 
-    return { success: true };
+    return { success: true, order: serializeOrder(order) };
   } catch (error) {
-    return { success: false, error: 'Gagal menghapus order' };
+    console.error('Cancel order error:', error);
+    return { success: false, error: 'Gagal membatalkan booking' };
   }
 }
 
+
 // Helper function to dynamically add queue numbers to a list of orders based on their creation index on each date
 async function addQueueNumbersToOrders(orders: any[]) {
-  if (orders.length === 0) return [];
+  if (orders.length === 0) {
+    return [];
+  }
 
   // 1. Get unique dates formatted as yyyy-MM-dd
   const dateStrings = Array.from(
@@ -834,7 +844,9 @@ async function addQueueNumbersToOrders(orders: any[]) {
   allOrdersForDates.forEach(o => {
     const d = o.createdAt instanceof Date ? o.createdAt : new Date(o.createdAt);
     const dateStr = format(d, 'yyyy-MM-dd');
-    if (!groups[dateStr]) groups[dateStr] = [];
+    if (!groups[dateStr]) {
+      groups[dateStr] = [];
+    }
     groups[dateStr].push(o);
   });
 

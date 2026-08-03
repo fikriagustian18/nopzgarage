@@ -1,7 +1,9 @@
-// components/DeleteConfirmDialog.tsx
+// components/dialogs/DeleteConfirmDialog.tsx — Cancel Booking Confirmation
 "use client";
 
 import { useState } from "react";
+import { Loader2, AlertCircle } from "lucide-react";
+
 import {
   Dialog,
   DialogContent,
@@ -11,12 +13,12 @@ import {
   DialogFooter,
 } from "@/components/ui/Dialog";
 import { Button } from "@/components/ui/Button";
-import { deleteOrder } from "@/lib/actions/orders";
-import { toast } from "@/hooks/useToast";
-import { Loader2, AlertTriangle } from "lucide-react";
-import { notifyOrderDeleted } from "@/hooks/useNotification";
 
-type DeleteConfirmDialogProps = {
+import { cancelOrder } from "@/lib/actions/orders";
+import { toast } from "@/hooks/useToast";
+import { notifyOrderCancelled } from "@/hooks/useNotification";
+
+interface CancelConfirmDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   orderId: string;
@@ -25,7 +27,7 @@ type DeleteConfirmDialogProps = {
     vehicle: string;
   };
   onSuccess?: () => void;
-};
+}
 
 export function DeleteConfirmDialog({
   open,
@@ -33,31 +35,33 @@ export function DeleteConfirmDialog({
   orderId,
   orderInfo,
   onSuccess,
-}: DeleteConfirmDialogProps) {
+}: CancelConfirmDialogProps) {
   const [loading, setLoading] = useState(false);
 
-  async function handleDelete() {
+  async function handleCancel() {
     setLoading(true);
 
     try {
-      const result = await deleteOrder(orderId);
+      const result = await cancelOrder(orderId);
 
       if (result.success) {
         toast({
-          title: "✅ Berhasil Dihapus!",
-          description: "Order telah berhasil dihapus dari sistem",
+          title: "✅ Booking Dibatalkan!",
+          description: "Booking telah berhasil dibatalkan",
         });
         
         // Add notification
-        notifyOrderDeleted(orderInfo.custName, orderId);
+        notifyOrderCancelled(orderInfo.custName, orderId);
         
         onOpenChange(false);
-        if (onSuccess) onSuccess();
+        if (onSuccess) {
+          onSuccess();
+        }
       } else {
         toast({
           variant: "destructive",
-          title: "❌ Gagal Menghapus",
-          description: result.error || "Terjadi kesalahan saat menghapus order",
+          title: "❌ Gagal Membatalkan",
+          description: result.error || "Terjadi kesalahan saat membatalkan booking",
         });
       }
     } catch (error) {
@@ -69,50 +73,50 @@ export function DeleteConfirmDialog({
     } finally {
       setLoading(false);
     }
-  };
+  }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
           <div className="flex items-center gap-3 mb-2">
-            <div className="p-3 bg-red-100 rounded-full">
-              <AlertTriangle className="h-6 w-6 text-red-600" />
+            <div className="p-3 bg-rose-100 dark:bg-rose-950/40 rounded-full">
+              <AlertCircle className="h-6 w-6 text-rose-600 dark:text-rose-400" />
             </div>
             <div>
               <DialogTitle className="text-xl font-bold">
-                Hapus Order?
+                Batalkan Booking?
               </DialogTitle>
               <DialogDescription className="mt-1">
-                Tindakan ini tidak dapat dibatalkan
+                Status booking akan diubah menjadi Dibatalkan.
               </DialogDescription>
             </div>
           </div>
         </DialogHeader>
 
         <div className="space-y-4 py-4">
-          <p className="text-sm text-gray-600">
-            Anda akan menghapus order berikut:
+          <p className="text-sm text-muted-foreground">
+            Anda akan membatalkan booking berikut:
           </p>
           
-          <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 space-y-2">
+          <div className="bg-muted/50 border border-border/60 rounded-lg p-4 space-y-2">
             <div className="flex items-center gap-2">
-              <span className="text-sm font-medium text-gray-500">Pelanggan:</span>
-              <span className="text-sm font-bold text-gray-900">{orderInfo.custName}</span>
+              <span className="text-sm font-medium text-muted-foreground">Pelanggan:</span>
+              <span className="text-sm font-bold text-foreground">{orderInfo.custName}</span>
             </div>
             <div className="flex items-center gap-2">
-              <span className="text-sm font-medium text-gray-500">Kendaraan:</span>
-              <span className="text-sm font-bold text-gray-900">{orderInfo.vehicle}</span>
+              <span className="text-sm font-medium text-muted-foreground">Kendaraan:</span>
+              <span className="text-sm font-bold text-foreground">{orderInfo.vehicle}</span>
             </div>
             <div className="flex items-center gap-2">
-              <span className="text-sm font-medium text-gray-500">Order ID:</span>
-              <span className="text-sm font-mono text-gray-700">{orderId.slice(-8)}</span>
+              <span className="text-sm font-medium text-muted-foreground">Order ID:</span>
+              <span className="text-sm font-mono text-foreground font-semibold">{`ORD-${orderId.slice(-6).toUpperCase()}`}</span>
             </div>
           </div>
 
-          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
-            <p className="text-sm text-yellow-800 font-medium">
-              ⚠️ Data yang dihapus tidak dapat dikembalikan!
+          <div className="bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800/40 rounded-lg p-3">
+            <p className="text-sm text-amber-800 dark:text-amber-400 font-medium">
+              ⚠️ Status order akan berubah menjadi <strong>CANCELLED</strong> (Dibatalkan).
             </p>
           </div>
         </div>
@@ -129,15 +133,16 @@ export function DeleteConfirmDialog({
           <Button
             type="button"
             variant="destructive"
-            onClick={handleDelete}
+            onClick={handleCancel}
             disabled={loading}
-            className="gap-2"
+            className="gap-2 bg-rose-600 hover:bg-rose-700 text-white"
           >
             {loading && <Loader2 className="h-4 w-4 animate-spin" />}
-            Ya, Hapus Order
+            Ya, Batalkan Booking
           </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
   );
 }
+

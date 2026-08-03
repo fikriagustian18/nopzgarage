@@ -1,12 +1,11 @@
-// hooks/useNotification.ts
 "use client";
 
-import { addNotification, type NotificationType } from "@/lib/notifications";
 import { useCallback } from "react";
+import { addNotification, type NotificationType } from "@/lib/notifications";
 
 export function useNotification() {
   const notify = useCallback(
-    (type: NotificationType, title: string, message: string, metadata?: Record<string, any>) => {
+    (type: NotificationType, title: string, message: string, metadata?: Record<string, unknown>) => {
       addNotification(type, title, message, metadata);
     },
     []
@@ -45,16 +44,11 @@ export function notifyOrderCompleted(customerName: string, orderId: string) {
   );
 }
 
-export function notifyOrderDeleted(customerName: string, orderId: string) {
+export function notifyOrderCancelled(customerName: string, orderId: string) {
   addNotification(
-    "system", // or create a specific type if needed, but 'system' or 'warning' might fit. Let's stick to system for now or create a new type if strictly needed. Actually 'system' is fine, or reusing 'order_updated' type with a delete message. 
-    // Let's use 'order_updated' type but with a delete title, or better, add 'order_deleted' type to notifications.ts if I could, but for now I'll use 'system' or existing types.
-    // Wait, notifications.ts has: "order_created" | "order_updated" | "order_completed" ... and "employee_deleted".
-    // It doesn't have "order_deleted". I should probably add it or just use "system".
-    // I'll use "system" for now to avoid modifying the type definition file again if not strictly necessary, or I can use "info".
-    // Actually, let's use "warning" for deletion.
-    "Order Dihapus",
-    `Order untuk ${customerName} telah dihapus dari sistem`,
+    "order_updated",
+    "Booking Dibatalkan",
+    `Booking untuk ${customerName} telah dibatalkan`,
     { orderId }
   );
 }
