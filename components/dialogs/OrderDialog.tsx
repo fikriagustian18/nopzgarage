@@ -27,6 +27,8 @@ import { toast } from "@/hooks/useToast";
 import { Loader2 } from "lucide-react";
 import { notifyOrderCreated, notifyOrderUpdated } from "@/hooks/useNotification";
 
+import { DEFAULT_SERVICES } from "@/lib/constants/serviceDefaults";
+
 type OrderDialogProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -43,6 +45,20 @@ type OrderDialogProps = {
   onSuccess?: () => void;
 };
 
+// Helper: Extract service title from complaint e.g. "[Layanan: Fast Lane Service]\nKeluhan..."
+function extractServiceTitle(complaint: string): string | null {
+  if (!complaint) return null;
+  const match = complaint.match(/^\[Layanan:\s*([^\]]+)\]/m);
+  return match ? match[1].trim() : null;
+}
+
+// Helper: Add, update or remove [Layanan: ...] header in complaint string cleanly
+function formatComplaintWithService(complaint: string, serviceTitle: string | null): string {
+  const clean = complaint.replace(/^\[Layanan:\s*[^\]]+\]\s*/g, "").trim();
+  if (!serviceTitle) return clean;
+  return clean ? `[Layanan: ${serviceTitle}]\n${clean}` : `[Layanan: ${serviceTitle}]`;
+}
+
 export function OrderDialog({
   open,
   onOpenChange,
@@ -51,7 +67,8 @@ export function OrderDialog({
   onSuccess,
 }: OrderDialogProps) {
   const [loading, setLoading] = useState(false);
-  const [services, setServices] = useState<any[]>([]); // Added state
+  const [services, setServices] = useState<any[]>([]); 
+  const [selectedServiceId, setSelectedServiceId] = useState<string>("NONE");
   const [formData, setFormData] = useState({
     custName: "",
     custPhone: "",
@@ -61,38 +78,81 @@ export function OrderDialog({
     serviceType: "LIGHT_SERVICE" as ServiceType,
   });
 
-  // Fetch Services from Website Content
+  // Fetch Services from Website Content (with fallback to DEFAULT_SERVICES)
   useEffect(() => {
     const fetchServices = async () => {
       const result = await getContent('services');
-      if (result.success && result.data && result.data.content && Array.isArray((result.data.content as any).items)) {
+      if (result.success && result.data && result.data.content && Array.isArray((result.data.content as any).items) && (result.data.content as any).items.length > 0) {
         setServices((result.data.content as any).items);
+      } else {
+        setServices(DEFAULT_SERVICES);
       }
     };
     fetchServices();
   }, []);
 
   useEffect(() => {
-    if (order && mode !== "create") {
-      setFormData({
-        custName: order.custName,
-        custPhone: order.custPhone,
-        vehicle: order.vehicle,
-        plateNumber: order.plateNumber || "",
-        complaint: order.complaint,
-        serviceType: order.serviceType,
-      });
-    } else {
-      setFormData({
-        custName: "",
-        custPhone: "",
-        vehicle: "",
-        plateNumber: "",
-        complaint: "",
-        serviceType: "LIGHT_SERVICE",
-      });
+    if (open) {
+      if (order && mode !== "create") {
+        const initialComplaint = order.complaint || "";
+        setFormData({
+          custName: order.custName || "",
+          custPhone: order.custPhone || "",
+          vehicle: order.vehicle || "",
+          plateNumber: order.plateNumber || "",
+          complaint: initialComplaint,
+          serviceType: order.serviceType || "LIGHT_SERVICE",
+        });
+
+        const extractedTitle = extractServiceTitle(initialComplaint);
+        if (extractedTitle) {
+          const matched = services.find(
+            (s) => s.title?.toLowerCase() === extractedTitle.toLowerCase() || s.id === extractedTitle
+          );
+          setSelectedServiceId(matched ? matched.id : `custom-${extractedTitle}`);
+        } else {
+          setSelectedServiceId("NONE");
+        }
+      } else {
+        setFormData({
+          custName: "",
+          custPhone: "",
+          vehicle: "",
+          plateNumber: "",
+          complaint: "",
+          serviceType: "LIGHT_SERVICE",
+        });
+        setSelectedServiceId("NONE");
+      }
     }
-  }, [order, mode, open]);
+  }, [order, mode, open, services]);
+
+  const handleServiceSelect = (serviceId: string) => {
+    setSelectedServiceId(serviceId);
+    if (serviceId === "NONE" || !serviceId) {
+      setFormData((prev) => ({
+        ...prev,
+        complaint: formatComplaintWithService(prev.complaint, null),
+      }));
+      return;
+    }
+
+    let selectedService = services.find((s) => s.id === serviceId);
+    let title = selectedService?.title;
+    let sType = selectedService?.serviceType;
+
+    if (!selectedService && serviceId.startsWith("custom-")) {
+      title = serviceId.replace("custom-", "");
+    }
+
+    if (title) {
+      setFormData((prev) => ({
+        ...prev,
+        serviceType: (sType as ServiceType) || prev.serviceType || "LIGHT_SERVICE",
+        complaint: formatComplaintWithService(prev.complaint, title),
+      }));
+    }
+  };
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -264,30 +324,25 @@ export function OrderDialog({
             <div className="space-y-2">
               <Label>Pilih Paket Layanan (Opsional)</Label>
               <Select
-                onValueChange={(serviceId) => {
-                  const service = services.find((s) => s.id === serviceId);
-                  if (service) {
-                    setFormData(prev => ({
-                      ...prev,
-                      serviceType: (service.serviceType as ServiceType) || "LIGHT_SERVICE",
-                      // Prepend service name to complaint if not already present
-                      complaint: prev.complaint.includes(`[Layanan: ${service.title}]`) 
-                        ? prev.complaint 
-                        : `[Layanan: ${service.title}]\n${prev.complaint}`
-                    }));
-                  }
-                }}
+                value={selectedServiceId}
+                onValueChange={handleServiceSelect}
                 disabled={isReadOnly}
               >
                 <SelectTrigger className={isReadOnly ? "bg-gray-50" : ""}>
                   <SelectValue placeholder="Pilih dari daftar layanan..." />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="NONE">-- Tidak Pilih Paket --</SelectItem>
                   {services.map((service) => (
                     <SelectItem key={service.id} value={service.id}>
                       {service.title} ({service.serviceType === 'MODIFICATION' ? 'Modifikasi' : 'Ringan'})
                     </SelectItem>
                   ))}
+                  {selectedServiceId && selectedServiceId.startsWith("custom-") && !services.some(s => s.id === selectedServiceId) && (
+                    <SelectItem value={selectedServiceId}>
+                      {selectedServiceId.replace("custom-", "")}
+                    </SelectItem>
+                  )}
                 </SelectContent>
               </Select>
             </div>
