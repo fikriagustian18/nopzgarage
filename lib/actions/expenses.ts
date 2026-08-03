@@ -1,211 +1,295 @@
-'use server';
+"use server";
 
-import { prisma } from '@/lib/prisma';
-import { auth } from '@/lib/auth';
-import { revalidatePath } from 'next/cache';
-import { createLog } from './logs';
+import { revalidatePath } from "next/cache";
+import { prisma } from "@/lib/prisma";
+import { auth } from "@/lib/auth";
+import { createLog } from "./logs";
 
 export interface CreateExpenseInput {
   description: string;
   amount: number;
-  accountId: string; // Akun beban/aset yang dipilih user
+  category: string;
+  accountId?: string;
   date?: Date;
-  reference?: string; // No Resi/Nota
+  reference?: string;
 }
 
-// ==================== Get Accounts for Expense Dropdown ====================
-/**
- * Fetch list of valid accounting accounts for expense category selection.
- * Filters include: Expense, Asset (Equipment/Supplies), Prive, and Liability.
- * Excludes Cash account to avoid duplicate entries.
- * 
- * @returns {Object} List of expense category accounts.
- */
-export async function getExpenseCategories() {
-  try {
-    const session = await auth();
-    if (!session || session.user?.role !== 'OWNER') {
-      return { success: false, error: 'Akses ditolak: Hanya Owner yang dapat mengambil kategori pengeluaran.' };
-    }
-    // Ambil akun yang relevan untuk pengeluaran:
-    // 1. BEBAN (EXPENSE) - Kode 5xx, 6xx
-    // 2. ASET (ASSET) - Kode 1xx (Misal beli peralatan)
-    // 3. EQUITY - Kode 3xx (Untuk Prive Owner)
-    // 4. LIABILITY - Kode 2xx (Bayar Utang Usaha non-gaji)
-    const accounts = await prisma.account.findMany({
-      where: {
-        OR: [
-          { type: 'EXPENSE' },
-          { name: { contains: 'Peralatan', mode: 'insensitive' } }, // Asset Equipment
-          { name: { contains: 'Perlengkapan', mode: 'insensitive' } }, // Asset Supplies
-          { name: { contains: 'Prive', mode: 'insensitive' } },     // Equity Prive
-          { type: 'LIABILITY' } // Utang
-        ]
-      },
-      orderBy: { code: 'asc' }
-    });
-    
-    // Filter out akun yang tidak boleh didebit manual sembarangan (misal Kas, Akum Penyusutan)
-    // Tapi simplified: Biarkan user pilih, as long as it makes sense.
-    // Kita exclude KAS (101) dari target debit pengeluaran (karena Kas akan di-Kredit)
-    const validAccounts = accounts.filter(a => !a.name.toLowerCase().includes('kas'));
+export interface ExpenseCategory {
+  id: string;
+  code: string;
+  name: string;
+}
 
-    return { success: true, accounts: validAccounts };
-  } catch (error) {
-    console.error('Get expense categories error:', error);
-    return { success: false, error: 'Gagal load kategori pengeluaran' };
+export interface ExpenseItem {
+  id: string;
+  date: string;
+  description: string;
+  reference: string | null;
+  amount: number;
+  category: string;
+  categoryCode: string;
+  source: string;
+}
+
+export interface ExpenseActionResult {
+  success: boolean;
+  expenses?: ExpenseItem[];
+  accounts?: ExpenseCategory[];
+  error?: string;
+}
+
+// Static Expense Categories List
+const EXPENSE_CATEGORIES: ExpenseCategory[] = [
+  { id: "OPERATIONAL", code: "EXP", name: "Beban Operasional" },
+  { id: "EQUIPMENT", code: "EXP", name: "Peralatan & Perlengkapan" },
+  { id: "RENT", code: "EXP", name: "Sewa Tempat" },
+  { id: "UTILITIES", code: "EXP", name: "Listrik, Air & Internet" },
+  { id: "SALARY", code: "EXP", name: "Gaji & Bonus" },
+  { id: "MAINTENANCE", code: "EXP", name: "Pemeliharaan & Perbaikan" },
+  { id: "OTHER", code: "EXP", name: "Pengeluaran Lainnya" },
+];
+
+/**
+ * Fetch expense categories for manual entry.
+ *
+ * @returns Object containing categories list or error message.
+ */
+export async function getExpenseCategories(): Promise<ExpenseActionResult> {
+  const session = await auth();
+  if (!session || session.user?.role !== "OWNER") {
+    return {
+      success: false,
+      error: "Akses ditolak: Hanya Owner yang dapat mengambil kategori pengeluaran.",
+    };
   }
+
+  return { success: true, accounts: EXPENSE_CATEGORIES };
 }
 
-// ==================== Create Expense (Journal Entry) ====================
 /**
- * Record a new expense.
- * 
- * Automatically creates an Accounting Journal Entry:
- * - Debit: Selected Expense/Asset account.
- * - Credit: CASH Account (Code 101).
- * 
- * @param {CreateExpenseInput} data - Expense entry data.
- * @returns {Object} Success status.
+ * Record a new manual expense transaction.
+ *
+ * @param data - The expense details to create.
+ * @returns Success indicator or error message.
  */
-export async function createExpense(data: CreateExpenseInput) {
+export async function createExpense(
+  data: CreateExpenseInput
+): Promise<ExpenseActionResult> {
   try {
     const session = await auth();
-    if (!session || session.user?.role !== 'OWNER') {
-      return { success: false, error: 'Akses ditolak: Hanya Owner yang dapat mencatat pengeluaran.' };
+    if (!session || session.user?.role !== "OWNER") {
+      return {
+        success: false,
+        error: "Akses ditolak: Hanya Owner yang dapat mencatat pengeluaran.",
+      };
     }
-    const { description, amount, accountId, date, reference } = data;
 
-    // 1. Cari akun Kas (Credit)
-    const cashAccount = await prisma.account.findFirst({
-      where: { code: '101' } // Asumsi Kode 101 adalah KAS UTAMA
+    const { description, amount, category, accountId, date, reference } = data;
+
+    if (!description || !amount || amount <= 0) {
+      return {
+        success: false,
+        error: "Deskripsi dan nominal valid harus diisi.",
+      };
+    }
+
+    const categoryName = category || "Pengeluaran Umum";
+
+    // Provision main cash account (Credit)
+    let cashAccount = await prisma.account.findFirst({
+      where: { code: "101" },
     });
 
     if (!cashAccount) {
-      return { success: false, error: 'Akun Kas (101) tidak ditemukan di sistem.' };
+      cashAccount = await prisma.account.create({
+        data: {
+          code: "101",
+          name: "Kas Utama",
+          type: "ASSET",
+          category: "Current Asset",
+        },
+      });
     }
 
-    // 2. Cari akun Target (Debit)
-    const targetAccount = await prisma.account.findUnique({
-      where: { id: accountId }
-    });
+    // Provision target expense account (Debit)
+    let targetAccount = null;
+    if (accountId) {
+      targetAccount = await prisma.account.findUnique({
+        where: { id: accountId },
+      });
+    }
 
     if (!targetAccount) {
-        return { success: false, error: 'Kategori pengeluaran tidak valid.' };
+      targetAccount = await prisma.account.findFirst({
+        where: { name: { equals: categoryName, mode: "insensitive" } },
+      });
     }
 
-    // 3. Create Journal
-    const journalResult = await prisma.$transaction(async (tx) => {
-        // Create Journal Entry
-        const journal = await tx.journalEntry.create({
-            data: {
-                date: date || new Date(),
-                description: description,
-                reference: reference, // Optional: No Nota
-                items: {
-                    create: [
-                        { accountId: targetAccount.id, debit: amount, credit: 0 }, // DEBIT BEBAN/ASET
-                        { accountId: cashAccount.id, debit: 0, credit: amount }    // KREDIT KAS
-                    ]
-                }
-            }
+    if (!targetAccount) {
+      const uniqueSuffix = Date.now().toString(36).slice(-4).toUpperCase();
+      targetAccount = await prisma.account.create({
+        data: {
+          code: `EXP-${uniqueSuffix}`,
+          name: categoryName,
+          type: "EXPENSE",
+          category: "Expense",
+        },
+      });
+    }
+
+    // Create journal entry transaction
+    await prisma.$transaction(
+      async (transaction) => {
+        const journal = await transaction.journalEntry.create({
+          data: {
+            date: date ?? new Date(),
+            description: description,
+            reference: reference ?? null,
+            items: {
+              create: [
+                { accountId: targetAccount!.id, debit: amount, credit: 0 },
+                { accountId: cashAccount!.id, debit: 0, credit: amount },
+              ],
+            },
+          },
         });
 
-        // Log Activity
         await createLog({
-            action: "CREATE_EXPENSE",
-            title: "Pengeluaran Dicatat",
-            details: `Pengeluaran Rp ${amount.toLocaleString('id-ID')} untuk ${targetAccount.name} (${description})`,
-            metadata: { journalId: journal.id },
-            userName: "Admin",
-            role: "ADMIN"
-        }); // Cannot use imported inside tx usually if log uses separate connection, but it's safe here as parallel/independent.
-        
-        return journal;
-    }, {
-      maxWait: 5000,
-      timeout: 15000,
-    });
+          action: "CREATE_EXPENSE",
+          title: "Pengeluaran Dicatat",
+          details: `Pengeluaran Rp ${amount.toLocaleString("id-ID")} - ${categoryName} (${description})`,
+          metadata: { journalId: journal.id },
+          userName: "Admin",
+          role: "ADMIN",
+        });
 
-    revalidatePath('/admin/expenses');
-    revalidatePath('/admin/reports');
+        return journal;
+      },
+      {
+        maxWait: 5000,
+        timeout: 15000,
+      }
+    );
+
+    revalidatePath("/admin/expenses");
+    revalidatePath("/admin/reports");
 
     return { success: true };
   } catch (error) {
-    console.error('Create expense error:', error);
-    return { success: false, error: 'Gagal mencatat pengeluaran' };
+    console.error("Create expense error:", error);
+    return { success: false, error: "Gagal mencatat pengeluaran" };
   }
 }
 
-// ==================== Get Expenses List ====================
 /**
- * Fetch expense history list.
- * Retrieves journal entry transactions that credit the Cash account.
- * Limited to last 50 transactions.
- * 
- * @returns {Object} Expense transaction list.
+ * Fetch list of recent expense records.
+ *
+ * @returns Array of formatted expense items or error message.
  */
-export async function getExpenses() {
+export async function getExpenses(): Promise<ExpenseActionResult> {
   try {
     const session = await auth();
-    if (!session || session.user?.role !== 'OWNER') {
-      return { success: false, error: 'Akses ditolak: Hanya Owner yang dapat mengambil daftar pengeluaran.' };
+    if (!session || session.user?.role !== "OWNER") {
+      return {
+        success: false,
+        error: "Akses ditolak: Hanya Owner yang dapat mengambil daftar pengeluaran.",
+      };
     }
+
     const journals = await prisma.journalEntry.findMany({
-      orderBy: { date: 'desc' },
-      take: 50,
+      where: {
+        items: {
+          some: {
+            debit: { gt: 0 },
+            account: { type: "EXPENSE" },
+          },
+        },
+      },
+      orderBy: { date: "desc" },
+      take: 100,
       include: {
         items: {
-          include: { account: true }
-        }
-      }
+          include: { account: true },
+        },
+      },
     });
 
-    const expenses = journals.map(j => {
-      const debitItem = j.items.find(i => i.debit.toNumber() > 0);
-      const creditItem = j.items.find(i => i.credit.toNumber() > 0);
-      
+    const expenses: ExpenseItem[] = journals.map((journal) => {
+      const debitItem = journal.items.find((item) => Number(item.debit) > 0);
+      const creditItem = journal.items.find((item) => Number(item.credit) > 0);
+      const amount = debitItem ? Number(debitItem.debit) : 0;
+
       return {
-        id: j.id,
-        date: j.date.toISOString(),
-        description: j.description,
-        reference: j.reference,
-        amount: debitItem?.debit.toNumber() || 0,
-        category: debitItem?.account.name || 'Unknown',
-        categoryCode: debitItem?.account.code || '',
-        source: creditItem?.account.name || 'Unknown'
+        id: journal.id,
+        date: journal.date.toISOString(),
+        description: journal.description,
+        reference: journal.reference,
+        amount,
+        category: debitItem?.account.name ?? "Pengeluaran Umum",
+        categoryCode: debitItem?.account.code ?? "EXP",
+        source: creditItem?.account.name ?? "Kas",
       };
     });
-    
-    const cashOutTransactions = expenses.filter(e => e.source.toLowerCase().includes('kas'));
 
-    return { success: true, expenses: cashOutTransactions };
+    return { success: true, expenses };
   } catch (error) {
-    console.error('Get expenses list error:', error);
-    return { success: false, error: 'Gagal load data pengeluaran' };
+    console.error("Get expenses list error:", error);
+    return { success: false, error: "Gagal load data pengeluaran" };
   }
 }
 
-// ==================== Delete Expense (Reverse Journal) ====================
 /**
- * Delete expense record by deleting associated journal entry.
- * 
- * @param {string} journalId - Journal Entry ID to delete.
- * @returns {Object} Success status.
+ * Delete an expense record by journal entry ID.
+ *
+ * @param journalId - Journal entry identifier to delete.
+ * @returns Success indicator or error message.
  */
-export async function deleteExpense(journalId: string) {
+export async function deleteExpense(
+  journalId: string
+): Promise<ExpenseActionResult> {
   try {
-    const session = await auth();
-    if (!session || session.user?.role !== 'OWNER') {
-      return { success: false, error: 'Akses ditolak: Hanya Owner yang dapat menghapus pengeluaran.' };
+    if (!journalId) {
+      return { success: false, error: "ID transaksi tidak valid." };
     }
-    await prisma.journalEntry.delete({
-      where: { id: journalId }
+
+    const session = await auth();
+    if (!session || session.user?.role !== "OWNER") {
+      return {
+        success: false,
+        error: "Akses ditolak: Hanya Owner yang dapat menghapus pengeluaran.",
+      };
+    }
+
+    const journal = await prisma.journalEntry.findUnique({
+      where: { id: journalId },
+      include: { items: { include: { account: true } } },
     });
-    
-    revalidatePath('/admin/expenses');
+
+    if (!journal) {
+      return { success: false, error: "Data pengeluaran tidak ditemukan." };
+    }
+
+    const debitItem = journal.items.find((item) => Number(item.debit) > 0);
+    const amount = debitItem ? Number(debitItem.debit) : 0;
+
+    await prisma.journalEntry.delete({
+      where: { id: journalId },
+    });
+
+    await createLog({
+      action: "DELETE_EXPENSE",
+      title: "Pengeluaran Dihapus",
+      details: `Hapus pengeluaran Rp ${amount.toLocaleString("id-ID")} - ${debitItem?.account.name ?? "Unknown"} (${journal.description})`,
+      metadata: { journalId },
+      userName: "Admin",
+      role: "ADMIN",
+    });
+
+    revalidatePath("/admin/expenses");
+    revalidatePath("/admin/reports");
     return { success: true };
   } catch (error) {
-    return { success: false, error: 'Gagal hapus data' };
+    console.error("Delete expense error:", error);
+    return { success: false, error: "Gagal hapus data" };
   }
 }
