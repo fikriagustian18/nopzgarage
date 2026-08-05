@@ -53,6 +53,7 @@ import { getPaymentHistory, createPayment } from "@/lib/actions/payments";
 import { getBankAccounts } from "@/lib/actions/bank";
 import { toast } from "@/hooks/useToast";
 import { exportInvoice } from "@/lib/export/reports/invoiceExport";
+import { exportOrders, type OrderListExport } from "@/lib/export/reports/orderListExport";
 
 import type { InvoiceExport } from "@/lib/export/types";
 
@@ -70,13 +71,13 @@ interface Order {
   updatedAt: string;
   scheduledAt: string | null;
   complaint: string;
-  items: any[];
+  items: Array<Record<string, unknown>>;
   mechanic?: {
     id: string;
     name: string;
     role: string;
   } | null;
-  payments: any[];
+  payments: Array<Record<string, unknown>>;
   paymentStatus: string;
   queueNumber?: string;
 }
@@ -130,14 +131,14 @@ export default function Page() {
       const [ordersRes, paymentsRes, bankRes] = await Promise.all([
         getAdminOrders({ limit: 100 }),
         getPaymentHistory(),
-        getBankAccounts()
+        getBankAccounts(),
       ]);
 
       if (ordersRes.success && ordersRes.orders) {
-        const orderData = ordersRes.orders as Order[];
-        setOrders(orderData);
-        if (orderData.length > 0 && !selectedOrderId) {
-          setSelectedOrderId(orderData[0].id);
+        const fetchedOrders = ordersRes.orders as Order[];
+        setOrders(fetchedOrders);
+        if (fetchedOrders.length > 0 && !selectedOrderId) {
+          setSelectedOrderId(fetchedOrders[0].id);
         }
       }
       if (paymentsRes.success && paymentsRes.payments) {
@@ -177,7 +178,7 @@ export default function Page() {
     
     const months = [
       "Januari", "Februari", "Maret", "April", "Mei", "Juni",
-      "Juli", "Agustus", "September", "Oktober", "November", "Desember"
+      "Juli", "Agustus", "September", "Oktober", "November", "Desember",
     ];
     
     const day = date.getDate();
@@ -309,27 +310,74 @@ export default function Page() {
         amount: txAmountNum,
         paymentMethod: newTxMethod,
         bankAccountId: ["TRANSFER", "QRIS", "CARD"].includes(newTxMethod) && newTxBankId ? newTxBankId : undefined,
-        note: newTxNote || "Pembayaran dari halaman Transaksi & Pembayaran"
+        note: newTxNote || "Pembayaran dari halaman Transaksi & Pembayaran",
       });
 
-      if (res.success) {
-        toast({ title: "✅ Transaksi Berhasil", description: `Pembayaran Rp ${txAmountNum.toLocaleString("id-ID")} berhasil dicatat.` });
-        setCreateTransactionOpen(false);
-        setNewTxOrderId("");
-        setNewTxAmount(0);
-        setNewTxMethod("CASH");
-        setNewTxBankId("");
-        setNewTxNote("");
-        
-        fetchData();
-      } else {
+      if (!res.success) {
         toast({ variant: "destructive", title: "❌ Gagal mencatat pembayaran", description: res.error || "Gagal" });
+        return;
       }
+
+      toast({ title: "✅ Transaksi Berhasil", description: `Pembayaran Rp ${txAmountNum.toLocaleString("id-ID")} berhasil dicatat.` });
+      setCreateTransactionOpen(false);
+      setNewTxOrderId("");
+      setNewTxAmount(0);
+      setNewTxMethod("CASH");
+      setNewTxBankId("");
+      setNewTxNote("");
+      
+      fetchData();
     } catch (err) {
       toast({ variant: "destructive", title: "❌ Error", description: "Terjadi kesalahan sistem" });
     } finally {
       setIsSubmittingTx(false);
     }
+  }
+
+  // Helper for export status labels
+  function getOrderStatusExportLabel(status: string) {
+    switch (status) {
+      case "COMPLETED":
+        return "Selesai";
+      case "READY":
+        return "Siap";
+      case "IN_PROGRESS":
+        return "Proses";
+      default:
+        return "Antrian";
+    }
+  }
+
+  function getPaymentStatusExportLabel(paymentStatus: string) {
+    switch (paymentStatus) {
+      case "PAID":
+        return "Lunas";
+      case "PARTIAL":
+        return "Sebagian";
+      default:
+        return "Belum Bayar";
+    }
+  }
+
+  // Export transactions handler
+  async function handleExportTransactions(
+    format: "pdf" | "excel",
+    orientation?: "portrait" | "landscape"
+  ) {
+    const exportData: OrderListExport[] = filteredOrders.map((order) => ({
+      id: `INV-${order.id.slice(-6).toUpperCase()}`,
+      date: order.createdAt,
+      customerName: order.custName,
+      vehicle: order.vehicle,
+      plateNumber: order.plateNumber || "-",
+      serviceType: getOrderType(order),
+      mechanic: order.mechanic?.name || "-",
+      status: getOrderStatusExportLabel(order.status),
+      paymentStatus: getPaymentStatusExportLabel(order.paymentStatus),
+      totalAmount: Number(order.totalPrice),
+    }));
+
+    return await exportOrders(exportData, format, orientation);
   }
 
   return (
@@ -353,25 +401,39 @@ export default function Page() {
               </p>
             </div>
             
-            <Button
-              className="bg-primary hover:bg-primary/95 text-primary-foreground font-semibold flex items-center gap-2 shadow-sm rounded-lg"
-              onClick={() => {
-                const unpaid = orders.find(o => o.paymentStatus !== "PAID" && (o.status === "READY" || o.status === "COMPLETED"));
-                if (unpaid) {
-                  setNewTxOrderId(unpaid.id);
-                  setNewTxAmount(Number(unpaid.totalPrice) - Number(unpaid.totalPaid));
-                }
-                setCreateTransactionOpen(true);
-              }}
-            >
-              <Plus className="h-5 w-5" />
-              Buat Transaksi Baru
-            </Button>
+            <div className="flex flex-wrap gap-2.5 items-center">
+              <ExportButton
+                title="Riwayat_Transaksi"
+                label="Unduh Riwayat Transaksi"
+                variant="outline"
+                className="font-semibold border-input shadow-sm"
+                onExport={handleExportTransactions}
+              />
+
+              <Button
+                className="bg-primary hover:bg-primary/95 text-primary-foreground font-semibold flex items-center gap-2 shadow-sm rounded-lg"
+                onClick={() => {
+                  const unpaid = orders.find(
+                    (o) =>
+                      o.paymentStatus !== "PAID" &&
+                      (o.status === "READY" || o.status === "COMPLETED")
+                  );
+                  if (unpaid) {
+                    setNewTxOrderId(unpaid.id);
+                    setNewTxAmount(Number(unpaid.totalPrice) - Number(unpaid.totalPaid));
+                  }
+                  setCreateTransactionOpen(true);
+                }}
+              >
+                <Plus className="h-5 w-5" />
+                Buat Transaksi Baru
+              </Button>
+            </div>
           </div>
 
           {/* Metrics Summary Cards */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            {/* Card 1: Total Transaksi */}
+            {/* Card 1: Total Transactions */}
             <Card className="border border-border/60 bg-card/40 backdrop-blur-sm shadow-sm overflow-hidden rounded-xl">
               <CardContent className="p-5 flex justify-between items-center">
                 <div>
@@ -385,7 +447,7 @@ export default function Page() {
               </CardContent>
             </Card>
 
-            {/* Card 2: Total Pendapatan Bulan Ini */}
+            {/* Card 2: Total Monthly Revenue */}
             <Card className="border border-border/60 bg-card/40 backdrop-blur-sm shadow-sm overflow-hidden rounded-xl">
               <CardContent className="p-5 flex justify-between items-center">
                 <div>
@@ -402,7 +464,7 @@ export default function Page() {
               </CardContent>
             </Card>
 
-            {/* Card 3: Belum Dibayar */}
+            {/* Card 3: Unpaid Transactions */}
             <Card className="border border-border/60 bg-card/40 backdrop-blur-sm shadow-sm overflow-hidden rounded-xl">
               <CardContent className="p-5 flex justify-between items-center">
                 <div>
@@ -416,7 +478,7 @@ export default function Page() {
               </CardContent>
             </Card>
 
-            {/* Card 4: Lunas */}
+            {/* Card 4: Paid Transactions */}
             <Card className="border border-border/60 bg-card/40 backdrop-blur-sm shadow-sm overflow-hidden rounded-xl">
               <CardContent className="p-5 flex justify-between items-center">
                 <div>
@@ -451,7 +513,7 @@ export default function Page() {
             <div className="w-full md:w-44">
               <Select
                 value={filterType}
-                onValueChange={(val: any) => {
+                onValueChange={(val: "ALL" | "SERVICE" | "PART" | "BOTH") => {
                   setFilterType(val);
                   setCurrentPage(1);
                 }}
@@ -472,7 +534,7 @@ export default function Page() {
             <div className="w-full md:w-44">
               <Select
                 value={filterStatus}
-                onValueChange={(val: any) => {
+                onValueChange={(val: "ALL" | "PAID" | "UNPAID") => {
                   setFilterStatus(val);
                   setCurrentPage(1);
                 }}
@@ -614,7 +676,7 @@ export default function Page() {
                       <ChevronLeft className="h-4 w-4" />
                     </Button>
 
-                    {Array.from({ length: totalPages }).map((_, i) => {
+                    {Array.from({ length: totalPages }).map((item, i) => {
                       const pageNum = i + 1;
                       if (
                         pageNum === 1 ||
@@ -847,7 +909,7 @@ export default function Page() {
                     {/* Print Actions buttons at bottom */}
                     {selectedOrder.paymentStatus === "PAID" && (
                       <div className="flex gap-3 pt-2">
-                        {/* Cetak Invoice */}
+                        {/* Print Invoice */}
                         <ExportButton
                           title={`Invoice_${selectedOrder.id.slice(-6)}`}
                           variant="outline"
@@ -872,18 +934,18 @@ export default function Page() {
                                 description: item.itemName,
                                 quantity: item.quantity,
                                 unitPrice: Number(item.unitPrice),
-                                total: Number(item.totalPrice)
+                                total: Number(item.totalPrice),
                               })),
                               subtotal: Number(fullOrder.totalPrice),
                               tax: 0,
                               total: Number(fullOrder.totalPrice),
-                              notes: `Kendaraan: ${fullOrder.vehicle} (${fullOrder.plateNumber || "-"})`
+                              notes: `Kendaraan: ${fullOrder.vehicle} (${fullOrder.plateNumber || "-"})`,
                             };
                             return await exportInvoice(invoiceData, format, orientation);
                           }}
                         />
 
-                        {/* Unduh PDF */}
+                        {/* Download PDF */}
                         <ExportButton
                           title={`Invoice_${selectedOrder.id.slice(-6)}`}
                           variant="outline"
@@ -908,12 +970,12 @@ export default function Page() {
                                 description: item.itemName,
                                 quantity: item.quantity,
                                 unitPrice: Number(item.unitPrice),
-                                total: Number(item.totalPrice)
+                                total: Number(item.totalPrice),
                               })),
                               subtotal: Number(fullOrder.totalPrice),
                               tax: 0,
                               total: Number(fullOrder.totalPrice),
-                              notes: `Kendaraan: ${fullOrder.vehicle} (${fullOrder.plateNumber || "-"})`
+                              notes: `Kendaraan: ${fullOrder.vehicle} (${fullOrder.plateNumber || "-"})`,
                             };
                             return await exportInvoice(invoiceData, "pdf", orientation);
                           }}
@@ -994,7 +1056,7 @@ export default function Page() {
                   <Label htmlFor="method-select" className="font-semibold">Metode Pembayaran</Label>
                   <Select
                     value={newTxMethod}
-                    onValueChange={(val: any) => setNewTxMethod(val)}
+                    onValueChange={(val: "CASH" | "TRANSFER" | "QRIS" | "CARD") => setNewTxMethod(val)}
                   >
                     <SelectTrigger id="method-select" className="bg-card border-input h-10 rounded-lg">
                       <SelectValue placeholder="Pilih metode..." />

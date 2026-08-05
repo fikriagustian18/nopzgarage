@@ -2,6 +2,7 @@
 
 // 1. External Libraries
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import {
   TrendingUp,
   TrendingDown,
@@ -367,10 +368,10 @@ export default function Page() {
   };
 
   const donutChartData = [
-    { name: "Servis", value: serviceRevenue, color: "#111827", percent: getPercentage(serviceRevenue) }, // Charcoal
-    { name: "Spare Part", value: partRevenue, color: "#4b5563", percent: getPercentage(partRevenue) }, // Gray
-    { name: "Lain-lain", value: otherRevenue, color: "#9ca3af", percent: getPercentage(otherRevenue) }, // Light Gray
-  ].filter(c => c.value > 0);
+    { name: "Servis", value: serviceRevenue, color: "#111827", percent: getPercentage(serviceRevenue) },
+    { name: "Spare Part", value: partRevenue, color: "#4b5563", percent: getPercentage(partRevenue) },
+    { name: "Lain-lain", value: otherRevenue, color: "#9ca3af", percent: getPercentage(otherRevenue) },
+  ].filter((c) => c.value > 0);
 
   // --- Expenses breakdown ---
   let purchasePartExpense = 0;
@@ -423,7 +424,7 @@ export default function Page() {
               </p>
             </div>
 
-            {/* Unduh Laporan Dropdown Action */}
+            {/* Download Report Action */}
             <div className="flex gap-2">
               <ExportButton
                 title="Laporan_Laba_Rugi"
@@ -452,13 +453,12 @@ export default function Page() {
                   return await exportIncomeStatement(incomeData, format, orientation);
                 }}
               />
-
             </div>
           </div>
 
           {/* Metrics Summary Cards */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            {/* Card 1: Total Pendapatan */}
+            {/* Card 1: Total Revenue */}
             <Card className="border border-border/60 bg-card/40 backdrop-blur-sm shadow-sm overflow-hidden rounded-xl">
               <CardContent className="p-5 flex justify-between items-center">
                 <div>
@@ -475,7 +475,7 @@ export default function Page() {
               </CardContent>
             </Card>
 
-            {/* Card 2: Total Pengeluaran */}
+            {/* Card 2: Total Expenses */}
             <Card className="border border-border/60 bg-card/40 backdrop-blur-sm shadow-sm overflow-hidden rounded-xl">
               <CardContent className="p-5 flex justify-between items-center">
                 <div>
@@ -492,7 +492,7 @@ export default function Page() {
               </CardContent>
             </Card>
 
-            {/* Card 3: Laba Rugi */}
+            {/* Card 3: Net Profit */}
             <Card className="border border-border/60 bg-card/40 backdrop-blur-sm shadow-sm overflow-hidden rounded-xl">
               <CardContent className="p-5 flex justify-between items-center">
                 <div>
@@ -511,7 +511,7 @@ export default function Page() {
               </CardContent>
             </Card>
 
-            {/* Card 4: Total Transaksi */}
+            {/* Card 4: Total Transactions */}
             <Card className="border border-border/60 bg-card/40 backdrop-blur-sm shadow-sm overflow-hidden rounded-xl">
               <CardContent className="p-5 flex justify-between items-center">
                 <div>
@@ -552,7 +552,7 @@ export default function Page() {
               </div>
             </div>
 
-            {/* Dropdown 1: Jenis Transaksi */}
+            {/* Dropdown 1: Transaction Type */}
             <div className="w-full lg:w-48 space-y-1">
               <Label className="text-xs font-bold text-muted-foreground">Jenis Transaksi</Label>
               <Select
@@ -571,7 +571,7 @@ export default function Page() {
               </Select>
             </div>
 
-            {/* Dropdown 2: Metode Pembayaran */}
+            {/* Dropdown 2: Payment Method */}
             <div className="w-full lg:w-56 space-y-1">
               <Label className="text-xs font-bold text-muted-foreground">Metode Pembayaran</Label>
               <Select
@@ -605,7 +605,7 @@ export default function Page() {
 
           {/* Two-Chart Layout */}
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-            {/* Chart Left: Ringkasan Arus Kas */}
+            {/* Chart Left: Cash Flow Summary */}
             <Card className="lg:col-span-8 border border-border bg-card shadow-sm rounded-xl overflow-hidden">
               <CardHeader className="p-5 border-b border-border/60">
                 <CardTitle className="text-base font-bold text-foreground">Ringkasan Arus Kas</CardTitle>
@@ -619,20 +619,20 @@ export default function Page() {
                         strokeDasharray="3 3"
                         vertical={false}
                         stroke="#e5e7eb"
-                       />
+                      />
                       <XAxis
                         dataKey="date"
                         stroke="#9ca3af"
                         fontSize={11}
                         tickLine={false}
-                       />
-                      <YAxis 
-                        stroke="#9ca3af" 
-                        fontSize={11} 
-                        tickLine={false} 
+                      />
+                      <YAxis
+                        stroke="#9ca3af"
+                        fontSize={11}
+                        tickLine={false}
                         tickFormatter={(value) => (value >= 1000000 ? `${value / 1000000}jt` : value >= 1000 ? `${value / 1000}rb` : value)}
                       />
-                      <Tooltip 
+                      <Tooltip
                         formatter={(value) => [formatIDR(Number(value)), ""]}
                         contentStyle={{ borderRadius: "8px", border: "1px solid #e5e7eb", fontSize: "12px" }}
                       />
@@ -642,7 +642,7 @@ export default function Page() {
                         iconType="circle"
                         iconSize={8}
                         wrapperStyle={{ fontSize: "12px" }}
-                       />
+                      />
                       <Line
                         type="monotone"
                         dataKey="Pendapatan"
@@ -650,21 +650,21 @@ export default function Page() {
                         strokeWidth={2.5}
                         activeDot={{ r: 6 }}
                         dot={false}
-                       />
+                      />
                       <Line
                         type="monotone"
                         dataKey="Pengeluaran"
                         stroke="#9ca3af"
                         strokeWidth={2}
                         dot={false}
-                       />
+                      />
                     </LineChart>
                   </ResponsiveContainer>
                 </div>
               </CardContent>
             </Card>
 
-            {/* Chart Right: Pendapatan per Kategori */}
+            {/* Chart Right: Revenue by Category */}
             <Card className="lg:col-span-4 border border-border bg-card shadow-sm rounded-xl overflow-hidden">
               <CardHeader className="p-5 border-b border-border/60">
                 <CardTitle className="text-base font-bold text-foreground">Pendapatan per Kategori</CardTitle>
@@ -720,18 +720,22 @@ export default function Page() {
             </Card>
           </div>
 
-          {/* Rincian Pendapatan & Pengeluaran Tables */}
+          {/* Revenue & Expense Details Tables */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             
-            {/* Table Left: Rincian Pendapatan */}
+            {/* Table Left: Revenue Details */}
             <Card className="border border-border bg-card shadow-sm rounded-xl overflow-hidden">
               <CardHeader className="p-5 border-b border-border/60 flex flex-row items-center justify-between">
                 <div>
                   <CardTitle className="text-base font-bold text-foreground">Rincian Pendapatan</CardTitle>
                   <CardDescription className="text-xs mt-0.5"> breakdowns per-kategori jasa dan penjualan </CardDescription>
                 </div>
-                <Button variant="link" className="text-xs font-bold text-primary hover:cursor-pointer p-0 h-auto">
-                  Lihat Semua
+                <Button
+                  variant="link"
+                  className="text-xs font-bold text-primary hover:cursor-pointer p-0 h-auto"
+                  asChild
+                >
+                  <Link href="/admin/transactions">Lihat Semua</Link>
                 </Button>
               </CardHeader>
               <CardContent className="p-0">
@@ -775,15 +779,19 @@ export default function Page() {
               </CardContent>
             </Card>
 
-            {/* Table Right: Rincian Pengeluaran */}
+            {/* Table Right: Expense Details */}
             <Card className="border border-border bg-card shadow-sm rounded-xl overflow-hidden">
               <CardHeader className="p-5 border-b border-border/60 flex flex-row items-center justify-between">
                 <div>
                   <CardTitle className="text-base font-bold text-foreground">Rincian Pengeluaran</CardTitle>
                   <CardDescription className="text-xs mt-0.5"> breakdown pengeluaran operasional dan payroll </CardDescription>
                 </div>
-                <Button variant="link" className="text-xs font-bold text-primary hover:cursor-pointer p-0 h-auto">
-                  Lihat Semua
+                <Button
+                  variant="link"
+                  className="text-xs font-bold text-primary hover:cursor-pointer p-0 h-auto"
+                  asChild
+                >
+                  <Link href="/admin/expenses">Lihat Semua</Link>
                 </Button>
               </CardHeader>
               <CardContent className="p-0">
@@ -870,3 +878,4 @@ function formatIndonesianDate(dateString?: string | Date | null): string {
   const year = date.getFullYear();
   return `${day} ${month} ${year}`;
 }
+

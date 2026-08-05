@@ -13,6 +13,9 @@ import { Button } from "@/components/ui/Button";
 import { Download, Loader2, FileText, Table, Maximize2, Minimize2 } from "lucide-react";
 import type { ExportFormat, PageOrientation } from "@/lib/export/types";
 
+/**
+ * Props for the ExportPreviewDialog component.
+ */
 interface ExportPreviewDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -22,6 +25,9 @@ interface ExportPreviewDialogProps {
   defaultOrientation?: PageOrientation;
 }
 
+/**
+ * Dialog component for displaying a preview of exported PDF/Excel documents.
+ */
 export function ExportPreviewDialog({
   open,
   onOpenChange,
@@ -35,54 +41,77 @@ export function ExportPreviewDialog({
   const [isGenerating, setIsGenerating] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
-  // Auto-generate preview when dialog opens
-  useEffect(() => {
-    if (open && !previewUrl && format === "pdf") {
-      generatePreview();
-    }
-    
-    // Cleanup: revoke URL when dialog closes or component unmounts
-    return () => {
-      if (previewUrl) {
-        URL.revokeObjectURL(previewUrl);
-      }
-    };
-  }, [open]);
-
-  // Re-generate preview when format or orientation changes
-  useEffect(() => {
-    if (open && format === "pdf") {
-      generatePreview();
-    } else if (format === "excel") {
-      // Clear preview for Excel
-      if (previewUrl) {
-        URL.revokeObjectURL(previewUrl);
-        setPreviewUrl(null);
-      }
-    }
-  }, [format, orientation]);
-
-  async function generatePreview() {
+  async function generatePreview(targetFormat = format, targetOrientation = orientation) {
     setIsGenerating(true);
     try {
-      const blob = await onExport(format, orientation);
+      const blob = await onExport(targetFormat, targetOrientation);
       
       // Create preview URL for PDF
-      if (format === "pdf") {
-        // Revoke old URL if exists to prevent memory leaks
-        if (previewUrl) {
-          URL.revokeObjectURL(previewUrl);
-        }
-        const url = URL.createObjectURL(blob);
-        setPreviewUrl(url);
+      if (targetFormat === "pdf") {
+        setPreviewUrl((prevUrl) => {
+          if (prevUrl) {
+            URL.revokeObjectURL(prevUrl);
+          }
+          return blob && blob.size > 0 ? URL.createObjectURL(blob) : null;
+        });
       } else {
-        // For Excel, we can't preview, so show a message
-        setPreviewUrl(null);
+        setPreviewUrl((prevUrl) => {
+          if (prevUrl) {
+            URL.revokeObjectURL(prevUrl);
+          }
+          return null;
+        });
       }
     } catch (error) {
       console.error("Error generating preview:", error);
     } finally {
       setIsGenerating(false);
+    }
+  }
+
+  // Auto-generate preview immediately when dialog opens
+  useEffect(() => {
+    if (open) {
+      setFormat(defaultFormat);
+      setOrientation(defaultOrientation);
+      setPreviewUrl((prevUrl) => {
+        if (prevUrl) {
+          URL.revokeObjectURL(prevUrl);
+        }
+        return null;
+      });
+
+      if (defaultFormat === "pdf") {
+        generatePreview(defaultFormat, defaultOrientation);
+      }
+    } else {
+      setPreviewUrl((prevUrl) => {
+        if (prevUrl) {
+          URL.revokeObjectURL(prevUrl);
+        }
+        return null;
+      });
+    }
+  }, [open, defaultFormat, defaultOrientation]);
+
+  function handleFormatChange(newFormat: ExportFormat) {
+    setFormat(newFormat);
+    if (newFormat === "pdf") {
+      generatePreview(newFormat, orientation);
+    } else {
+      setPreviewUrl((prevUrl) => {
+        if (prevUrl) {
+          URL.revokeObjectURL(prevUrl);
+        }
+        return null;
+      });
+    }
+  }
+
+  function handleOrientationChange(newOrientation: PageOrientation) {
+    setOrientation(newOrientation);
+    if (format === "pdf") {
+      generatePreview(format, newOrientation);
     }
   }
 
@@ -106,11 +135,11 @@ export function ExportPreviewDialog({
     } finally {
       setIsGenerating(false);
     }
-  };
+  }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="!w-[95vw] !max-w-[95vw] h-[95vh] flex flex-col p-6">
+      <DialogContent className="w-[95vw] max-w-[95vw] h-[95vh] flex flex-col p-6">
         <DialogHeader>
           <DialogTitle>Export Preview - {title}</DialogTitle>
           <DialogDescription>
@@ -124,7 +153,7 @@ export function ExportPreviewDialog({
             <Button
               variant={format === "pdf" ? "default" : "outline"}
               size="default"
-              onClick={() => setFormat("pdf")}
+              onClick={() => handleFormatChange("pdf")}
               className="min-w-[110px]"
             >
               <FileText className="h-4 w-4 mr-2" />
@@ -133,7 +162,7 @@ export function ExportPreviewDialog({
             <Button
               variant={format === "excel" ? "default" : "outline"}
               size="default"
-              onClick={() => setFormat("excel")}
+              onClick={() => handleFormatChange("excel")}
               className="min-w-[110px]"
             >
               <Table className="h-4 w-4 mr-2" />
@@ -147,7 +176,7 @@ export function ExportPreviewDialog({
             <Button
               variant={orientation === "portrait" ? "default" : "outline"}
               size="default"
-              onClick={() => setOrientation("portrait")}
+              onClick={() => handleOrientationChange("portrait")}
               className="min-w-[120px]"
             >
               <Minimize2 className="h-4 w-4 mr-2" />
@@ -156,7 +185,7 @@ export function ExportPreviewDialog({
             <Button
               variant={orientation === "landscape" ? "default" : "outline"}
               size="default"
-              onClick={() => setOrientation("landscape")}
+              onClick={() => handleOrientationChange("landscape")}
               className="min-w-[120px]"
             >
               <Maximize2 className="h-4 w-4 mr-2" />
@@ -167,7 +196,7 @@ export function ExportPreviewDialog({
           <div className="flex-1" />
 
           <Button
-            onClick={generatePreview}
+            onClick={() => generatePreview(format, orientation)}
             disabled={isGenerating}
             size="default"
             variant="secondary"
@@ -198,7 +227,7 @@ export function ExportPreviewDialog({
               src={previewUrl}
               className="w-full h-full"
               title="PDF Preview"
-             />
+            />
           ) : format === "excel" ? (
             <div className="flex items-center justify-center h-full">
               <div className="text-center">
@@ -245,3 +274,4 @@ export function ExportPreviewDialog({
     </Dialog>
   );
 }
+
