@@ -231,3 +231,43 @@ export function formatOrderNo(id?: string): string {
   }
   return `ORD-${id.slice(-4).toUpperCase()}`;
 }
+
+// ==================== Data Serializer for Next.js Client Components ====================
+/**
+ * Recursively converts Prisma Decimal instances to plain numbers and Date instances to ISO strings,
+ * ensuring objects can be safely passed from Server Components/Actions to Client Components.
+ */
+export function serializeData<T>(obj: T): T {
+  if (obj === null || obj === undefined) {
+    return obj;
+  }
+
+  if (typeof obj === "object") {
+    // 1. Prisma Decimal check
+    if ("toNumber" in obj && typeof (obj as any).toNumber === "function") {
+      return (obj as any).toNumber();
+    }
+    if (obj.constructor && obj.constructor.name === "Decimal") {
+      return Number(obj) as any;
+    }
+
+    // 2. Date check
+    if (obj instanceof Date) {
+      return obj.toISOString() as any;
+    }
+
+    // 3. Array check
+    if (Array.isArray(obj)) {
+      return obj.map((item) => serializeData(item)) as any;
+    }
+
+    // 4. Plain Object check (recursion over properties)
+    const result: Record<string, any> = {};
+    for (const key of Object.keys(obj)) {
+      result[key] = serializeData((obj as any)[key]);
+    }
+    return result as T;
+  }
+
+  return obj;
+}

@@ -6,28 +6,9 @@ import { auth } from '@/lib/auth';
 import bcrypt from 'bcryptjs';
 import { revalidatePath } from 'next/cache';
 import { createLog } from './logs';
+import { serializeData } from '@/lib/utils';
 import type { SalaryType } from '@prisma/client';
 
-// ==================== Helpers ====================
-/** Safely convert Prisma Decimal to plain number */
-function toNumber(value: unknown): number {
-  if (value != null && typeof (value as any).toNumber === 'function') {
-    return (value as any).toNumber();
-  }
-  return value ? Number(value) : 0;
-}
-
-/** Serialize employee Decimal fields for client consumption */
-function serializeEmployee(employee: any) {
-  if (!employee) {
-    return null;
-  }
-  return {
-    ...employee,
-    dailyRate: toNumber(employee.dailyRate),
-    commissionRate: toNumber(employee.commissionRate),
-  };
-}
 
 // ==================== Interfaces ====================
 export interface CreateUserInput {
@@ -71,7 +52,7 @@ export async function getUsers() {
   try {
     const session = await auth();
     if (!session || session.user?.role !== 'OWNER') {
-      return { success: false, error: 'Akses ditolak: Hanya Owner yang dapat mengakses data user.' };
+      return { success: false, error: 'Access denied: Only Owner can access user data.' };
     }
     const users = await prisma.user.findMany({
       include: {
@@ -90,15 +71,13 @@ export async function getUsers() {
       orderBy: { createdAt: 'desc' },
     });
 
-    // Remove password from response and serialize Decimal fields
+    // Remove password from response and serialize all fields
     const sanitizedUsers = users.map((user) => {
       const { password, ...userWithoutPassword } = user;
-      return {
+      return serializeData({
         ...userWithoutPassword,
-        employee: serializeEmployee(user.employee),
-        createdAt: user.createdAt.toISOString(),
-        updatedAt: user.updatedAt.toISOString(),
-      };
+        employee: user.employee,
+      });
     });
 
     return { success: true, users: sanitizedUsers };
@@ -125,7 +104,7 @@ export async function createUser(data: CreateUserInput) {
   try {
     const session = await auth();
     if (!session || session.user?.role !== 'OWNER') {
-      return { success: false, error: 'Akses ditolak: Hanya Owner yang dapat membuat user.' };
+      return { success: false, error: 'Access denied: Only Owner can create users.' };
     }
     // Check if email already exists
     const existingUser = await prisma.user.findUnique({
@@ -133,7 +112,7 @@ export async function createUser(data: CreateUserInput) {
     });
 
     if (existingUser) {
-      return { success: false, error: 'Email sudah terdaftar' };
+      return { success: false, error: 'Email already registered' };
     }
 
     // Hash password
@@ -194,12 +173,10 @@ export async function createUser(data: CreateUserInput) {
     const { password, ...sanitizedUser } = user;
     return { 
       success: true, 
-      user: {
+      user: serializeData({
         ...sanitizedUser,
-        employee: serializeEmployee(user.employee),
-        createdAt: user.createdAt.toISOString(),
-        updatedAt: user.updatedAt.toISOString(),
-      }
+        employee: user.employee,
+      })
     };
   } catch (error) {
     console.error('Create user error:', error);
@@ -218,7 +195,7 @@ export async function updateUser(data: UpdateUserInput) {
   try {
     const session = await auth();
     if (!session || session.user?.role !== 'OWNER') {
-      return { success: false, error: 'Akses ditolak: Hanya Owner yang dapat mengupdate user.' };
+      return { success: false, error: 'Access denied: Only Owner can update users.' };
     }
     const { id, password, name, phone, salaryType, dailyRate, commissionRate, ...updateData } = data;
     
@@ -287,12 +264,10 @@ export async function updateUser(data: UpdateUserInput) {
     const { password: unusedPassword, ...sanitizedUser } = user;
     return { 
       success: true, 
-      user: {
+      user: serializeData({
         ...sanitizedUser,
-        employee: serializeEmployee(user.employee),
-        createdAt: user.createdAt.toISOString(),
-        updatedAt: user.updatedAt.toISOString(),
-      }
+        employee: user.employee,
+      })
     };
   } catch (error) {
     console.error('Update user error:', error);
@@ -302,17 +277,17 @@ export async function updateUser(data: UpdateUserInput) {
 
 // ==================== Reset Password ====================
 /**
- * Mereset password user secara langsung oleh admin.
+ * Resets user password directly by admin.
  * 
- * @param {string} userId - ID user yang akan direset passwordnya.
- * @param {string} newPassword - Password baru yang diinginkan.
- * @returns {Object} Status success message.
+ * @param {string} userId - ID of the user whose password will be reset.
+ * @param {string} newPassword - New desired password.
+ * @returns {Object} Success message status.
  */
 export async function resetUserPassword(userId: string, newPassword: string) {
   try {
     const session = await auth();
     if (!session || session.user?.role !== 'OWNER') {
-      return { success: false, error: 'Akses ditolak: Hanya Owner yang dapat mereset password.' };
+      return { success: false, error: 'Access denied: Only Owner can reset passwords.' };
     }
     const hashedPassword = await bcrypt.hash(newPassword, 10);
 
@@ -341,13 +316,13 @@ export async function resetUserPassword(userId: string, newPassword: string) {
 
 // ==================== Forgot Password Request ====================
 /**
- * Membuat permintaan reset password (Lupa Password).
+ * Creates a password reset request (Forgot Password).
  * 
- * Digunakan oleh user yang lupa password. Sistem tidak akan memberitahu
- * jika email tidak ditemukan untuk alasan keamanan.
+ * Used by users who forgot their password. System will not disclose
+ * if an email does not exist for security reasons.
  * 
- * @param {string} email - Email user yang lupa password.
- * @returns {Object} Pesan sukses bahwa permintaan telah dikirim (jika email valid).
+ * @param {string} email - Email of user requesting reset.
+ * @returns {Object} Success message status.
  */
 export async function createForgotPasswordRequest(email: string) {
   try {
@@ -387,16 +362,16 @@ export async function createForgotPasswordRequest(email: string) {
 
 // ==================== Get Forgot Password Requests ====================
 /**
- * Mengambil semua permintaan reset password yang statusnya 'PENDING'.
- * Biasanya digunakan di halaman dashboard admin untuk melihat request masuk.
+ * Retrieves all password reset requests with 'PENDING' status.
+ * Used on the admin dashboard to review incoming requests.
  * 
- * @returns {Object} Daftar request reset password.
+ * @returns {Object} List of password reset requests.
  */
 export async function getForgotPasswordRequests() {
   try {
     const session = await auth();
     if (!session || session.user?.role !== 'OWNER') {
-      return { success: false, error: 'Akses ditolak: Hanya Owner yang dapat mengambil permintaan lupa password.' };
+      return { success: false, error: 'Access denied: Only Owner can view forgot password requests.' };
     }
     const requests = await prisma.forgotPasswordRequest.findMany({
       where: { status: 'PENDING' },
@@ -410,18 +385,7 @@ export async function getForgotPasswordRequests() {
       orderBy: { createdAt: 'desc' }
     });
 
-    const serializedRequests = requests.map(req => ({
-      ...req,
-      createdAt: req.createdAt.toISOString(),
-
-      user: {
-        ...req.user,
-        createdAt: req.user.createdAt.toISOString(),
-        updatedAt: req.user.updatedAt.toISOString(),
-      }
-    }));
-
-    return { success: true, requests: serializedRequests };
+    return { success: true, requests: serializeData(requests) };
   } catch (error) {
     console.error('Get forgot password requests error:', error);
     return { success: false, error: 'Gagal load permintaan' };
@@ -430,12 +394,12 @@ export async function getForgotPasswordRequests() {
 
 // ==================== Resolve Forgot Password Request ====================
 /**
- * Menyelesaikan permintaan reset password (Admin melakukan reset).
+ * Resolves a password reset request (Admin executes reset).
  * 
- * @param {string} requestId - ID request reset password.
- * @param {string} newPassword - Password baru yang ditetapkan admin.
- * @param {string} resolvedBy - Nama/ID admin yang memproses.
- * @returns {Object} Status keberhasilan reset password.
+ * @param {string} requestId - Password reset request ID.
+ * @param {string} newPassword - New password set by admin.
+ * @param {string} resolvedBy - Admin name/ID resolving the request.
+ * @returns {Object} Resolution success status.
  */
 export async function resolveForgotPasswordRequest(
   requestId: string, 
@@ -445,7 +409,7 @@ export async function resolveForgotPasswordRequest(
   try {
     const session = await auth();
     if (!session || session.user?.role !== 'OWNER') {
-      return { success: false, error: 'Akses ditolak: Hanya Owner yang dapat menyetujui permintaan lupa password.' };
+      return { success: false, error: 'Access denied: Only Owner can resolve forgot password requests.' };
     }
     const request = await prisma.forgotPasswordRequest.findUnique({
       where: { id: requestId },
@@ -494,16 +458,16 @@ export async function resolveForgotPasswordRequest(
 
 // ==================== Delete User ====================
 /**
- * Menghapus user dari sistem (Hard Delete).
+ * Deletes a user from the system (Hard Delete).
  * 
- * @param {string} userId - ID user yang akan dihapus.
- * @returns {Object} Pesan sukses.
+ * @param {string} userId - User ID to delete.
+ * @returns {Object} Success message.
  */
 export async function deleteUser(userId: string) {
   try {
     const session = await auth();
     if (!session || session.user?.role !== 'OWNER') {
-      return { success: false, error: 'Akses ditolak: Hanya Owner yang dapat menghapus user.' };
+      return { success: false, error: 'Access denied: Only Owner can delete users.' };
     }
     await prisma.user.delete({
       where: { id: userId }
@@ -532,7 +496,7 @@ export async function getCurrentProfile() {
   try {
     const session = await auth();
     if (!session || !session.user?.email) {
-      return { success: false, error: 'Belum login' };
+      return { success: false, error: 'Not logged in' };
     }
 
     const user = await prisma.user.findUnique({
@@ -541,7 +505,7 @@ export async function getCurrentProfile() {
     });
 
     if (!user) {
-      return { success: false, error: 'User tidak ditemukan' };
+      return { success: false, error: 'User not found' };
     }
 
     // Get user activities from ActivityLog
@@ -590,7 +554,7 @@ export async function updateCurrentProfile(data: { name: string; phone: string; 
   try {
     const session = await auth();
     if (!session || !session.user?.email) {
-      return { success: false, error: 'Belum login' };
+      return { success: false, error: 'Not logged in' };
     }
 
     const user = await prisma.user.findUnique({
@@ -599,7 +563,7 @@ export async function updateCurrentProfile(data: { name: string; phone: string; 
     });
 
     if (!user) {
-      return { success: false, error: 'User tidak ditemukan' };
+      return { success: false, error: 'User not found' };
     }
 
     // Check email availability if changing email
@@ -666,7 +630,7 @@ export async function changeCurrentPassword(data: { currentPassword: string; new
   try {
     const session = await auth();
     if (!session || !session.user?.email) {
-      return { success: false, error: 'Belum login' };
+      return { success: false, error: 'Not logged in' };
     }
 
     const user = await prisma.user.findUnique({
@@ -675,13 +639,13 @@ export async function changeCurrentPassword(data: { currentPassword: string; new
     });
 
     if (!user) {
-      return { success: false, error: 'User tidak ditemukan' };
+      return { success: false, error: 'User not found' };
     }
 
     // Verify current password
     const isPasswordValid = await bcrypt.compare(data.currentPassword, user.password);
     if (!isPasswordValid) {
-      return { success: false, error: 'Password saat ini salah' };
+      return { success: false, error: 'Current password is incorrect' };
     }
 
     // Hash new password

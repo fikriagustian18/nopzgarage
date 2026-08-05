@@ -1,164 +1,83 @@
-// app/actions/payroll.ts
+// lib/actions/payroll.ts
 'use server';
 
 import { prisma } from '@/lib/prisma';
 import { auth } from '@/lib/auth';
 import { PaymentStatus } from '@prisma/client';
 import { revalidatePath } from 'next/cache';
+import { serializeData } from '@/lib/utils';
 
-// ==================== Types ====================
-export type GeneratePayrollInput = {
+// ==================== Interfaces ====================
+export interface GeneratePayrollInput {
   employeeId: string;
   startDate: Date;
   endDate: Date;
   bonusAmount?: number;
   bonusNote?: string;
-};
+}
 
-export type PayrollDetail = {
+export interface PayrollDetail {
   workDays?: number;
   motorCount?: number;
   bonusNote?: string;
-};
+}
 
 // ==================== Helper: Serialize Decimal ====================
-function toNumber(val: any) {
-  if (typeof val === 'number') return val;
-  if (val && typeof val.toNumber === 'function') return val.toNumber();
-  return 0;
-}
-
-function serializeJournalItem(item: any) {
-  if (!item) return null;
-  const serialized = {
-    ...item,
-    debit: toNumber(item.debit),
-    credit: toNumber(item.credit),
-  };
-  if (serialized.account) {
-    serialized.account = {
-      ...serialized.account,
-      createdAt: serialized.account.createdAt instanceof Date ? serialized.account.createdAt.toISOString() : serialized.account.createdAt,
-    };
-  }
-  return serialized;
-}
-
-function serializeJournalEntry(entry: any) {
-  if (!entry) return null;
-  const serialized = {
-    ...entry,
-    date: entry.date instanceof Date ? entry.date.toISOString() : entry.date,
-    createdAt: entry.createdAt instanceof Date ? entry.createdAt.toISOString() : entry.createdAt,
-    items: entry.items?.map(serializeJournalItem) ?? [],
-  };
-  if (serialized.payment) {
-    serialized.payment = serializePayment(serialized.payment);
-  }
-  return serialized;
-}
-
-function serializePayment(payment:any) {
-  if (!payment) return null;
-  const p = {
-    ...payment,
-    amount: toNumber(payment.amount),
-    date: payment.date instanceof Date ? payment.date.toISOString() : payment.date,
-    createdAt: payment.createdAt instanceof Date ? payment.createdAt.toISOString() : payment.createdAt,
-  };
-  if (p.journal) {
-    p.journal = serializeJournalEntry(p.journal);
-  }
-  return p;
-}
-
 function serializeEmployee(emp: any) {
-  if (!emp) return null;
-  const e = {
-    ...emp,
-    dailyRate: toNumber(emp.dailyRate),
-    commissionRate: toNumber(emp.commissionRate),
-    createdAt: emp.createdAt instanceof Date ? emp.createdAt.toISOString() : emp.createdAt,
-    updatedAt: emp.updatedAt instanceof Date ? emp.updatedAt.toISOString() : emp.updatedAt,
-  };
-  
-  if (e.orders) {
-    e.orders = e.orders.map((o: any) => ({
-      ...o,
-      totalPrice: toNumber(o.totalPrice),
-      createdAt: o.createdAt instanceof Date ? o.createdAt.toISOString() : o.createdAt,
-      updatedAt: o.updatedAt instanceof Date ? o.updatedAt.toISOString() : o.updatedAt,
-    }));
+  if (!emp) {
+    return null;
   }
-  return e;
+  return serializeData(emp);
 }
 
 function serializePayroll(payroll: any) {
-  if (!payroll) return null;
-  const p = {
-    ...payroll,
-    baseSalary: toNumber(payroll.baseSalary),
-    bonus: toNumber(payroll.bonus),
-    totalEarned: toNumber(payroll.totalEarned),
-    totalPaid: toNumber(payroll.totalPaid),
-    startDate: payroll.startDate instanceof Date ? payroll.startDate.toISOString() : payroll.startDate,
-    endDate: payroll.endDate instanceof Date ? payroll.endDate.toISOString() : payroll.endDate,
-    createdAt: payroll.createdAt instanceof Date ? payroll.createdAt.toISOString() : payroll.createdAt,
-    updatedAt: payroll.updatedAt instanceof Date ? payroll.updatedAt.toISOString() : payroll.updatedAt,
-  };
-
-  if (p.employee) {
-    p.employee = serializeEmployee(p.employee);
+  if (!payroll) {
+    return null;
   }
-
-  if (p.payments) {
-    p.payments = p.payments.map(serializePayment);
-  }
-
-  return p;
+  return serializeData(payroll);
 }
 
-// ==================== Generate Payroll (Slip Gaji) ====================
+// ==================== Generate Payroll (Pay Slip) ====================
 /**
- * Membuat Slip Gaji (Payroll) untuk satu periode.
+ * Generates a Payroll (Pay Slip) for a period.
  * 
- * Mendukung dua tipe gaji:
- * 1. DAILY (Harian): Gaji = Hari Kerja x Rate Harian.
- * 2. COMMISSION (Komisi/Borongan): Gaji = Jumlah Motor Selesai x Rate Komisi.
+ * Supports two salary schemes:
+ * 1. DAILY: Salary = Work Days x Daily Rate.
+ * 2. COMMISSION: Salary = Completed Vehicles x Commission Rate.
  * 
- * Fitur:
- * - Menambahkan bonus manual.
- * - Mencegah duplikasi payroll di periode yang sama.
+ * Features:
+ * - Adds manual bonus.
+ * - Prevents duplicate payroll generation for the same period.
  * 
- * @param {GeneratePayrollInput} data - Data input payroll.
- * @returns {Object} Data payroll yang dibuat.
+ * @param {GeneratePayrollInput} data - Input payroll data.
+ * @returns {Object} Generated payroll result.
  */
 export async function generatePayroll(data: GeneratePayrollInput) {
   try {
     const session = await auth();
     if (!session || session.user?.role !== 'OWNER') {
-      return { success: false, error: 'Akses ditolak: Hanya Owner yang dapat men-generate payroll.' };
+      return { success: false, error: 'Access denied: Only Owner can generate payroll.' };
     }
-    // 1. Ambil data employee
+    // 1. Fetch employee data
     const employee = await prisma.employee.findUnique({
       where: { id: data.employeeId },
     });
 
     if (!employee) {
-      return { success: false, error: 'Karyawan tidak ditemukan' };
+      return { success: false, error: 'Employee not found' };
     }
 
-    // 2. Hitung gaji berdasarkan skema
+    // 2. Calculate salary based on scheme
     let baseSalary = 0;
     let details: PayrollDetail = {};
 
     if (employee.salaryType === 'DAILY') {
-      // Hitung hari kerja dalam periode
+      // Calculate work days in the period
       const workDays = calculateWorkDays(data.startDate, data.endDate);
       baseSalary = workDays * Number(employee.dailyRate);
       details.workDays = workDays;
     } else if (employee.salaryType === 'COMMISSION') {
-      // Hitung jumlah motor yang dikerjakan
+      // Count completed vehicles
       const motorCount = await prisma.order.count({
         where: {
           mechanicId: employee.id,
@@ -173,7 +92,7 @@ export async function generatePayroll(data: GeneratePayrollInput) {
       details.motorCount = motorCount;
     }
 
-    // 3. Tambahkan bonus jika ada
+    // 3. Add bonus if provided
     const bonusAmount = data.bonusAmount || 0;
     if (bonusAmount > 0 && data.bonusNote) {
       details.bonusNote = data.bonusNote;
@@ -181,7 +100,7 @@ export async function generatePayroll(data: GeneratePayrollInput) {
 
     const totalEarned = baseSalary + bonusAmount;
 
-    // 4. Cek duplikasi payroll untuk periode yang sama
+    // 4. Check duplicate payroll for the same period
     const existing = await prisma.payroll.findFirst({
       where: {
         employeeId: data.employeeId,
@@ -193,7 +112,7 @@ export async function generatePayroll(data: GeneratePayrollInput) {
     if (existing) {
       return { 
         success: false, 
-        error: 'Payroll untuk periode ini sudah ada' 
+        error: 'Payroll for this period already exists' 
       };
     }
 
@@ -230,7 +149,7 @@ function calculateWorkDays(startDate: Date, endDate: Date): number {
   const current = new Date(startDate);
   
   while (current <= endDate) {
-    // Skip Minggu (0)
+    // Skip Sunday (0)
     if (current.getDay() !== 0) {
       count++;
     }
@@ -242,10 +161,10 @@ function calculateWorkDays(startDate: Date, endDate: Date): number {
 
 // ==================== Get All Payrolls ====================
 /**
- * Mengambil daftar payroll dengan filter.
+ * Fetch all payroll records with optional filters.
  * 
- * @param {Object} filters - Filter pencarian (employeeId, status, tanggal).
- * @returns {Object} Daftar payroll.
+ * @param {Object} filters - Search filters (employeeId, status, date bounds).
+ * @returns {Object} List of payroll records.
  */
 export async function getPayrolls(filters?: {
   employeeId?: string;
@@ -256,7 +175,7 @@ export async function getPayrolls(filters?: {
   try {
     const session = await auth();
     if (!session || !['OWNER', 'ADMIN'].includes(session.user?.role || '')) {
-      return { success: false, error: 'Akses ditolak: Hanya Owner dan Admin yang dapat mengakses daftar payroll.' };
+      return { success: false, error: 'Access denied: Only Owner and Admin can access payroll list.' };
     }
     const isOwner = session.user?.role === 'OWNER';
     const finalEmployeeId = isOwner ? filters?.employeeId : session.user?.employeeId;
@@ -306,23 +225,22 @@ export async function getPayrolls(filters?: {
     return { success: true, payrolls: parsedPayrolls.map(serializePayroll) };
   } catch (error) {
     console.error('Get payrolls error:', error);
-    return { success: false, error: 'Gagal load payroll' };
+    return { success: false, error: 'Failed to load payroll list' };
   }
 }
 
 // ==================== Get Payroll Detail ====================
-// ==================== Get Payroll Detail ====================
 /**
- * Mengambil detail satu payroll beserta riwayat pembayarannya.
+ * Fetch detail for a single payroll along with its payment history.
  * 
- * @param {string} payrollId - ID Payroll.
- * @returns {Object} Detail payroll.
+ * @param {string} payrollId - Payroll ID.
+ * @returns {Object} Payroll details.
  */
 export async function getPayrollDetail(payrollId: string) {
   try {
     const session = await auth();
     if (!session || !['OWNER', 'ADMIN'].includes(session.user?.role || '')) {
-      return { success: false, error: 'Akses ditolak: Hanya Owner dan Admin yang dapat melihat detail payroll.' };
+      return { success: false, error: 'Access denied: Only Owner and Admin can view payroll details.' };
     }
     const payroll = await prisma.payroll.findUnique({
       where: { id: payrollId },
@@ -348,11 +266,11 @@ export async function getPayrollDetail(payrollId: string) {
     });
 
     if (!payroll) {
-      return { success: false, error: 'Payroll tidak ditemukan' };
+      return { success: false, error: 'Payroll not found' };
     }
     const isOwner = session.user?.role === 'OWNER';
     if (!isOwner && payroll.employeeId !== session.user?.employeeId) {
-      return { success: false, error: 'Akses ditolak: Anda hanya dapat melihat detail payroll Anda sendiri.' };
+      return { success: false, error: 'Access denied: You can only view your own payroll details.' };
     }
 
     // Parse details
@@ -374,18 +292,18 @@ export async function getPayrollDetail(payrollId: string) {
     };
   } catch (error) {
     console.error('Get payroll detail error:', error);
-    return { success: false, error: 'Gagal load detail payroll' };
+    return { success: false, error: 'Failed to load payroll details' };
   }
 }
 
-// ==================== Update Payroll (Edit Bonus, dll) ====================
+// ==================== Update Payroll (Edit Bonus, etc.) ====================
 /**
- * Mengupdate data payroll (biasanya untuk koreksi bonus atau catatan).
- * Akan menghitung ulang Total Earned.
+ * Updates payroll data (e.g. bonus correction or notes).
+ * Recalculates Total Earned.
  * 
- * @param {string} payrollId - ID Payroll.
- * @param {Object} updates - Data yang diupdate.
- * @returns {Object} Payroll updated.
+ * @param {string} payrollId - Payroll ID.
+ * @param {Object} updates - Update payload.
+ * @returns {Object} Updated payroll object.
  */
 export async function updatePayroll(
   payrollId: string,
@@ -397,14 +315,14 @@ export async function updatePayroll(
   try {
     const session = await auth();
     if (!session || session.user?.role !== 'OWNER') {
-      return { success: false, error: 'Akses ditolak: Hanya Owner yang dapat mengupdate payroll.' };
+      return { success: false, error: 'Access denied: Only Owner can update payroll.' };
     }
     const payroll = await prisma.payroll.findUnique({
       where: { id: payrollId },
     });
 
     if (!payroll) {
-      return { success: false, error: 'Payroll tidak ditemukan' };
+      return { success: false, error: 'Payroll not found' };
     }
 
     // Parse existing details
@@ -443,26 +361,25 @@ export async function updatePayroll(
     return { success: true, payroll: serializePayroll(updated) };
   } catch (error) {
     console.error('Update payroll error:', error);
-    return { success: false, error: 'Gagal update payroll' };
+    return { success: false, error: 'Failed to update payroll' };
   }
 }
 
 // ==================== Delete Payroll ====================
-// ==================== Delete Payroll ====================
 /**
- * Menghapus payroll yang belum ada pembayarannya.
- * Jika sudah ada pembayaran, tidak bisa dihapus demi integritas data.
+ * Deletes a payroll that has no payment records.
+ * If payments exist, deletion is prevented to maintain data integrity.
  * 
- * @param {string} payrollId - ID Payroll.
- * @returns {Object} Status sukses.
+ * @param {string} payrollId - Payroll ID.
+ * @returns {Object} Success status.
  */
 export async function deletePayroll(payrollId: string) {
   try {
     const session = await auth();
     if (!session || session.user?.role !== 'OWNER') {
-      return { success: false, error: 'Akses ditolak: Hanya Owner yang dapat menghapus payroll.' };
+      return { success: false, error: 'Access denied: Only Owner can delete payroll.' };
     }
-    // Cek apakah sudah ada pembayaran
+    // Check if payment exists
     const payroll = await prisma.payroll.findUnique({
       where: { id: payrollId },
       include: {
@@ -471,13 +388,13 @@ export async function deletePayroll(payrollId: string) {
     });
 
     if (!payroll) {
-      return { success: false, error: 'Payroll tidak ditemukan' };
+      return { success: false, error: 'Payroll not found' };
     }
 
     if (payroll.payments.length > 0) {
       return { 
         success: false, 
-        error: 'Tidak bisa hapus payroll yang sudah ada pembayaran' 
+        error: 'Cannot delete payroll that has existing payments' 
       };
     }
 
@@ -490,24 +407,23 @@ export async function deletePayroll(payrollId: string) {
     return { success: true };
   } catch (error) {
     console.error('Delete payroll error:', error);
-    return { success: false, error: 'Gagal hapus payroll' };
+    return { success: false, error: 'Failed to delete payroll' };
   }
 }
 
 // ==================== Get Employee Summary ====================
-// ==================== Get Employee Summary ====================
 /**
- * Mengambil ringkasan kinerja karyawan.
- * Termasuk jumlah order yang diselesaikan dan total gaji yang sudah diterima.
+ * Fetch employee performance summary.
+ * Includes total completed orders and total salary received.
  * 
- * @param {string} employeeId - ID Karyawan.
- * @returns {Object} Statistik karyawan.
+ * @param {string} employeeId - Employee ID.
+ * @returns {Object} Employee stats.
  */
 export async function getEmployeeSummary(employeeId: string) {
   try {
     const session = await auth();
     if (!session || session.user?.role !== 'OWNER') {
-      return { success: false, error: 'Akses ditolak: Hanya Owner yang dapat mengakses summary karyawan.' };
+      return { success: false, error: 'Access denied: Only Owner can access employee summary.' };
     }
     const employee = await prisma.employee.findUnique({
       where: { id: employeeId },
@@ -537,10 +453,10 @@ export async function getEmployeeSummary(employeeId: string) {
     });
 
     if (!employee) {
-      return { success: false, error: 'Karyawan tidak ditemukan' };
+      return { success: false, error: 'Employee not found' };
     }
 
-    // Hitung statistik
+    // Calculate stats
     const totalCompleted = await prisma.order.count({
       where: {
         mechanicId: employeeId,
@@ -563,24 +479,23 @@ export async function getEmployeeSummary(employeeId: string) {
       employee: serializeEmployee(employee),
       stats: {
         totalCompleted,
-        totalEarned: totalPaidPayrolls._sum.totalEarned?.toNumber ? totalPaidPayrolls._sum.totalEarned.toNumber() : 0,
+        totalEarned: totalPaidPayrolls._sum.totalEarned ? Number(totalPaidPayrolls._sum.totalEarned) : 0,
       },
     };
   } catch (error) {
     console.error('Get employee summary error:', error);
-    return { success: false, error: 'Gagal load summary karyawan' };
+    return { success: false, error: 'Failed to load employee summary' };
   }
 }
 
 // ==================== Bulk Generate Payroll (All Employees) ====================
-// ==================== Bulk Generate Payroll (All Employees) ====================
 /**
- * Membuat payroll masal untuk SEMUA karyawan aktif (kecuali Owner).
- * Berguna saat tutup buku akhir bulan untuk membuatkan slip gaji semua staff sekaligus.
+ * Generates bulk payroll for ALL active employees (except Owner).
+ * Useful for monthly closing.
  * 
- * @param {Date} startDate - Tanggal mulai periode.
- * @param {Date} endDate - Tanggal akhir periode.
- * @returns {Object} Hasil generate per karyawan.
+ * @param {Date} startDate - Period start date.
+ * @param {Date} endDate - Period end date.
+ * @returns {Object} Results list per employee.
  */
 export async function bulkGeneratePayroll(
   startDate: Date,
@@ -589,7 +504,7 @@ export async function bulkGeneratePayroll(
   try {
     const session = await auth();
     if (!session || session.user?.role !== 'OWNER') {
-      return { success: false, error: 'Akses ditolak: Hanya Owner yang dapat melakukan bulk generate payroll.' };
+      return { success: false, error: 'Access denied: Only Owner can perform bulk payroll generation.' };
     }
     const employees = await prisma.employee.findMany({
       where: {
@@ -620,6 +535,6 @@ export async function bulkGeneratePayroll(
     return { success: true, results };
   } catch (error) {
     console.error('Bulk generate payroll error:', error);
-    return { success: false, error: 'Gagal generate bulk payroll' };
+    return { success: false, error: 'Failed bulk payroll generation' };
   }
 }

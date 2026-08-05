@@ -719,12 +719,12 @@ export default function Page() {
                                         items: fullOrder.orderItems.map((item: any) => ({
                                           description: item.itemName,
                                           quantity: item.quantity,
-                                          unitPrice: item.unitPrice,
-                                          total: item.totalPrice
+                                          unitPrice: Number(item.unitPrice),
+                                          total: Number(item.totalPrice)
                                         })),
-                                        subtotal: fullOrder.totalPrice,
+                                        subtotal: Number(fullOrder.totalPrice),
                                         tax: 0,
-                                        total: fullOrder.totalPrice,
+                                        total: Number(fullOrder.totalPrice),
                                         notes: `Kendaraan: ${fullOrder.vehicle} (${fullOrder.plateNumber || '-'})`
                                       };
                                       return await exportInvoice(invoiceData, format, orientation);

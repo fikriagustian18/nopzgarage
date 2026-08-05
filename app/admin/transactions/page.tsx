@@ -433,6 +433,7 @@ export default function Page() {
 
           {/* Search & Filter bar */}
           <div className="flex flex-col md:flex-row gap-3 items-stretch md:items-center">
+            {/* Search Input */}
             <div className="flex-1 relative">
               <Search className="absolute left-3.5 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
@@ -446,6 +447,7 @@ export default function Page() {
               />
             </div>
 
+            {/* Select Type */}
             <div className="w-full md:w-44">
               <Select
                 value={filterType}
@@ -466,6 +468,7 @@ export default function Page() {
               </Select>
             </div>
 
+            {/* Select Status */}
             <div className="w-full md:w-44">
               <Select
                 value={filterStatus}
@@ -485,6 +488,7 @@ export default function Page() {
               </Select>
             </div>
 
+            {/* Reset Button */}
             <Button
               variant="outline"
               onClick={handleResetFilters}
@@ -867,12 +871,12 @@ export default function Page() {
                               items: fullOrder.orderItems.map((item: any) => ({
                                 description: item.itemName,
                                 quantity: item.quantity,
-                                unitPrice: item.unitPrice,
-                                total: item.totalPrice
+                                unitPrice: Number(item.unitPrice),
+                                total: Number(item.totalPrice)
                               })),
-                              subtotal: fullOrder.totalPrice,
+                              subtotal: Number(fullOrder.totalPrice),
                               tax: 0,
-                              total: fullOrder.totalPrice,
+                              total: Number(fullOrder.totalPrice),
                               notes: `Kendaraan: ${fullOrder.vehicle} (${fullOrder.plateNumber || "-"})`
                             };
                             return await exportInvoice(invoiceData, format, orientation);
@@ -903,12 +907,12 @@ export default function Page() {
                               items: fullOrder.orderItems.map((item: any) => ({
                                 description: item.itemName,
                                 quantity: item.quantity,
-                                unitPrice: item.unitPrice,
-                                total: item.totalPrice
+                                unitPrice: Number(item.unitPrice),
+                                total: Number(item.totalPrice)
                               })),
-                              subtotal: fullOrder.totalPrice,
+                              subtotal: Number(fullOrder.totalPrice),
                               tax: 0,
-                              total: fullOrder.totalPrice,
+                              total: Number(fullOrder.totalPrice),
                               notes: `Kendaraan: ${fullOrder.vehicle} (${fullOrder.plateNumber || "-"})`
                             };
                             return await exportInvoice(invoiceData, "pdf", orientation);

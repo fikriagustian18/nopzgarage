@@ -1,10 +1,11 @@
-// app/actions/employees.ts
+// lib/actions/employees.ts
 'use server';
 
 import { prisma } from '@/lib/prisma';
 import { auth } from '@/lib/auth';
 import { revalidatePath } from 'next/cache';
 import { createLog } from './logs';
+import { serializeData } from '@/lib/utils';
 
 import type { SalaryType } from '@prisma/client';
 
@@ -273,24 +274,7 @@ export async function payCommission(feeId: string, paymentMethod: "CASH" | "TRAN
         }
       });
 
-      const serializedFee = {
-        ...fee,
-        amount: Number(fee.amount),
-        order: fee.order ? {
-          ...fee.order,
-          totalPrice: fee.order.totalPrice?.toNumber ? fee.order.totalPrice.toNumber() : 0,
-          totalPaid: fee.order.totalPaid?.toNumber ? fee.order.totalPaid.toNumber() : 0,
-        } : null,
-        employee: serializeEmployee(fee.employee)
-      };
-
-      const serializedFeeWithDates = {
-        ...serializedFee,
-        createdAt: fee.createdAt instanceof Date ? fee.createdAt.toISOString() : fee.createdAt,
-        paidAt: fee.paidAt instanceof Date ? fee.paidAt.toISOString() : fee.paidAt,
-      };
-
-      return { success: true, fee: serializedFeeWithDates };
+      return { success: true, fee: serializeData(fee) };
     }, {
       maxWait: 5000,
       timeout: 15000,
@@ -309,14 +293,10 @@ export async function payCommission(feeId: string, paymentMethod: "CASH" | "TRAN
 
 // ==================== Helper: Serialize Employee ====================
 function serializeEmployee(employee: any) {
-  return {
-    ...employee,
-    dailyRate: employee.dailyRate?.toNumber ? employee.dailyRate.toNumber() : 0,
-    commissionRate: employee.commissionRate?.toNumber ? employee.commissionRate.toNumber() : 0,
-    unpaidAmount: employee.unpaidAmount || 0,
-    createdAt: employee.createdAt instanceof Date ? employee.createdAt.toISOString() : employee.createdAt,
-    updatedAt: employee.updatedAt instanceof Date ? employee.updatedAt.toISOString() : employee.updatedAt,
-  };
+  if (!employee) {
+    return null;
+  }
+  return serializeData(employee);
 }
 
 // ==================== Get All Employees ====================
@@ -331,7 +311,7 @@ export async function getEmployees(activeOnly: boolean = false) {
   try {
     const session = await auth();
     if (!session || !['OWNER', 'ADMIN'].includes(session.user?.role || '')) {
-      return { success: false, error: 'Akses ditolak: Hanya Owner dan Admin yang memiliki wewenang ini.' };
+      return { success: false, error: 'Access denied: Only Owner and Admin have access.' };
     }
     const employees = await prisma.employee.findMany({
       where: activeOnly ? { isActive: true } : undefined,
@@ -382,7 +362,7 @@ export async function getMechanics() {
   try {
     const session = await auth();
     if (!session || !['OWNER', 'ADMIN'].includes(session.user?.role || '')) {
-      return { success: false, error: 'Akses ditolak: Hanya Owner dan Admin yang memiliki wewenang ini.' };
+      return { success: false, error: 'Access denied: Only Owner and Admin have access.' };
     }
     const mechanics = await prisma.employee.findMany({
       where: { 
@@ -397,10 +377,7 @@ export async function getMechanics() {
       orderBy: { name: 'asc' },
     });
 
-    const mechanicsWithNumber = mechanics.map((m: any) => ({
-      ...m,
-      commissionRate: m.commissionRate?.toNumber ? m.commissionRate.toNumber() : 0,
-    }));
+    const mechanicsWithNumber = mechanics.map((m: any) => serializeData(m));
 
     return { success: true, mechanics: mechanicsWithNumber };
   } catch (error) {
@@ -420,7 +397,7 @@ export async function getEmployeeStats() {
   try {
     const session = await auth();
     if (!session || session.user?.role !== 'OWNER') {
-      return { success: false, error: 'Akses ditolak: Hanya Owner yang memiliki wewenang ini.' };
+      return { success: false, error: 'Access denied: Only Owner has access.' };
     }
     const [fees, activeOrders, totalMechanics] = await Promise.all([
       prisma.orderFee.aggregate({
@@ -447,7 +424,7 @@ export async function getEmployeeStats() {
     return {
       success: true,
       stats: {
-        totalUnpaid: fees._sum.amount?.toNumber() || 0,
+        totalUnpaid: fees._sum.amount ? Number(fees._sum.amount) : 0,
         unpaidCount: fees._count.id,
         workingMechanics: workingCount,
         standbyMechanics: standbyCount,
@@ -473,13 +450,13 @@ export async function getEmployeeDetail(id: string) {
   try {
     const session = await auth();
     if (!session) {
-      return { success: false, error: 'Sesi tidak valid.' };
+      return { success: false, error: 'Invalid session.' };
     }
     const isOwner = session.user?.role === 'OWNER';
     const isAdmin = session.user?.role === 'ADMIN';
     const isSelf = session.user?.employeeId === id;
     if (!isOwner && !isAdmin && !isSelf) {
-      return { success: false, error: 'Akses ditolak: Anda tidak memiliki wewenang untuk melihat data karyawan ini.' };
+      return { success: false, error: 'Access denied: You do not have authorization to view this employee data.' };
     }
     // 1. Fetch Basic Info & History in parallel with Stats
     const [employee, stats, unpaidStats] = await Promise.all([
@@ -522,7 +499,7 @@ export async function getEmployeeDetail(id: string) {
     ]);
 
     if (!employee) {
-      return { success: false, error: 'Karyawan tidak ditemukan' };
+      return { success: false, error: 'Employee not found' };
     }
 
     // 2. Fetch Active Order & Queue
@@ -568,43 +545,20 @@ export async function getEmployeeDetail(id: string) {
 
     console.log(`[DEBUG] Employee ${id}: Found active=${activeOrder?.id} (${activeOrder?.status}), queue=${queueOrders.length}`);
 
-    const totalEarned = stats._sum.amount?.toNumber() || 0;
-    const totalUnpaid = unpaidStats._sum.amount?.toNumber() || 0;
+    const totalEarned = stats._sum.amount ? Number(stats._sum.amount) : 0;
+    const totalUnpaid = unpaidStats._sum.amount ? Number(unpaidStats._sum.amount) : 0;
     const totalPaid = totalEarned - totalUnpaid;
 
     const serialized = {
-      ...serializeEmployee(employee),
-      orderFees: employee.orderFees.map((f: any) => ({
-        ...f,
-        amount: f.amount.toNumber(),
-        createdAt: f.createdAt instanceof Date ? f.createdAt.toISOString() : f.createdAt,
-        paidAt: f.paidAt instanceof Date ? f.paidAt.toISOString() : f.paidAt,
-      })),
-      payrolls: employee.payrolls ? employee.payrolls.map((p: any) => ({
-        ...p,
-        baseSalary: p.baseSalary.toNumber ? p.baseSalary.toNumber() : Number(p.baseSalary),
-        bonus: p.bonus.toNumber ? p.bonus.toNumber() : Number(p.bonus),
-        totalEarned: p.totalEarned.toNumber ? p.totalEarned.toNumber() : Number(p.totalEarned),
-        totalPaid: p.totalPaid.toNumber ? p.totalPaid.toNumber() : Number(p.totalPaid),
-        startDate: p.startDate instanceof Date ? p.startDate.toISOString() : p.startDate,
-        endDate: p.endDate instanceof Date ? p.endDate.toISOString() : p.endDate,
-        createdAt: p.createdAt instanceof Date ? p.createdAt.toISOString() : p.createdAt,
-        updatedAt: p.updatedAt instanceof Date ? p.updatedAt.toISOString() : p.updatedAt,
-      })) : [],
+      ...serializeData(employee),
       stats: {
         totalEarned,
         totalPaid,
         totalUnpaid,
         taskCount: stats._count.id
       },
-      activeOrder: activeOrder ? {
-        ...activeOrder,
-        createdAt: activeOrder.createdAt.toISOString()
-      } : null,
-      queueOrders: queueOrders ? queueOrders.map(o => ({
-        ...o,
-        createdAt: o.createdAt.toISOString()
-      })) : []
+      activeOrder: serializeData(activeOrder),
+      queueOrders: serializeData(queueOrders),
     };
 
     return { success: true, employee: serialized };
@@ -625,7 +579,7 @@ export async function createEmployee(data: CreateEmployeeInput) {
   try {
     const session = await auth();
     if (!session || session.user?.role !== 'OWNER') {
-      return { success: false, error: 'Akses ditolak: Hanya Owner yang dapat menambah karyawan.' };
+      return { success: false, error: 'Access denied: Only Owner can add employees.' };
     }
     const employee = await prisma.employee.create({
       data: {
@@ -668,7 +622,7 @@ export async function updateEmployee(data: UpdateEmployeeInput) {
   try {
     const session = await auth();
     if (!session || session.user?.role !== 'OWNER') {
-      return { success: false, error: 'Akses ditolak: Hanya Owner yang dapat mengupdate data karyawan.' };
+      return { success: false, error: 'Access denied: Only Owner can update employee data.' };
     }
     const { id, salaryType, dailyRate, commissionRate, ...rest } = data;
     
@@ -718,7 +672,7 @@ export async function deactivateEmployee(id: string) {
   try {
     const session = await auth();
     if (!session || session.user?.role !== 'OWNER') {
-      return { success: false, error: 'Akses ditolak: Hanya Owner yang dapat menonaktifkan karyawan.' };
+      return { success: false, error: 'Access denied: Only Owner can deactivate employees.' };
     }
     const employee = await prisma.employee.update({
       where: { id },
@@ -754,7 +708,7 @@ export async function reactivateEmployee(id: string) {
   try {
     const session = await auth();
     if (!session || session.user?.role !== 'OWNER') {
-      return { success: false, error: 'Akses ditolak: Hanya Owner yang dapat mengaktifkan kembali karyawan.' };
+      return { success: false, error: 'Access denied: Only Owner can reactivate employees.' };
     }
     const employee = await prisma.employee.update({
       where: { id },
