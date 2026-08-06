@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 import { Bell, Check, Trash2, X } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
@@ -10,13 +10,15 @@ import { Button } from "@/components/ui/Button";
 
 import { getRecentLogs } from "@/lib/actions/logs";
 import {
-  getNotifications,
-  markAsRead,
-  markAllAsRead,
   clearNotifications,
-  getUnreadCount,
+  getNotifications,
   getNotificationStyle,
+  getReadNotificationIds,
+  getUnreadCount,
+  markAllAsRead,
+  markAsRead,
 } from "@/lib/notifications";
+
 import type { Notification } from "@/lib/notifications";
 
 const MAX_NOTIFICATIONS_COUNT = 50;
@@ -28,33 +30,11 @@ interface ServerLog {
   action: string;
   title: string;
   details: string;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
   userId?: string;
   userName?: string;
   role?: string;
   createdAt: string;
-}
-
-/**
- * Maps a log action string to a visual notification type.
- *
- * @param action - Log action name.
- * @returns Corresponding notification type identifier.
- */
-function mapActionToType(action: string): Notification["type"] {
-  if (action.includes("CREATE")) {
-    return "success";
-  }
-  if (action.includes("UPDATE")) {
-    return "info";
-  }
-  if (action.includes("DELETE")) {
-    return "error";
-  }
-  if (action.includes("PAYMENT")) {
-    return "success";
-  }
-  return "system";
 }
 
 /**
@@ -71,34 +51,45 @@ export function NotificationPanel() {
 
   const loadNotifications = useCallback(async () => {
     const clientNotifications = getNotifications();
+    const readIds = getReadNotificationIds();
 
     try {
       const serverResult = await getRecentLogs(RECENT_LOGS_LIMIT);
       if (serverResult.success && serverResult.logs) {
         const serverNotifications: Notification[] = (
-          serverResult.logs as ServerLog[]
+          serverResult.logs as unknown as ServerLog[]
         ).map((log) => ({
           id: log.id,
           type: mapActionToType(log.action),
           title: log.title,
           message: log.details,
           timestamp: new Date(log.createdAt),
-          read: false,
+          read: readIds.includes(log.id),
           metadata: log.metadata,
           actor: log.userName || (log.userId ? "User" : "System"),
         }));
 
+        // Deduplicate notifications by ID
+        const clientOnly = clientNotifications.filter(
+          (clientNotification) =>
+            !serverNotifications.some(
+              (serverNotification) => serverNotification.id === clientNotification.id
+            )
+        );
+
         const combinedNotifications = [
-          ...clientNotifications,
+          ...clientOnly,
           ...serverNotifications,
         ];
         const sortedNotifications = combinedNotifications.sort(
-          (a, b) =>
-            new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+          (firstNotification, secondNotification) =>
+            new Date(secondNotification.timestamp).getTime() -
+            new Date(firstNotification.timestamp).getTime()
         );
 
-        setNotifications(sortedNotifications.slice(0, MAX_NOTIFICATIONS_COUNT));
-        setUnreadCount(getUnreadCount());
+        const sliced = sortedNotifications.slice(0, MAX_NOTIFICATIONS_COUNT);
+        setNotifications(sliced);
+        setUnreadCount(getUnreadCount(sliced));
         return;
       }
     } catch (error) {
@@ -106,7 +97,7 @@ export function NotificationPanel() {
     }
 
     setNotifications(clientNotifications);
-    setUnreadCount(getUnreadCount());
+    setUnreadCount(getUnreadCount(clientNotifications));
   }, []);
 
   useEffect(() => {
@@ -143,7 +134,8 @@ export function NotificationPanel() {
   }
 
   function handleMarkAllAsRead() {
-    markAllAsRead();
+    const allIds = notifications.map((notification) => notification.id);
+    markAllAsRead(allIds);
     loadNotifications();
   }
 
@@ -290,3 +282,26 @@ export function NotificationPanel() {
     </div>
   );
 }
+
+/**
+ * Maps a log action string to a visual notification type.
+ *
+ * @param action - Log action name.
+ * @returns Corresponding notification type identifier.
+ */
+function mapActionToType(action: string): Notification["type"] {
+  if (action.includes("CREATE")) {
+    return "success";
+  }
+  if (action.includes("UPDATE")) {
+    return "info";
+  }
+  if (action.includes("DELETE")) {
+    return "error";
+  }
+  if (action.includes("PAYMENT")) {
+    return "success";
+  }
+  return "system";
+}
+
