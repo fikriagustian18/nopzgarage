@@ -107,9 +107,9 @@ export async function processOrder(data: ProcessOrderInput): Promise<
       for (const item of customerItems) {
         let sparePartId = null;
         
-        // Cek apakah ini barang (part)
+        // Check if this is a part
         if (item.type === 'part') {
-          // Cari sparepart di DB berdasarkan nama
+          // Find spare part in DB by name
           const part = await tx.sparePart.findFirst({ where: { name: item.name } });
           if (part) {
             sparePartId = part.id;
@@ -125,10 +125,10 @@ export async function processOrder(data: ProcessOrderInput): Promise<
               data: { stock: { decrement: item.qty } }
             });
 
-            // === JURNAL HPP (Harga Pokok Penjualan) ===
+            // === COGS (Cost of Goods Sold) JOURNAL ===
             const hpp = Number(part.buyPrice) * item.qty;
             
-            // Ensure accounts exist: 511 (HPP) dan 111 (Persediaan Sparepart)
+            // Ensure accounts exist: 511 (COGS) and 111 (Spare Part Inventory)
             const hppAccount = await tx.account.upsert({
               where: { code: '511' },
               create: { code: '511', name: 'Harga Pokok Penjualan', type: 'EXPENSE', category: 'COST_OF_GOODS' },
@@ -149,8 +149,8 @@ export async function processOrder(data: ProcessOrderInput): Promise<
                 reference: order.id,
                 items: {
                   create: [
-                    { accountId: hppAccount.id, debit: hpp, credit: 0 },  // Debit: HPP
-                    { accountId: inventoryAccount.id, debit: 0, credit: hpp }  // Kredit: Persediaan
+                    { accountId: hppAccount.id, debit: hpp, credit: 0 }, // Debit: COGS
+                    { accountId: inventoryAccount.id, debit: 0, credit: hpp } // Credit: Inventory
                   ]
                 }
               }
@@ -158,7 +158,7 @@ export async function processOrder(data: ProcessOrderInput): Promise<
           }
         }
 
-        // Simpan ke detail OrderItem
+        // Save to OrderItem details
         await tx.orderItem.create({
           data: {
             orderId: order.id,
@@ -198,7 +198,7 @@ export async function processOrder(data: ProcessOrderInput): Promise<
                  orderId: order.id,
                  employeeId: fee.employeeId,
                  amount: fee.amount,
-                 description: fee.note || `Komisi: ${fee.name}`, // Gunakan catatan admin atau default
+                 description: fee.note || `Komisi: ${fee.name}`, // Use admin note or default
                  isPaid: false
                }
              });
@@ -207,8 +207,8 @@ export async function processOrder(data: ProcessOrderInput): Promise<
         }
 
         // CREATE JOURNAL ENTRY (ACCRUAL)
-        // Debit: Beban (501)
-        // Kredit: Utang (202)
+        // Debit: Expense (501)
+        // Credit: Payable (202)
         if (totalFeeAmount > 0) {
             await tx.journalEntry.create({
                 data: {
@@ -757,6 +757,61 @@ export async function cancelOrder(orderId: string) {
   }
 }
 
+// ==================== Get Order History (Activity Logs) ====================
+/**
+ * Retrieves the activity logs/history for a specific order.
+ * 
+ * @param {string} orderId - Order ID.
+ * @returns {Object} List of activity logs.
+ */
+export async function getOrderHistory(orderId: string) {
+  try {
+    const session = await auth();
+    if (!session || !['OWNER', 'ADMIN'].includes(session.user?.role || '')) {
+      return { success: false, error: 'Access denied' };
+    }
+
+    const logs = await prisma.activityLog.findMany({
+      where: {
+        OR: [
+          {
+            metadata: {
+              path: ['orderId'],
+              equals: orderId
+            }
+          },
+          {
+            details: {
+              contains: orderId
+            }
+          }
+        ]
+      },
+      orderBy: {
+        createdAt: 'asc'
+      }
+    });
+
+    return { success: true, logs: serializeData(logs) };
+  } catch (error) {
+    console.error('Get order history error:', error);
+    // Fallback in case JSON querying throws an error on some DB environments
+    try {
+      const logs = await prisma.activityLog.findMany({
+        where: {
+          details: {
+            contains: orderId
+          }
+        },
+        orderBy: { createdAt: 'asc' }
+      });
+      return { success: true, logs: serializeData(logs) };
+    } catch (fallbackError) {
+      console.error('Fallback get order history error:', fallbackError);
+      return { success: false, error: 'Gagal memuat riwayat order' };
+    }
+  }
+}
 
 // Helper function to dynamically add queue numbers to a list of orders based on their creation index on each date
 async function addQueueNumbersToOrders(orders: any[]) {

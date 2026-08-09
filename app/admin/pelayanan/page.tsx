@@ -22,6 +22,7 @@ import {
   RotateCcw,
   Plus,
   CreditCard,
+  History,
 } from "lucide-react";
 
 import { RoleGuard } from "@/components/shared/RoleGuard";
@@ -48,6 +49,7 @@ import { OrderDialog } from "@/components/dialogs/OrderDialog";
 import { DeleteConfirmDialog } from "@/components/dialogs/DeleteConfirmDialog";
 import { ProcessOrderDialog } from "@/components/dialogs/ProcessOrderDialog";
 import { PaymentDialog } from "@/components/dialogs/PaymentDialog";
+import { HistoryDialog } from "@/components/dialogs/HistoryDialog";
 import { Toaster } from "@/components/ui/Toaster";
 import { ExportButton } from "@/components/export/ExportButton";
 
@@ -112,6 +114,7 @@ export default function Page() {
   const [processDialogOpen, setProcessDialogOpen] = useState(false);
   const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [historyDialogOpen, setHistoryDialogOpen] = useState(false);
   
   const [finishDialogOpen, setFinishDialogOpen] = useState(false);
   const [orderToFinish, setOrderToFinish] = useState<Order | null>(null);
@@ -380,7 +383,7 @@ export default function Page() {
 
           {/* Metrics Summary Cards */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            {/* Card Semua */}
+            {/* All Card */}
             <Card className="border border-border/60 bg-card/40 backdrop-blur-sm shadow-sm overflow-hidden rounded-xl">
               <CardContent className="p-5 flex justify-between items-center">
                 <div>
@@ -394,7 +397,7 @@ export default function Page() {
               </CardContent>
             </Card>
 
-            {/* Card Menunggu */}
+            {/* Waiting Card */}
             <Card className="border border-border/60 bg-card/40 backdrop-blur-sm shadow-sm overflow-hidden rounded-xl">
               <CardContent className="p-5 flex justify-between items-center">
                 <div>
@@ -408,7 +411,7 @@ export default function Page() {
               </CardContent>
             </Card>
 
-            {/* Card Sedang Dikerjakan */}
+            {/* In Progress Card */}
             <Card className="border border-border/60 bg-card/40 backdrop-blur-sm shadow-sm overflow-hidden rounded-xl">
               <CardContent className="p-5 flex justify-between items-center">
                 <div>
@@ -422,7 +425,7 @@ export default function Page() {
               </CardContent>
             </Card>
 
-            {/* Card Selesai */}
+            {/* Completed Card */}
             <Card className="border border-border/60 bg-card/40 backdrop-blur-sm shadow-sm overflow-hidden rounded-xl">
               <CardContent className="p-5 flex justify-between items-center">
                 <div>
@@ -550,22 +553,22 @@ export default function Page() {
                             <td className="px-6 py-4 align-middle font-semibold text-foreground">
                               {`ORD-${order.id.slice(-6).toUpperCase()}`}
                             </td>
-                            {/* Pelanggan */}
+                            {/* Customer */}
                             <td className="px-6 py-4 align-middle font-medium text-foreground">
                               {order.custName}
                             </td>
-                            {/* Kendaraan */}
+                            {/* Vehicle */}
                             <td className="px-6 py-4 align-middle">
                               <div className="font-semibold text-foreground">{order.vehicle}</div>
                               {order.plateNumber && (
                                 <div className="text-xs font-semibold text-muted-foreground uppercase font-mono mt-0.5">{order.plateNumber}</div>
                               )}
                             </td>
-                            {/* Jenis Layanan */}
+                            {/* Service Type */}
                             <td className="px-6 py-4 align-middle text-muted-foreground font-medium">
                               {serviceTypeLabel}
                             </td>
-                            {/* Mekanik */}
+                            {/* Mechanic */}
                             <td className="px-6 py-4 align-middle text-foreground font-medium">
                               {order.mechanic?.name || "-"}
                             </td>
@@ -573,12 +576,12 @@ export default function Page() {
                             <td className="px-6 py-4 align-middle">
                               {getStatusBadge(order)}
                             </td>
-                            {/* Estimasi Selesai */}
+                            {/* Estimated Completion */}
                             <td className="px-6 py-4 align-middle">
                               <div className="font-semibold text-foreground">{estSelesai.dateStr}</div>
                               <div className="text-xs font-semibold text-muted-foreground mt-0.5">{estSelesai.timeStr}</div>
                             </td>
-                            {/* Aksi */}
+                            {/* Action */}
                             <td className="px-6 py-4 text-center align-middle">
                               <div className="flex justify-center items-center gap-1.5">
                                 {/* Eye/Detail */}
@@ -613,7 +616,7 @@ export default function Page() {
                                   </Button>
                                 )}
 
-                                {/* Konfirmasi (For PENDING) */}
+                                {/* Confirm (For PENDING) */}
                                 {order.status === "PENDING" && (
                                   <Button
                                     variant="ghost"
@@ -629,7 +632,7 @@ export default function Page() {
                                   </Button>
                                 )}
 
-                                {/* Proses (For PENDING, CONFIRMED, QUEUE, ESTIMATED) */}
+                                {/* Process (For PENDING, CONFIRMED, QUEUE, ESTIMATED) */}
                                 {["PENDING", "CONFIRMED", "QUEUE", "ESTIMATED"].includes(order.status) && (
                                   <Button
                                     variant="ghost"
@@ -645,7 +648,7 @@ export default function Page() {
                                   </Button>
                                 )}
 
-                                {/* Selesai (For IN_PROGRESS) */}
+                                {/* Finish (For IN_PROGRESS) */}
                                 {order.status === "IN_PROGRESS" && (
                                   <Button
                                     variant="ghost"
@@ -661,7 +664,7 @@ export default function Page() {
                                   </Button>
                                 )}
 
-                                {/* Bayar (For READY / COMPLETED and unpaid) */}
+                                {/* Pay (For READY / COMPLETED and unpaid) */}
                                 {isSelesai && order.paymentStatus !== "PAID" && (
                                   <Button
                                     variant="ghost"
@@ -677,7 +680,7 @@ export default function Page() {
                                   </Button>
                                 )}
 
-                                {/* Serah Terima (For READY) */}
+                                {/* Handover (For READY) */}
                                 {order.status === "READY" && order.paymentStatus === "PAID" && (
                                   <Button
                                     variant="ghost"
@@ -693,7 +696,21 @@ export default function Page() {
                                   </Button>
                                 )}
 
-                                {/* Printer / Invoice */}
+                                {/* Order Progress History */}
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8 text-muted-foreground hover:text-foreground hover:cursor-pointer"
+                                  onClick={() => {
+                                    setSelectedOrder(order);
+                                    setHistoryDialogOpen(true);
+                                  }}
+                                  title="Riwayat Perkembangan Order"
+                                >
+                                  <History className="h-4.5 w-4.5" />
+                                </Button>
+
+                                {/* Print Invoice */}
                                 {isSelesai && (
                                   <ExportButton
                                     title={`Invoice_${order.id.slice(-6)}`}
@@ -732,7 +749,7 @@ export default function Page() {
                                   />
                                 )}
 
-                                {/* Batalkan Booking button */}
+                                {/* Cancel Booking button */}
                                 {order.status !== "COMPLETED" && order.status !== "CANCELLED" && (
                                   <Button
                                     variant="ghost"
@@ -869,6 +886,14 @@ export default function Page() {
               onOpenChange={setPaymentDialogOpen}
               order={selectedOrder}
               onSuccess={fetchData}
+            />
+          )}
+
+          {selectedOrder && (
+            <HistoryDialog
+              open={historyDialogOpen}
+              onOpenChange={setHistoryDialogOpen}
+              order={selectedOrder}
             />
           )}
 
