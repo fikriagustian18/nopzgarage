@@ -44,13 +44,16 @@ import {
 import { ExportButton } from "@/components/export/ExportButton";
 import { Toaster } from "@/components/ui/Toaster";
 import { BankAccountsManager } from "@/components/admin/BankAccountsManager";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/Tabs";
+import { Badge } from "@/components/ui/Badge";
 
 // 3. Utilities & Logic
 import { getFinancialReports, getOperationalReports } from "@/lib/actions/finance";
-import { exportIncomeStatement } from "@/lib/export/reports/financialExport";
+import { exportIncomeStatement, exportCashFlow, exportExpenses } from "@/lib/export/reports/financialExport";
+import { exportOrders } from "@/lib/export/reports/orderListExport";
 
 // 4. Types
-import type { IncomeStatementData } from "@/lib/export/types";
+import type { IncomeStatementData, CashFlowData, ExpenseExportData } from "@/lib/export/types";
 
 interface OrderItem {
   id: string;
@@ -74,6 +77,7 @@ interface Order {
   totalPaid: number;
   createdAt: string;
   orderItems: OrderItem[];
+  mechanic?: { name: string } | null;
 }
 
 interface Expense {
@@ -111,6 +115,31 @@ interface BalanceSheetSection {
   totalEquity: number;
 }
 
+interface CashFlowTransactionData {
+  id: string;
+  date: string;
+  description: string;
+  reference: string | null;
+  inflow: number;
+  outflow: number;
+  classification: "REVENUE" | "PARTS" | "OPERATING" | "OTHER";
+  balance: number;
+}
+
+interface CashFlowStatementData {
+  beginningCash: number;
+  endingCash: number;
+  inflowRevenue: number;
+  inflowOther: number;
+  totalInflow: number;
+  outflowParts: number;
+  outflowOperating: number;
+  outflowOther: number;
+  totalOutflow: number;
+  netChange: number;
+  transactions: CashFlowTransactionData[];
+}
+
 interface FinancialReportData {
   trialBalance?: TrialBalanceAccount[];
   incomeStatement: {
@@ -122,6 +151,7 @@ interface FinancialReportData {
     netIncome: number;
   };
   balanceSheet?: BalanceSheetSection;
+  cashFlowStatement?: CashFlowStatementData;
 }
 
 /**
@@ -132,6 +162,9 @@ export default function Page() {
   const [isMounted, setIsMounted] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+
+  // Tabs State
+  const [activeTab, setActiveTab] = useState("ringkasan");
 
   // Data States
   const [reportData, setReportData] = useState<FinancialReportData | null>(null);
@@ -151,18 +184,25 @@ export default function Page() {
     const now = new Date();
     const start = new Date(now.getFullYear(), now.getMonth(), 1);
     
-    setStartDate(start.toISOString().split("T")[0]);
-    setEndDate(now.toISOString().split("T")[0]);
-
-    fetchData();
+    setStartDate(toLocalDateString(start));
+    setEndDate(toLocalDateString(now));
   }, []);
 
-  async function fetchData() {
+  useEffect(() => {
+    if (isMounted && startDate && endDate) {
+      fetchData(startDate, endDate);
+    }
+  }, [startDate, endDate, isMounted]);
+
+  async function fetchData(start?: string, end?: string) {
     setLoading(true);
     setError("");
     try {
+      const queryStart = start !== undefined ? start : startDate;
+      const queryEnd = end !== undefined ? end : endDate;
+
       const [reportsRes, opRes] = await Promise.all([
-        getFinancialReports(),
+        getFinancialReports(queryStart || undefined, queryEnd || undefined),
         getOperationalReports(),
       ]);
 
@@ -195,14 +235,14 @@ export default function Page() {
   function handleResetFilters() {
     const now = new Date();
     const start = new Date(now.getFullYear(), now.getMonth(), 1);
-    setStartDate(start.toISOString().split("T")[0]);
-    setEndDate(now.toISOString().split("T")[0]);
+    setStartDate(toLocalDateString(start));
+    setEndDate(toLocalDateString(now));
     setFilterType("ALL");
     setFilterPaymentMethod("ALL");
   }
 
   function handleRetry() {
-    fetchData();
+    fetchData(startDate, endDate);
   }
 
   if (loading || !isMounted) {
@@ -230,7 +270,7 @@ export default function Page() {
 
   // --- Dynamic Filtering Logic ---
   const filteredOrders = orders.filter((order) => {
-    const orderDate = new Date(order.createdAt).toISOString().split("T")[0];
+    const orderDate = toLocalDateString(order.createdAt);
     const inDateRange = (!startDate || orderDate >= startDate) && (!endDate || orderDate <= endDate);
 
     // Filter by type:
@@ -257,7 +297,7 @@ export default function Page() {
   });
 
   const filteredExpenses = expenses.filter((expense) => {
-    const expenseDate = new Date(expense.date).toISOString().split("T")[0];
+    const expenseDate = toLocalDateString(expense.date);
     const inDateRange = (!startDate || expenseDate >= startDate) && (!endDate || expenseDate <= endDate);
     return inDateRange;
   });
@@ -278,10 +318,10 @@ export default function Page() {
   
   // Fill all days between start and end date
   if (startDate && endDate) {
-    const start = new Date(startDate);
-    const end = new Date(endDate);
+    const start = new Date(`${startDate}T00:00:00`);
+    const end = new Date(`${endDate}T00:00:00`);
     for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
-      const dateStr = d.toISOString().split("T")[0];
+      const dateStr = toLocalDateString(d);
       const dateLabel = `${d.getDate()} ${d.toLocaleString("id-ID", { month: "short" })}`;
       dailyDataMap[dateStr] = {
         date: dateLabel,
@@ -293,7 +333,7 @@ export default function Page() {
 
   // Populate revenues
   filteredOrders.forEach((o) => {
-    const dateStr = new Date(o.createdAt).toISOString().split("T")[0];
+    const dateStr = toLocalDateString(o.createdAt);
     if (dailyDataMap[dateStr]) {
       dailyDataMap[dateStr].Pendapatan += o.totalPaid;
     }
@@ -301,7 +341,7 @@ export default function Page() {
 
   // Populate expenses
   filteredExpenses.forEach((e) => {
-    const dateStr = new Date(e.date).toISOString().split("T")[0];
+    const dateStr = toLocalDateString(e.date);
     if (dailyDataMap[dateStr]) {
       dailyDataMap[dateStr].Pengeluaran += e.amount;
     }
@@ -405,8 +445,9 @@ export default function Page() {
 
   return (
     <RoleGuard allowedRoles={["OWNER"]}>
-      <div className="min-h-screen bg-background text-foreground">
-        <div className="p-6 md:p-8 space-y-6 max-w-[1600px] mx-auto">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+        <div className="min-h-screen bg-background text-foreground">
+          <div className="p-6 md:p-8 space-y-6 max-w-[1600px] mx-auto">
           
           {/* Header & Breadcrumb */}
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
@@ -416,43 +457,131 @@ export default function Page() {
                 <span>&gt;</span>
                 <span className="text-foreground">Laporan Keuangan</span>
               </div>
-              <h2 className="text-3xl font-extrabold tracking-tight text-foreground">
-                Laporan Keuangan
-              </h2>
+              <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+                <h2 className="text-3xl font-extrabold tracking-tight text-foreground">
+                  Laporan Keuangan
+                </h2>
+                <TabsList className="bg-muted/70 p-1 border border-border/80 rounded-xl inline-flex h-10 items-center gap-1">
+                  <TabsTrigger value="ringkasan" className="rounded-lg px-3 py-1.5 text-xs font-semibold">Ikhtisar Laba Rugi</TabsTrigger>
+                  <TabsTrigger value="pemasukan" className="rounded-lg px-3 py-1.5 text-xs font-semibold">Laporan Pendapatan</TabsTrigger>
+                  <TabsTrigger value="pengeluaran" className="rounded-lg px-3 py-1.5 text-xs font-semibold">Laporan Pengeluaran</TabsTrigger>
+                  <TabsTrigger value="arus-kas" className="rounded-lg px-3 py-1.5 text-xs font-semibold">Laporan Kas Arus</TabsTrigger>
+                </TabsList>
+              </div>
               <p className="text-sm text-muted-foreground mt-1">
-                Pantau semua pemasukan, pengeluaran, dan laba rugi bengkel Anda.
+                Pantau semua pemasukan, pengeluaran, dan arus kas bengkel Anda.
               </p>
             </div>
 
-            {/* Download Report Action */}
+            {/* Download Report Action based on active tab */}
             <div className="flex gap-2">
-              <ExportButton
-                title="Laporan_Laba_Rugi"
-                label="Unduh Laba Rugi"
-                variant="default"
-                onExport={async (format, orientation) => {
-                  if (!reportData) {
-                    return new Blob([]);
-                  }
-                  const incomeData: IncomeStatementData = {
-                    period: `${formatIndonesianDate(startDate)} - ${formatIndonesianDate(endDate)}`,
-                    revenues: reportData.incomeStatement.revenues.map((acc) => ({
-                      code: acc.code,
-                      name: acc.name,
-                      balance: acc.balance,
-                    })),
-                    totalRevenue: reportData.incomeStatement.totalRevenue,
-                    expenses: reportData.incomeStatement.expenses.map((acc) => ({
-                      code: acc.code,
-                      name: acc.name,
-                      balance: acc.balance,
-                    })),
-                    totalExpense: reportData.incomeStatement.totalExpense,
-                    netIncome: reportData.incomeStatement.netIncome,
-                  };
-                  return await exportIncomeStatement(incomeData, format, orientation);
-                }}
-              />
+              {activeTab === "ringkasan" && (
+                <ExportButton
+                  title={`Laporan_Laba_Rugi_${startDate}_to_${endDate}`}
+                  label="Unduh Laba Rugi"
+                  variant="default"
+                  onExport={async (format, orientation) => {
+                    if (!reportData) {
+                      return new Blob([]);
+                    }
+                    const incomeData: IncomeStatementData = {
+                      period: `${formatIndonesianDate(startDate)} - ${formatIndonesianDate(endDate)}`,
+                      revenues: reportData.incomeStatement.revenues.map((acc) => ({
+                        code: acc.code,
+                        name: acc.name,
+                        balance: acc.balance,
+                      })),
+                      totalRevenue: reportData.incomeStatement.totalRevenue,
+                      expenses: reportData.incomeStatement.expenses.map((acc) => ({
+                        code: acc.code,
+                        name: acc.name,
+                        balance: acc.balance,
+                      })),
+                      totalExpense: reportData.incomeStatement.totalExpense,
+                      netIncome: reportData.incomeStatement.netIncome,
+                    };
+                    return await exportIncomeStatement(incomeData, format, orientation);
+                  }}
+                />
+              )}
+              {activeTab === "pemasukan" && (
+                <ExportButton
+                  title={`Laporan_Pemasukan_${startDate}_to_${endDate}`}
+                  label="Unduh Pemasukan"
+                  variant="default"
+                  onExport={async (format, orientation) => {
+                    const exportData = filteredOrders.map(o => ({
+                      id: o.id,
+                      date: o.createdAt,
+                      customerName: o.custName,
+                      vehicle: o.vehicle,
+                      plateNumber: o.plateNumber || "-",
+                      serviceType: o.orderItems.map(item => item.itemName).join(", ") || "Lain-lain",
+                      mechanic: o.mechanic?.name || "-",
+                      status: o.status,
+                      paymentStatus: o.paymentStatus,
+                      totalAmount: o.totalPrice
+                    }));
+                    return await exportOrders(exportData, format, orientation);
+                  }}
+                />
+              )}
+              {activeTab === "pengeluaran" && (
+                <ExportButton
+                  title={`Laporan_Pengeluaran_${startDate}_to_${endDate}`}
+                  label="Unduh Pengeluaran"
+                  variant="default"
+                  onExport={async (format, orientation) => {
+                    const exportData: ExpenseExportData = {
+                      period: `${formatIndonesianDate(startDate)} - ${formatIndonesianDate(endDate)}`,
+                      expenses: filteredExpenses.map(e => ({
+                        date: e.date,
+                        description: e.description,
+                        category: e.category,
+                        source: e.source,
+                        amount: e.amount
+                      })),
+                      totalExpense: totalExpense
+                    };
+                    return await exportExpenses(exportData, format, orientation);
+                  }}
+                />
+              )}
+              {activeTab === "arus-kas" && (
+                <ExportButton
+                  title={`Laporan_Arus_Kas_${startDate}_to_${endDate}`}
+                  label="Unduh Arus Kas"
+                  variant="default"
+                  onExport={async (format, orientation) => {
+                    if (!reportData?.cashFlowStatement) {
+                      return new Blob([]);
+                    }
+                    const exportData: CashFlowData = {
+                      period: `${formatIndonesianDate(startDate)} - ${formatIndonesianDate(endDate)}`,
+                      beginningCash: reportData.cashFlowStatement.beginningCash,
+                      inflowRevenue: reportData.cashFlowStatement.inflowRevenue,
+                      inflowOther: reportData.cashFlowStatement.inflowOther,
+                      totalInflow: reportData.cashFlowStatement.totalInflow,
+                      outflowParts: reportData.cashFlowStatement.outflowParts,
+                      outflowOperating: reportData.cashFlowStatement.outflowOperating,
+                      outflowOther: reportData.cashFlowStatement.outflowOther,
+                      totalOutflow: reportData.cashFlowStatement.totalOutflow,
+                      netChange: reportData.cashFlowStatement.netChange,
+                      endingCash: reportData.cashFlowStatement.endingCash,
+                      transactions: reportData.cashFlowStatement.transactions.map(t => ({
+                        date: t.date,
+                        description: t.description,
+                        reference: t.reference,
+                        inflow: t.inflow,
+                        outflow: t.outflow,
+                        classification: t.classification,
+                        balance: t.balance
+                      }))
+                    };
+                    return await exportCashFlow(exportData, format, orientation);
+                  }}
+                />
+              )}
             </div>
           </div>
 
@@ -603,188 +732,337 @@ export default function Page() {
             </div>
           </div>
 
-          {/* Two-Chart Layout */}
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-            {/* Chart Left: Cash Flow Summary */}
-            <Card className="lg:col-span-8 border border-border bg-card shadow-sm rounded-xl overflow-hidden">
-              <CardHeader className="p-5 border-b border-border/60">
-                <CardTitle className="text-base font-bold text-foreground">Ringkasan Arus Kas</CardTitle>
-                <CardDescription className="text-xs mt-0.5">Grafik pendapatan dan pengeluaran harian</CardDescription>
+          {/* TAB 0: Ikhtisar Laba Rugi */}
+          <TabsContent value="ringkasan" className="space-y-6 mt-0 animate-in fade-in duration-200">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Revenue Accounts Table */}
+              <Card className="border border-border bg-card shadow-sm rounded-xl overflow-hidden">
+                <CardHeader className="p-5 border-b border-border/60">
+                  <CardTitle className="text-base font-bold text-foreground">Akun Pendapatan (Revenues)</CardTitle>
+                  <CardDescription className="text-xs mt-0.5">Saldo seluruh akun pendapatan pada periode terpilih</CardDescription>
+                </CardHeader>
+                <CardContent className="p-0">
+                  <table className="w-full text-xs">
+                    <thead>
+                      <tr className="bg-muted/40 border-b border-border/80 font-bold text-muted-foreground">
+                        <th className="px-5 py-3 text-left">Kode</th>
+                        <th className="px-5 py-3 text-left">Nama Akun</th>
+                        <th className="px-5 py-3 text-right">Saldo</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-border/60">
+                      {reportData?.incomeStatement.revenues && reportData.incomeStatement.revenues.length > 0 ? (
+                        reportData.incomeStatement.revenues.map((acc) => (
+                          <tr key={acc.code} className="hover:bg-muted/10 font-medium">
+                            <td className="px-5 py-3 text-primary font-semibold">{acc.code}</td>
+                            <td className="px-5 py-3 text-foreground font-semibold">{acc.name}</td>
+                            <td className="px-5 py-3 text-right text-emerald-600 font-bold">{formatIDR(acc.balance)}</td>
+                          </tr>
+                        ))
+                      ) : (
+                        <tr>
+                          <td colSpan={3} className="px-5 py-8 text-center text-muted-foreground font-semibold">
+                            Belum ada data pendapatan
+                          </td>
+                        </tr>
+                      )}
+                      <tr className="bg-muted/30 border-t border-border font-extrabold text-foreground">
+                        <td colSpan={2} className="px-5 py-3">Total Pendapatan</td>
+                        <td className="px-5 py-3 text-right text-emerald-600 dark:text-emerald-400">
+                          {formatIDR(reportData?.incomeStatement.totalRevenue || 0)}
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </CardContent>
+              </Card>
+
+              {/* Expense Accounts Table */}
+              <Card className="border border-border bg-card shadow-sm rounded-xl overflow-hidden">
+                <CardHeader className="p-5 border-b border-border/60">
+                  <CardTitle className="text-base font-bold text-foreground">Akun Beban & Biaya (Expenses)</CardTitle>
+                  <CardDescription className="text-xs mt-0.5">Saldo seluruh akun beban operasional dan HPP pada periode terpilih</CardDescription>
+                </CardHeader>
+                <CardContent className="p-0">
+                  <table className="w-full text-xs">
+                    <thead>
+                      <tr className="bg-muted/40 border-b border-border/80 font-bold text-muted-foreground">
+                        <th className="px-5 py-3 text-left">Kode</th>
+                        <th className="px-5 py-3 text-left">Nama Akun</th>
+                        <th className="px-5 py-3 text-right">Saldo</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-border/60">
+                      {reportData?.incomeStatement.expenses && reportData.incomeStatement.expenses.length > 0 ? (
+                        reportData.incomeStatement.expenses.map((acc) => (
+                          <tr key={acc.code} className="hover:bg-muted/10 font-medium">
+                            <td className="px-5 py-3 text-primary font-semibold">{acc.code}</td>
+                            <td className="px-5 py-3 text-foreground font-semibold">{acc.name}</td>
+                            <td className="px-5 py-3 text-right text-rose-600 font-bold">{formatIDR(acc.balance)}</td>
+                          </tr>
+                        ))
+                      ) : (
+                        <tr>
+                          <td colSpan={3} className="px-5 py-8 text-center text-muted-foreground font-semibold">
+                            Belum ada data beban
+                          </td>
+                        </tr>
+                      )}
+                      <tr className="bg-muted/30 border-t border-border font-extrabold text-foreground">
+                        <td colSpan={2} className="px-5 py-3">Total Beban</td>
+                        <td className="px-5 py-3 text-right text-rose-600 dark:text-rose-400">
+                          {formatIDR(reportData?.incomeStatement.totalExpense || 0)}
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Income Statement Summary Card */}
+            <Card className="border border-border bg-card shadow-sm rounded-xl overflow-hidden">
+              <CardHeader className="p-5 border-b border-border/60 flex flex-row items-center justify-between">
+                <div>
+                  <CardTitle className="text-base font-bold text-foreground">Ringkasan Laba Rugi Bersih (Net Income)</CardTitle>
+                  <CardDescription className="text-xs mt-0.5">Perhitungan Laba Bersih = Total Pendapatan - Total Beban</CardDescription>
+                </div>
+                <Badge
+                  className={`font-extrabold text-xs px-3 py-1 ${
+                    (reportData?.incomeStatement.netIncome || 0) >= 0
+                      ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300"
+                      : "bg-rose-100 text-rose-800 dark:bg-rose-950/40 dark:text-rose-300"
+                  }`}
+                >
+                  {(reportData?.incomeStatement.netIncome || 0) >= 0 ? "PROFIT (LABA)" : "LOSS (RUGI)"}
+                </Badge>
               </CardHeader>
               <CardContent className="p-6">
-                <div className="h-[300px] w-full">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={cashFlowChartData} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
-                      <CartesianGrid
-                        strokeDasharray="3 3"
-                        vertical={false}
-                        stroke="#e5e7eb"
-                      />
-                      <XAxis
-                        dataKey="date"
-                        stroke="#9ca3af"
-                        fontSize={11}
-                        tickLine={false}
-                      />
-                      <YAxis
-                        stroke="#9ca3af"
-                        fontSize={11}
-                        tickLine={false}
-                        tickFormatter={(value) => (value >= 1000000 ? `${value / 1000000}jt` : value >= 1000 ? `${value / 1000}rb` : value)}
-                      />
-                      <Tooltip
-                        formatter={(value) => [formatIDR(Number(value)), ""]}
-                        contentStyle={{ borderRadius: "8px", border: "1px solid #e5e7eb", fontSize: "12px" }}
-                      />
-                      <Legend
-                        verticalAlign="top"
-                        height={36}
-                        iconType="circle"
-                        iconSize={8}
-                        wrapperStyle={{ fontSize: "12px" }}
-                      />
-                      <Line
-                        type="monotone"
-                        dataKey="Pendapatan"
-                        stroke="#111827"
-                        strokeWidth={2.5}
-                        activeDot={{ r: 6 }}
-                        dot={false}
-                      />
-                      <Line
-                        type="monotone"
-                        dataKey="Pengeluaran"
-                        stroke="#9ca3af"
-                        strokeWidth={2}
-                        dot={false}
-                      />
-                    </LineChart>
-                  </ResponsiveContainer>
+                <div className="flex flex-col sm:flex-row items-center justify-around gap-6 text-center">
+                  <div>
+                    <p className="text-xs text-muted-foreground uppercase font-bold">Total Pendapatan</p>
+                    <p className="text-xl font-extrabold text-emerald-600 mt-1">{formatIDR(reportData?.incomeStatement.totalRevenue || 0)}</p>
+                  </div>
+                  <div className="text-2xl font-bold text-muted-foreground">-</div>
+                  <div>
+                    <p className="text-xs text-muted-foreground uppercase font-bold">Total Beban</p>
+                    <p className="text-xl font-extrabold text-rose-600 mt-1">{formatIDR(reportData?.incomeStatement.totalExpense || 0)}</p>
+                  </div>
+                  <div className="text-2xl font-bold text-muted-foreground">=</div>
+                  <div>
+                    <p className="text-xs text-muted-foreground uppercase font-bold">Laba / (Rugi) Bersih</p>
+                    <p className={`text-2xl font-extrabold mt-1 ${(reportData?.incomeStatement.netIncome || 0) >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"}`}>
+                      {formatIDR(reportData?.incomeStatement.netIncome || 0)}
+                    </p>
+                  </div>
                 </div>
               </CardContent>
             </Card>
+          </TabsContent>
 
-            {/* Chart Right: Revenue by Category */}
-            <Card className="lg:col-span-4 border border-border bg-card shadow-sm rounded-xl overflow-hidden">
-              <CardHeader className="p-5 border-b border-border/60">
-                <CardTitle className="text-base font-bold text-foreground">Pendapatan per Kategori</CardTitle>
-                <CardDescription className="text-xs mt-0.5">Rincian pendapatan berdasarkan jenis layanan</CardDescription>
-              </CardHeader>
-              <CardContent className="p-6 flex flex-col items-center justify-center">
-                {categoryTotal > 0 ? (
-                  <div className="w-full flex flex-col items-center gap-6">
-                    <div className="relative h-[180px] w-[180px] flex items-center justify-center">
-                      <ResponsiveContainer width="100%" height="100%">
-                        <PieChart>
-                          <Pie
-                            data={donutChartData}
-                            cx="50%"
-                            cy="50%"
-                            innerRadius={60}
-                            outerRadius={80}
-                            paddingAngle={3}
-                            dataKey="value"
-                          >
-                            {donutChartData.map((entry, index) => (
-                              <Cell key={`cell-${index}`} fill={entry.color} />
-                            ))}
-                          </Pie>
-                          <Tooltip formatter={(value) => formatIDR(Number(value))} />
-                        </PieChart>
-                      </ResponsiveContainer>
-                      <div className="absolute text-center">
-                        <p className="text-[10px] uppercase font-semibold text-muted-foreground">Total</p>
-                        <p className="text-sm font-extrabold text-foreground mt-0.5">{formatIDR(categoryTotal)}</p>
+          {/* TAB 1: Laporan Pendapatan (Pemasukan) */}
+          <TabsContent value="pemasukan" className="space-y-6 mt-0 animate-in fade-in duration-200">
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+              {/* Chart Left: Revenue by Category */}
+              <Card className="lg:col-span-5 border border-border bg-card shadow-sm rounded-xl overflow-hidden">
+                <CardHeader className="p-5 border-b border-border/60">
+                  <CardTitle className="text-base font-bold text-foreground">Pendapatan per Kategori</CardTitle>
+                  <CardDescription className="text-xs mt-0.5">Rincian pendapatan berdasarkan jenis layanan</CardDescription>
+                </CardHeader>
+                <CardContent className="p-6 flex flex-col items-center justify-center">
+                  {categoryTotal > 0 ? (
+                    <div className="w-full flex flex-col items-center gap-6">
+                      <div className="relative h-[180px] w-[180px] flex items-center justify-center">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <PieChart>
+                            <Pie
+                              data={donutChartData}
+                              cx="50%"
+                              cy="50%"
+                              innerRadius={60}
+                              outerRadius={80}
+                              paddingAngle={3}
+                              dataKey="value"
+                            >
+                              {donutChartData.map((entry, index) => (
+                                <Cell key={`cell-${index}`} fill={entry.color} />
+                              ))}
+                            </Pie>
+                            <Tooltip formatter={(value) => formatIDR(Number(value))} />
+                          </PieChart>
+                        </ResponsiveContainer>
+                        <div className="absolute text-center">
+                          <p className="text-[10px] uppercase font-semibold text-muted-foreground">Total</p>
+                          <p className="text-sm font-extrabold text-foreground mt-0.5">{formatIDR(categoryTotal)}</p>
+                        </div>
+                      </div>
+
+                      {/* Legend Lists */}
+                      <div className="w-full space-y-2.5 text-xs">
+                        {donutChartData.map((entry, idx) => (
+                          <div key={idx} className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <div className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: entry.color }} />
+                              <span className="font-semibold text-muted-foreground">{entry.name}</span>
+                            </div>
+                            <span className="font-bold text-foreground">{formatIDR(entry.value)} ({entry.percent}%)</span>
+                          </div>
+                        ))}
                       </div>
                     </div>
-
-                    {/* Legend Lists */}
-                    <div className="w-full space-y-2.5 text-xs">
-                      {donutChartData.map((entry, idx) => (
-                        <div key={idx} className="flex items-center justify-between">
-                          <div className="flex items-center gap-2">
-                            <div className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: entry.color }} />
-                            <span className="font-semibold text-muted-foreground">{entry.name}</span>
-                          </div>
-                          <span className="font-bold text-foreground">{formatIDR(entry.value)} ({entry.percent}%)</span>
-                        </div>
-                      ))}
+                  ) : (
+                    <div className="py-20 text-center text-muted-foreground text-xs font-semibold">
+                      Belum ada data pendapatan
                     </div>
-                  </div>
-                ) : (
-                  <div className="py-20 text-center text-muted-foreground text-xs font-semibold">
-                    Belum ada data pendapatan
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </div>
+                  )}
+                </CardContent>
+              </Card>
 
-          {/* Revenue & Expense Details Tables */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            
-            {/* Table Left: Revenue Details */}
+              {/* Table Right: Revenue Summary per Category */}
+              <Card className="lg:col-span-7 border border-border bg-card shadow-sm rounded-xl overflow-hidden">
+                <CardHeader className="p-5 border-b border-border/60 flex flex-row items-center justify-between">
+                  <div>
+                    <CardTitle className="text-base font-bold text-foreground">Rincian Pendapatan per Kategori</CardTitle>
+                    <CardDescription className="text-xs mt-0.5"> breakdown per-kategori jasa servis dan penjualan sparepart </CardDescription>
+                  </div>
+                  <Button
+                    variant="link"
+                    className="text-xs font-bold text-primary hover:cursor-pointer p-0 h-auto"
+                    asChild
+                  >
+                    <Link href="/admin/transactions">Lihat Semua</Link>
+                  </Button>
+                </CardHeader>
+                <CardContent className="p-0">
+                  <table className="w-full text-xs">
+                    <thead>
+                      <tr className="bg-muted/40 border-b border-border/80 font-bold text-muted-foreground">
+                        <th className="px-5 py-3 text-left">Jenis Pendapatan</th>
+                        <th className="px-5 py-3 text-center">Jumlah Transaksi</th>
+                        <th className="px-5 py-3 text-right">Total Pendapatan</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-border/60">
+                      <tr className="hover:bg-muted/10 font-semibold">
+                        <td className="px-5 py-3 flex items-center gap-2">
+                          <Wrench className="h-4 w-4 text-muted-foreground" /> Servis
+                        </td>
+                        <td className="px-5 py-3 text-center text-muted-foreground">{serviceTxCount} transaksi</td>
+                        <td className="px-5 py-3 text-right text-foreground">{formatIDR(serviceRevenue)}</td>
+                      </tr>
+                      <tr className="hover:bg-muted/10 font-semibold">
+                        <td className="px-5 py-3 flex items-center gap-2">
+                          <Package className="h-4 w-4 text-muted-foreground" /> Spare Part
+                        </td>
+                        <td className="px-5 py-3 text-center text-muted-foreground">{partTxCount} transaksi</td>
+                        <td className="px-5 py-3 text-right text-foreground">{formatIDR(partRevenue)}</td>
+                      </tr>
+                      <tr className="hover:bg-muted/10 font-semibold">
+                        <td className="px-5 py-3 flex items-center gap-2">
+                          <Layers className="h-4 w-4 text-muted-foreground" /> Lain-lain
+                        </td>
+                        <td className="px-5 py-3 text-center text-muted-foreground">{otherTxCount} transaksi</td>
+                        <td className="px-5 py-3 text-right text-foreground">{formatIDR(otherRevenue)}</td>
+                      </tr>
+                      <tr className="bg-muted/30 border-t border-border font-extrabold text-foreground">
+                        <td className="px-5 py-3">Total</td>
+                        <td className="px-5 py-3 text-center">{filteredOrders.length} transaksi</td>
+                        <td className="px-5 py-3 text-right text-primary">{formatIDR(totalRevenue)}</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Income Transactions Table */}
             <Card className="border border-border bg-card shadow-sm rounded-xl overflow-hidden">
-              <CardHeader className="p-5 border-b border-border/60 flex flex-row items-center justify-between">
-                <div>
-                  <CardTitle className="text-base font-bold text-foreground">Rincian Pendapatan</CardTitle>
-                  <CardDescription className="text-xs mt-0.5"> breakdowns per-kategori jasa dan penjualan </CardDescription>
-                </div>
-                <Button
-                  variant="link"
-                  className="text-xs font-bold text-primary hover:cursor-pointer p-0 h-auto"
-                  asChild
-                >
-                  <Link href="/admin/transactions">Lihat Semua</Link>
-                </Button>
+              <CardHeader className="p-5 border-b border-border/60">
+                <CardTitle className="text-base font-bold text-foreground">Daftar Transaksi Pemasukan (Pendapatan)</CardTitle>
+                <CardDescription className="text-xs mt-0.5">Daftar semua pesanan/servis masuk pada periode terpilih</CardDescription>
               </CardHeader>
               <CardContent className="p-0">
-                <table className="w-full text-xs">
-                  <thead>
-                    <tr className="bg-muted/40 border-b border-border/80 font-bold text-muted-foreground">
-                      <th className="px-5 py-3 text-left">Jenis Pendapatan</th>
-                      <th className="px-5 py-3 text-center">Jumlah Transaksi</th>
-                      <th className="px-5 py-3 text-right">Total Pendapatan</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-border/60">
-                    <tr className="hover:bg-muted/10 font-semibold">
-                      <td className="px-5 py-3 flex items-center gap-2">
-                        <Wrench className="h-4 w-4 text-muted-foreground" /> Servis
-                      </td>
-                      <td className="px-5 py-3 text-center text-muted-foreground">{serviceTxCount} transaksi</td>
-                      <td className="px-5 py-3 text-right text-foreground">{formatIDR(serviceRevenue)}</td>
-                    </tr>
-                    <tr className="hover:bg-muted/10 font-semibold">
-                      <td className="px-5 py-3 flex items-center gap-2">
-                        <Package className="h-4 w-4 text-muted-foreground" /> Spare Part
-                      </td>
-                      <td className="px-5 py-3 text-center text-muted-foreground">{partTxCount} transaksi</td>
-                      <td className="px-5 py-3 text-right text-foreground">{formatIDR(partRevenue)}</td>
-                    </tr>
-                    <tr className="hover:bg-muted/10 font-semibold">
-                      <td className="px-5 py-3 flex items-center gap-2">
-                        <Layers className="h-4 w-4 text-muted-foreground" /> Lain-lain
-                      </td>
-                      <td className="px-5 py-3 text-center text-muted-foreground">{otherTxCount} transaksi</td>
-                      <td className="px-5 py-3 text-right text-foreground">{formatIDR(otherRevenue)}</td>
-                    </tr>
-                    <tr className="bg-muted/30 border-t border-border font-extrabold text-foreground">
-                      <td className="px-5 py-3">Total</td>
-                      <td className="px-5 py-3 text-center">{filteredOrders.length} transaksi</td>
-                      <td className="px-5 py-3 text-right text-primary">{formatIDR(totalRevenue)}</td>
-                    </tr>
-                  </tbody>
-                </table>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-xs">
+                    <thead>
+                      <tr className="bg-muted/40 border-b border-border/80 font-bold text-muted-foreground">
+                        <th className="px-5 py-3 text-left">Tanggal</th>
+                        <th className="px-5 py-3 text-left">ID Order</th>
+                        <th className="px-5 py-3 text-left">Pelanggan</th>
+                        <th className="px-5 py-3 text-left">Kendaraan</th>
+                        <th className="px-5 py-3 text-center">Metode Bayar</th>
+                        <th className="px-5 py-3 text-center">Status Bayar</th>
+                        <th className="px-5 py-3 text-right">Total Transaksi</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-border/60">
+                      {filteredOrders.length > 0 ? (
+                        filteredOrders.map((o) => (
+                          <tr key={o.id} className="hover:bg-muted/10 font-medium">
+                            <td className="px-5 py-3 text-muted-foreground whitespace-nowrap">
+                              {formatIndonesianDate(o.createdAt)}
+                            </td>
+                            <td className="px-5 py-3 font-semibold text-primary">
+                              <Link href={`/admin/transactions?search=${o.id}`}>
+                                {o.id.slice(-8).toUpperCase()}
+                              </Link>
+                            </td>
+                            <td className="px-5 py-3 text-foreground font-semibold">
+                              {o.custName}
+                            </td>
+                            <td className="px-5 py-3 text-muted-foreground">
+                              {o.vehicle} {o.plateNumber ? `(${o.plateNumber})` : ""}
+                            </td>
+                            <td className="px-5 py-3 text-center">
+                              <Badge variant="outline" className="bg-muted font-bold text-[10px] py-0.5 px-2">
+                                {o.paymentMethod}
+                              </Badge>
+                            </td>
+                            <td className="px-5 py-3 text-center">
+                              <Badge
+                                className={`font-bold text-[10px] py-0.5 px-2 ${
+                                  o.paymentStatus === "PAID"
+                                    ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/20 dark:text-emerald-400 border border-emerald-200/50"
+                                    : "bg-amber-50 text-amber-700 dark:bg-amber-950/20 dark:text-amber-400 border border-amber-200/50"
+                                }`}
+                              >
+                                {o.paymentStatus === "PAID" ? "Lunas" : "Sebagian / Belum"}
+                              </Badge>
+                            </td>
+                            <td className="px-5 py-3 text-right text-foreground font-bold">
+                              {formatIDR(o.totalPaid)}
+                            </td>
+                          </tr>
+                        ))
+                      ) : (
+                        <tr>
+                          <td colSpan={7} className="px-5 py-10 text-center text-muted-foreground font-semibold">
+                            Tidak ada transaksi pemasukan pada periode ini
+                          </td>
+                        </tr>
+                      )}
+                      <tr className="bg-muted/30 border-t border-border font-extrabold text-foreground">
+                        <td colSpan={5} className="px-5 py-3">Total Pemasukan Kas</td>
+                        <td className="px-5 py-3 text-center text-muted-foreground">{filteredOrders.length} transaksi</td>
+                        <td className="px-5 py-3 text-right text-emerald-600 dark:text-emerald-400">
+                          {formatIDR(totalRevenue)}
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
               </CardContent>
             </Card>
+          </TabsContent>
 
-            {/* Table Right: Expense Details */}
+          {/* TAB 2: Laporan Pengeluaran */}
+          <TabsContent value="pengeluaran" className="space-y-6 mt-0 animate-in fade-in duration-200">
+            {/* Table Top: Expense Category Breakdown */}
             <Card className="border border-border bg-card shadow-sm rounded-xl overflow-hidden">
               <CardHeader className="p-5 border-b border-border/60 flex flex-row items-center justify-between">
                 <div>
-                  <CardTitle className="text-base font-bold text-foreground">Rincian Pengeluaran</CardTitle>
-                  <CardDescription className="text-xs mt-0.5"> breakdown pengeluaran operasional dan payroll </CardDescription>
+                  <CardTitle className="text-base font-bold text-foreground">Rincian Pengeluaran per Kategori</CardTitle>
+                  <CardDescription className="text-xs mt-0.5"> breakdown pengeluaran operasional, pembelian sparepart, dan gaji karyawan </CardDescription>
                 </div>
                 <Button
                   variant="link"
@@ -844,7 +1122,302 @@ export default function Page() {
               </CardContent>
             </Card>
 
-          </div>
+            {/* Expense Detailed Table */}
+            <Card className="border border-border bg-card shadow-sm rounded-xl overflow-hidden">
+              <CardHeader className="p-5 border-b border-border/60">
+                <CardTitle className="text-base font-bold text-foreground">Daftar Transaksi Pengeluaran</CardTitle>
+                <CardDescription className="text-xs mt-0.5">Daftar semua pengeluaran operasional, payroll, dan persediaan pada periode terpilih</CardDescription>
+              </CardHeader>
+              <CardContent className="p-0">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-xs">
+                    <thead>
+                      <tr className="bg-muted/40 border-b border-border/80 font-bold text-muted-foreground">
+                        <th className="px-5 py-3 text-left">Tanggal</th>
+                        <th className="px-5 py-3 text-left">Deskripsi</th>
+                        <th className="px-5 py-3 text-left">Kategori</th>
+                        <th className="px-5 py-3 text-left">Sumber Dana</th>
+                        <th className="px-5 py-3 text-right">Jumlah</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-border/60">
+                      {filteredExpenses.length > 0 ? (
+                        filteredExpenses.map((e) => (
+                          <tr key={e.id} className="hover:bg-muted/10 font-medium">
+                            <td className="px-5 py-3 text-muted-foreground whitespace-nowrap">
+                              {formatIndonesianDate(e.date)}
+                            </td>
+                            <td className="px-5 py-3 text-foreground font-semibold">
+                              {e.description}
+                            </td>
+                            <td className="px-5 py-3">
+                              <Badge variant="outline" className="font-bold text-[10px] py-0.5 px-2">
+                                {e.category}
+                              </Badge>
+                            </td>
+                            <td className="px-5 py-3 text-muted-foreground">
+                              {e.source}
+                            </td>
+                            <td className="px-5 py-3 text-right text-rose-600 font-bold">
+                              {formatIDR(e.amount)}
+                            </td>
+                          </tr>
+                        ))
+                      ) : (
+                        <tr>
+                          <td colSpan={5} className="px-5 py-10 text-center text-muted-foreground font-semibold">
+                            Tidak ada transaksi pengeluaran pada periode ini
+                          </td>
+                        </tr>
+                      )}
+                      <tr className="bg-muted/30 border-t border-border font-extrabold text-foreground">
+                        <td colSpan={3} className="px-5 py-3">Total Pengeluaran Kas</td>
+                        <td className="px-5 py-3 text-center text-muted-foreground">{filteredExpenses.length} transaksi</td>
+                        <td className="px-5 py-3 text-right text-rose-600 dark:text-rose-400">
+                          {formatIDR(totalExpense)}
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* TAB 3: Laporan Kas Arus */}
+          <TabsContent value="arus-kas" className="mt-0 space-y-6 animate-in fade-in duration-200">
+            {/* Cash Flow Summary Cards */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              <Card className="border border-border bg-card/60 shadow-sm rounded-xl">
+                <CardContent className="p-5">
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Saldo Awal Kas & Bank</p>
+                  <h3 className="text-xl font-extrabold text-foreground mt-1">
+                    {formatIDR(reportData?.cashFlowStatement?.beginningCash || 0)}
+                  </h3>
+                </CardContent>
+              </Card>
+              <Card className="border border-border bg-card/60 shadow-sm rounded-xl">
+                <CardContent className="p-5">
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-emerald-600">Total Kas Masuk</p>
+                  <h3 className="text-xl font-extrabold text-emerald-600 mt-1">
+                    {formatIDR(reportData?.cashFlowStatement?.totalInflow || 0)}
+                  </h3>
+                </CardContent>
+              </Card>
+              <Card className="border border-border bg-card/60 shadow-sm rounded-xl">
+                <CardContent className="p-5">
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-rose-600">Total Kas Keluar</p>
+                  <h3 className="text-xl font-extrabold text-rose-600 mt-1">
+                    {formatIDR(reportData?.cashFlowStatement?.totalOutflow || 0)}
+                  </h3>
+                </CardContent>
+              </Card>
+              <Card className="border border-border bg-card/60 shadow-sm rounded-xl">
+                <CardContent className="p-5">
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-blue-600">Saldo Akhir Kas & Bank</p>
+                  <h3 className="text-xl font-extrabold text-blue-600 mt-1">
+                    {formatIDR(reportData?.cashFlowStatement?.endingCash || 0)}
+                  </h3>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Line Chart & Cash Flow Statement Grid */}
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+              {/* Left: Line Chart */}
+              <Card className="lg:col-span-7 border border-border bg-card shadow-sm rounded-xl overflow-hidden">
+                <CardHeader className="p-5 border-b border-border/60">
+                  <CardTitle className="text-base font-bold text-foreground">Grafik Arus Kas Harian</CardTitle>
+                  <CardDescription className="text-xs mt-0.5">Perbandingan grafik pendapatan dan pengeluaran harian</CardDescription>
+                </CardHeader>
+                <CardContent className="p-6">
+                  <div className="h-[300px] w-full">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <LineChart data={cashFlowChartData} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
+                        <CartesianGrid
+                          strokeDasharray="3 3"
+                          vertical={false}
+                          stroke="#e5e7eb"
+                        />
+                        <XAxis
+                          dataKey="date"
+                          stroke="#9ca3af"
+                          fontSize={11}
+                          tickLine={false}
+                        />
+                        <YAxis
+                          stroke="#9ca3af"
+                          fontSize={11}
+                          tickLine={false}
+                          tickFormatter={(value) => (value >= 1000000 ? `${value / 1000000}jt` : value >= 1000 ? `${value / 1000}rb` : value)}
+                        />
+                        <Tooltip formatter={(value) => [formatIDR(Number(value)), ""]} contentStyle={{ borderRadius: "8px", border: "1px solid #e5e7eb", fontSize: "12px" }} />
+                        <Legend
+                          verticalAlign="top"
+                          height={36}
+                          iconType="circle"
+                          iconSize={8}
+                          wrapperStyle={{ fontSize: "12px" }}
+                        />
+                        <Line
+                          type="monotone"
+                          dataKey="Pendapatan"
+                          stroke="#111827"
+                          strokeWidth={2.5}
+                          activeDot={{ r: 6 }}
+                          dot={false}
+                        />
+                        <Line
+                          type="monotone"
+                          dataKey="Pengeluaran"
+                          stroke="#9ca3af"
+                          strokeWidth={2}
+                          dot={false}
+                        />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Right: Statement of Cash Flows (Direct Method) */}
+              <Card className="lg:col-span-5 border border-border bg-card shadow-sm rounded-xl overflow-hidden">
+                <CardHeader className="p-5 border-b border-border/60">
+                  <CardTitle className="text-base font-bold text-foreground">Laporan Arus Kas (Metode Langsung)</CardTitle>
+                  <CardDescription className="text-xs mt-0.5">Klasifikasi arus kas masuk dan keluar dari aktivitas operasional</CardDescription>
+                </CardHeader>
+                <CardContent className="p-5 space-y-4 text-xs font-semibold">
+                  <div className="flex justify-between border-b pb-2 text-foreground font-bold">
+                    <span>SALDO AWAL KAS & BANK</span>
+                    <span>{formatIDR(reportData?.cashFlowStatement?.beginningCash || 0)}</span>
+                  </div>
+
+                  <div className="space-y-2">
+                    <p className="font-bold text-muted-foreground uppercase text-[10px] tracking-wider">Arus Kas Masuk (Inflow):</p>
+                    <div className="flex justify-between pl-3 text-muted-foreground">
+                      <span>Penerimaan Kas dari Pelanggan</span>
+                      <span className="text-foreground">{formatIDR(reportData?.cashFlowStatement?.inflowRevenue || 0)}</span>
+                    </div>
+                    <div className="flex justify-between pl-3 text-muted-foreground border-b pb-1">
+                      <span>Penerimaan Kas Lainnya</span>
+                      <span className="text-foreground">{formatIDR(reportData?.cashFlowStatement?.inflowOther || 0)}</span>
+                    </div>
+                    <div className="flex justify-between pl-1 font-bold text-emerald-600">
+                      <span>Total Arus Kas Masuk</span>
+                      <span>{formatIDR(reportData?.cashFlowStatement?.totalInflow || 0)}</span>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <p className="font-bold text-muted-foreground uppercase text-[10px] tracking-wider">Arus Kas Keluar (Outflow):</p>
+                    <div className="flex justify-between pl-3 text-muted-foreground">
+                      <span>Pembayaran Pembelian Spare Part</span>
+                      <span className="text-foreground">({formatIDR(reportData?.cashFlowStatement?.outflowParts || 0)})</span>
+                    </div>
+                    <div className="flex justify-between pl-3 text-muted-foreground">
+                      <span>Pembayaran Operasional & Beban</span>
+                      <span className="text-foreground">({formatIDR(reportData?.cashFlowStatement?.outflowOperating || 0)})</span>
+                    </div>
+                    <div className="flex justify-between pl-3 text-muted-foreground border-b pb-1">
+                      <span>Pengeluaran Kas Lainnya</span>
+                      <span className="text-foreground">({formatIDR(reportData?.cashFlowStatement?.outflowOther || 0)})</span>
+                    </div>
+                    <div className="flex justify-between pl-1 font-bold text-rose-600">
+                      <span>Total Arus Kas Keluar</span>
+                      <span>({formatIDR(reportData?.cashFlowStatement?.totalOutflow || 0)})</span>
+                    </div>
+                  </div>
+
+                  <div className="pt-2 border-t flex justify-between text-foreground font-bold">
+                    <span>Kenaikan / (Penurunan) Kas Bersih</span>
+                    <span className={reportData?.cashFlowStatement?.netChange && reportData.cashFlowStatement.netChange >= 0 ? "text-emerald-600" : "text-rose-600"}>
+                      {formatIDR(reportData?.cashFlowStatement?.netChange || 0)}
+                    </span>
+                  </div>
+
+                  <div className="flex justify-between pt-3 border-t-2 border-double border-foreground text-foreground font-extrabold text-sm">
+                    <span>SALDO AKHIR KAS & BANK</span>
+                    <span className="text-primary">{formatIDR(reportData?.cashFlowStatement?.endingCash || 0)}</span>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Detailed Ledger of Cash Transactions (Mutasi Kas) */}
+            <Card className="border border-border bg-card shadow-sm rounded-xl overflow-hidden">
+              <CardHeader className="p-5 border-b border-border/60">
+                <CardTitle className="text-base font-bold text-foreground">Buku Pembantu Mutasi Kas</CardTitle>
+                <CardDescription className="text-xs mt-0.5">Catatan historis penerimaan dan pengeluaran kas secara kronologis</CardDescription>
+              </CardHeader>
+              <CardContent className="p-0">
+                <div className="max-h-[400px] overflow-y-auto">
+                  <table className="w-full text-xs">
+                    <thead className="sticky top-0 bg-background border-b border-border z-10 font-bold text-muted-foreground">
+                      <tr className="bg-muted/40">
+                        <th className="px-4 py-2.5 text-left">Tanggal</th>
+                        <th className="px-4 py-2.5 text-left">Deskripsi</th>
+                        <th className="px-4 py-2.5 text-center">Kategori</th>
+                        <th className="px-4 py-2.5 text-right">Masuk</th>
+                        <th className="px-4 py-2.5 text-right">Keluar</th>
+                        <th className="px-4 py-2.5 text-right">Saldo</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-border/60">
+                      {reportData?.cashFlowStatement?.transactions && reportData.cashFlowStatement.transactions.length > 0 ? (
+                        reportData.cashFlowStatement.transactions.map((t) => (
+                          <tr key={t.id} className="hover:bg-muted/10 font-medium">
+                            <td className="px-4 py-2 text-muted-foreground whitespace-nowrap">
+                              {formatIndonesianDate(t.date)}
+                            </td>
+                            <td className="px-4 py-2 text-foreground font-semibold">
+                              {t.description}
+                            </td>
+                            <td className="px-4 py-2 text-center">
+                              <Badge
+                                variant="outline"
+                                className={`font-bold text-[9px] py-0 px-1.5 ${
+                                  t.classification === "REVENUE"
+                                    ? "border-emerald-200 text-emerald-700 bg-emerald-50 dark:bg-emerald-950/20 dark:text-emerald-400"
+                                    : t.classification === "PARTS"
+                                    ? "border-amber-200 text-amber-700 bg-amber-50 dark:bg-amber-950/20 dark:text-amber-400"
+                                    : t.classification === "OPERATING"
+                                    ? "border-rose-200 text-rose-700 bg-rose-50 dark:bg-rose-950/20 dark:text-rose-400"
+                                    : "border-gray-200 text-gray-700 bg-gray-50 dark:bg-gray-900 dark:text-gray-400"
+                                }`}
+                              >
+                                {t.classification === "REVENUE"
+                                  ? "Pendapatan"
+                                  : t.classification === "PARTS"
+                                  ? "Spare Part"
+                                  : t.classification === "OPERATING"
+                                  ? "Operasional"
+                                  : "Lain-lain"}
+                              </Badge>
+                            </td>
+                            <td className="px-4 py-2 text-right text-emerald-600 font-bold">
+                              {t.inflow > 0 ? formatIDR(t.inflow) : "-"}
+                            </td>
+                            <td className="px-4 py-2 text-right text-rose-600 font-bold">
+                              {t.outflow > 0 ? formatIDR(t.outflow) : "-"}
+                            </td>
+                            <td className="px-4 py-2 text-right text-foreground font-bold">
+                              {formatIDR(t.balance)}
+                            </td>
+                          </tr>
+                        ))
+                      ) : (
+                        <tr>
+                          <td colSpan={6} className="px-4 py-8 text-center text-muted-foreground font-semibold">
+                            Belum ada riwayat mutasi kas dalam periode ini
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
 
           {/* BANK ACCOUNTS MANAGER */}
           <div className="pt-2">
@@ -854,8 +1427,9 @@ export default function Page() {
           <Toaster />
         </div>
       </div>
-    </RoleGuard>
-  );
+    </Tabs>
+  </RoleGuard>
+);
 }
 
 // Helper function for Indonesian date formatting
@@ -877,5 +1451,20 @@ function formatIndonesianDate(dateString?: string | Date | null): string {
   const month = months[date.getMonth()];
   const year = date.getFullYear();
   return `${day} ${month} ${year}`;
+}
+
+// Helper function to format Date object to YYYY-MM-DD in local time
+function toLocalDateString(dateInput: string | Date | null | undefined): string {
+  if (!dateInput) {
+    return "";
+  }
+  const d = typeof dateInput === "string" ? new Date(dateInput) : dateInput;
+  if (isNaN(d.getTime())) {
+    return "";
+  }
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
 }
 

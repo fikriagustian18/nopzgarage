@@ -144,3 +144,45 @@ export interface InvoiceExport {
   paymentStatus?: string;
   notes?: string;
 }
+
+// Cash Flow Types
+export interface CashFlowTransaction {
+  date: string;
+  description: string;
+  reference: string | null;
+  inflow: number;
+  outflow: number;
+  classification: string;
+  balance: number;
+}
+
+export interface CashFlowData {
+  period: string;
+  beginningCash: number;
+  inflowRevenue: number;
+  inflowOther: number;
+  totalInflow: number;
+  outflowParts: number;
+  outflowOperating: number;
+  outflowOther: number;
+  totalOutflow: number;
+  netChange: number;
+  endingCash: number;
+  transactions: CashFlowTransaction[];
+}
+
+// Detailed Expense Export Types
+export interface ExpenseExportItem {
+  date: string;
+  description: string;
+  category: string;
+  source: string;
+  amount: number;
+}
+
+export interface ExpenseExportData {
+  period: string;
+  expenses: ExpenseExportItem[];
+  totalExpense: number;
+}
+

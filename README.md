@@ -75,9 +75,14 @@ Setiap expense yang dicatat akan otomatis menghasilkan JournalEntry dengan posti
 
 ### 9. Laporan Keuangan (`/admin/reports`)
 
-Modul Laporan Keuangan menyajikan insight keuangan komprehensif untuk pengambilan keputusan bisnis, menampilkan summary arus kas dengan card untuk total pemasukan, total pengeluaran, dan profit/loss, serta manajemen rekening bank.
+Modul Laporan Keuangan menyajikan insight keuangan komprehensif berbasis periode (rentang tanggal) untuk mendukung pengawasan dan pengambilan keputusan bisnis pemilik (Owner).
 
-Halaman Laporan Keuangan menyajikan laporan detail termasuk: (1) Laporan Laba Rugi yang menampilkan pendapatan, beban, dan net income; (2) Neraca Saldo yang menunjukkan posisi saldo setiap akun; (3) Laporan Arus Kas yang meringkas cash in dan cash out. Setiap laporan dapat difilter berdasarkan rentang tanggal dan dapat di-export untuk keperluan arsip.
+Halaman ini didesain dengan navigasi tab terpisah di bagian header di samping judul:
+- **Laporan Pendapatan**: Menyajikan grafik donat persentase pendapatan per kategori (jasa servis dan penjualan sparepart), tabel rincian per kategori, serta daftar transaksi pesanan/pemasukan terperinci.
+- **Laporan Pengeluaran**: Menyajikan tabel rincian klasifikasi pengeluaran (pembelian sparepart, operasional, gaji karyawan/payroll) serta daftar transaksi pengeluaran rinci.
+- **Laporan Kas Arus**: Menyajikan kartu metrik saldo (saldo awal, kas masuk, kas keluar, saldo akhir), grafik garis arus kas harian, Laporan Arus Kas Metode Langsung (Direct Method), serta Buku Pembantu Mutasi Kas (jurnal mutasi kas & bank kronologis).
+
+Setiap jenis laporan dilengkapi dengan tombol ekspor dinamis ke format PDF dan Excel, serta fitur **Cetak PDF** langsung (direct printing via hidden iframe) tanpa menyertakan elemen layout navigasi web.
 
 ### 10. Settings & Konfigurasi (`/admin/settings`)
 

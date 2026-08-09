@@ -18,27 +18,42 @@ function toNumber(val: unknown): number {
 
 // ==================== Get Financial Reports ====================
 /**
- * Menghasilkan Laporan Keuangan lengkap (Neraca Saldo, Laba Rugi, Neraca).
+ * Generates complete Financial Reports (Trial Balance, Income Statement, Balance Sheet, Cash Flow).
  * 
- * Flow perhitungan:
- * 1. Ambil semua akun COA dan item transaksinya.
- * 2. Hitung saldo per akun berdasarkan Debit - Kredit (atau sebaliknya tergantung tipe akun).
- * 3. Pisahkan akun berdasarkan tipe untuk Laba Rugi (Revenue, Expense) dan Neraca (Limitasi: Asset, Liability, Equity).
- * 4. Hitung Laba/Rugi Bersih (Net Income).
- * 5. Update Total Equity dengan Net Income.
+ * Calculation flow:
+ * 1. Fetch all COA accounts and their journal transaction items.
+ * 2. Calculate balance per account based on Debit - Credit (or vice versa depending on account type).
+ * 3. Categorize accounts by type for Income Statement (Revenue, Expense) and Balance Sheet (Asset, Liability, Equity).
+ * 4. Calculate Net Income.
+ * 5. Update Total Equity with Net Income.
  * 
- * @returns {Object} Data laporan keuangan lengkap.
+ * @returns {Object} Complete financial reports data.
  */
-export async function getFinancialReports() {
+export async function getFinancialReports(startDate?: string, endDate?: string) {
   try {
     const session = await auth();
     if (!session || session.user?.role !== 'OWNER') {
       return { success: false, error: 'Akses ditolak: Hanya Owner yang dapat melihat laporan keuangan.' };
     }
-    // Ambil semua akun beserta item transaksinya
-    const accounts = await prisma.account.findMany({
+
+    const start = startDate ? new Date(`${startDate}T00:00:00Z`) : undefined;
+    const end = endDate ? new Date(`${endDate}T23:59:59.999Z`) : undefined;
+
+    // 1. Fetch Income Statement accounts with date range filter (period)
+    const incomeStatementAccounts = await prisma.account.findMany({
+      where: {
+        type: { in: ['REVENUE', 'EXPENSE', 'COST_OF_GOODS_SOLD'] }
+      },
       include: {
         journalItems: {
+          where: start || end ? {
+            journalEntry: {
+              date: {
+                gte: start,
+                lte: end,
+              }
+            }
+          } : undefined,
           select: {
             debit: true,
             credit: true,
@@ -48,14 +63,35 @@ export async function getFinancialReports() {
       orderBy: { code: 'asc' },
     });
 
-    // Hitung saldo per akun
-    const accountBalances = accounts.map((account: any) => {
+    // 2. Fetch Balance Sheet accounts cumulatively up to end date (endDate)
+    const balanceSheetAccounts = await prisma.account.findMany({
+      where: {
+        type: { in: ['ASSET', 'LIABILITY', 'EQUITY'] }
+      },
+      include: {
+        journalItems: {
+          where: end ? {
+            journalEntry: {
+              date: {
+                lte: end,
+              }
+            }
+          } : undefined,
+          select: {
+            debit: true,
+            credit: true,
+          },
+        },
+      },
+      orderBy: { code: 'asc' },
+    });
+
+    // Combine all accounts and calculate their balances
+    const allAccounts = [...balanceSheetAccounts, ...incomeStatementAccounts];
+    const accountBalances = allAccounts.map((account: any) => {
       const totalDebit = account.journalItems.reduce((sum: number, item: any) => sum + toNumber(item.debit), 0);
       const totalCredit = account.journalItems.reduce((sum: number, item: any) => sum + toNumber(item.credit), 0);
       
-      // Saldo normal
-      // Asset & Expense: Debit Balance
-      // Liability, Equity, Revenue: Credit Balance
       let balance = 0;
       if (['ASSET', 'EXPENSE', 'COST_OF_GOODS_SOLD'].includes(account.type)) {
         balance = totalDebit - totalCredit;
@@ -63,7 +99,6 @@ export async function getFinancialReports() {
         balance = totalCredit - totalDebit;
       }
 
-      // Destructure to separate journalItems from the rest of the account properties
       const { journalItems, ...accountWithoutJournalItems } = account;
 
       return {
@@ -93,8 +128,131 @@ export async function getFinancialReports() {
     const totalLiability = liabilities.reduce((sum: number, a: any) => sum + a.balance, 0);
     let totalEquity = equity.reduce((sum: number, a: any) => sum + a.balance, 0);
 
-    // Tambahkan Laba Berjalan (Net Income) ke Equity
+    // Add Net Income to Equity
     totalEquity += netIncome;
+
+    // ==================== Arus Kas (Cash Flow Statement) ====================
+    let beginningCash = 0;
+    let endingCash = 0;
+    let totalCashInflow = 0;
+    let totalCashOutflow = 0;
+    
+    let cashInflowRevenue = 0;
+    let cashInflowOther = 0;
+    
+    let cashOutflowParts = 0;
+    let cashOutflowOperating = 0;
+    let cashOutflowOther = 0;
+
+    const cashTransactions: any[] = [];
+
+    // 1. Beginning Cash balance
+    const startBalanceRes = await prisma.journalItem.aggregate({
+      where: {
+        account: {
+          code: { in: ['101', '102'] }
+        },
+        journalEntry: {
+          date: start ? {
+            lt: start
+          } : {
+            lt: new Date('1970-01-01T00:00:00Z')
+          }
+        }
+      },
+      _sum: {
+        debit: true,
+        credit: true
+      }
+    });
+    beginningCash = toNumber(startBalanceRes._sum.debit) - toNumber(startBalanceRes._sum.credit);
+
+    // 2. Cash Transactions within Period
+    const cashEntries = await prisma.journalEntry.findMany({
+      where: {
+        date: {
+          gte: start,
+          lte: end,
+        },
+        items: {
+          some: {
+            account: {
+              code: { in: ['101', '102'] }
+            }
+          }
+        }
+      },
+      include: {
+        items: {
+          include: {
+            account: true
+          }
+        }
+      },
+      orderBy: { date: 'asc' }
+    });
+
+    let currentRunningBalance = beginningCash;
+
+    for (const entry of cashEntries) {
+      const cashItems = entry.items.filter((item: any) => ['101', '102'].includes(item.account.code));
+      const entryDebit = cashItems.reduce((sum: number, item: any) => sum + toNumber(item.debit), 0);
+      const entryCredit = cashItems.reduce((sum: number, item: any) => sum + toNumber(item.credit), 0);
+      
+      const netCash = entryDebit - entryCredit;
+      if (netCash === 0) {
+        continue;
+      }
+
+      const inflow = netCash > 0 ? netCash : 0;
+      const outflow = netCash < 0 ? Math.abs(netCash) : 0;
+
+      totalCashInflow += inflow;
+      totalCashOutflow += outflow;
+      currentRunningBalance += netCash;
+
+      const counterItems = entry.items.filter((item: any) => !['101', '102'].includes(item.account.code));
+      
+      let classification: 'REVENUE' | 'PARTS' | 'OPERATING' | 'OTHER' = 'OTHER';
+
+      if (counterItems.some((item: any) => item.account.type === 'REVENUE' || item.account.code.startsWith('4'))) {
+        classification = 'REVENUE';
+        if (inflow > 0) {
+          cashInflowRevenue += inflow;
+        }
+      } else if (counterItems.some((item: any) => ['111', '511'].includes(item.account.code))) {
+        classification = 'PARTS';
+        if (outflow > 0) {
+          cashOutflowParts += outflow;
+        }
+      } else if (counterItems.some((item: any) => item.account.code.startsWith('5') && item.account.code !== '511')) {
+        classification = 'OPERATING';
+        if (outflow > 0) {
+          cashOutflowOperating += outflow;
+        }
+      } else {
+        classification = 'OTHER';
+        if (inflow > 0) {
+          cashInflowOther += inflow;
+        }
+        if (outflow > 0) {
+          cashOutflowOther += outflow;
+        }
+      }
+
+      cashTransactions.push({
+        id: entry.id,
+        date: entry.date instanceof Date ? entry.date.toISOString() : entry.date,
+        description: entry.description,
+        reference: entry.reference,
+        inflow,
+        outflow,
+        classification,
+        balance: currentRunningBalance
+      });
+    }
+
+    endingCash = currentRunningBalance;
 
     return {
       success: true,
@@ -114,8 +272,21 @@ export async function getFinancialReports() {
           totalAsset,
           totalLiability,
           totalEquity,
-          netIncome, // Untuk ditampilkan di bagian Equity sebagai Laba Tahun Berjalan
+          netIncome,
         },
+        cashFlowStatement: {
+          beginningCash,
+          endingCash,
+          inflowRevenue: cashInflowRevenue,
+          inflowOther: cashInflowOther,
+          totalInflow: totalCashInflow,
+          outflowParts: cashOutflowParts,
+          outflowOperating: cashOutflowOperating,
+          outflowOther: cashOutflowOther,
+          totalOutflow: totalCashOutflow,
+          netChange: totalCashInflow - totalCashOutflow,
+          transactions: cashTransactions,
+        }
       },
     };
   } catch (error) {
@@ -125,9 +296,9 @@ export async function getFinancialReports() {
 }
 
 /**
- * Mengambil Jurnal Akuntansi (General Ledger) terbaru.
+ * Fetches recent General Ledger entries.
  * 
- * @returns {Object} 100 transaksi jurnal terakhir dengan detail debit/kredit.
+ * @returns {Object} Last 100 journal entries with debit/credit details.
  */
 export async function getGeneralLedger() {
   try {
@@ -144,7 +315,7 @@ export async function getGeneralLedger() {
         }
       },
       orderBy: { date: 'desc' },
-      take: 100, // Limit 100 terakhir
+      take: 100, // Limit to last 100 entries
     });
 
     // Convert decimal and dates
@@ -167,9 +338,9 @@ export async function getGeneralLedger() {
 }
 
 /**
- * Mengambil Laporan Operasional lengkap untuk Owner (Pesanan, Pengeluaran, Spareparts, Log Stok).
+ * Fetches complete Operational Reports for Owner (Orders, Expenses, Spare parts, Stock logs).
  * 
- * @returns {Object} Data pesanan, pengeluaran, spareparts, dan riwayat stok.
+ * @returns {Object} Data of orders, expenses, spare parts, and stock logs history.
  */
 export async function getOperationalReports() {
   try {
@@ -215,9 +386,13 @@ export async function getOperationalReports() {
         amount: toNumber(debitItem?.debit),
         category: debitItem?.account.name || 'Unknown',
         categoryCode: debitItem?.account.code || '',
-        source: creditItem?.account.name || 'Unknown'
+        source: creditItem?.account.name || 'Unknown',
+        sourceCode: creditItem?.account.code || '',
       };
-    }).filter(e => e.source.toLowerCase().includes('kas'));
+    }).filter(e => {
+      const src = e.source.toLowerCase();
+      return src.includes('kas') || src.includes('bank') || ['101', '102'].includes(e.sourceCode);
+    });
 
     const spareParts = await prisma.sparePart.findMany({
       orderBy: { name: 'asc' }
