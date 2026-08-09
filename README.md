@@ -51,15 +51,15 @@ Fitur pencarian memungkinkan admin menemukan part dengan cepat berdasarkan kode 
 
 ### 5. Manajemen Karyawan (`/admin/employees`)
 
-Modul Karyawan mengelola data seluruh staff bengkel termasuk mekanik, helper, kasir, dan admin. Setiap karyawan memiliki profil yang mencakup nama, role/jabatan, nomor telepon, tipe gaji (harian atau komisi), rate harian, dan persentase komisi. Sistem mendukung dua model penggajian: gaji harian (daily rate) untuk karyawan dengan jam kerja tetap, dan sistem komisi (commission rate) untuk mekanik yang dibayar berdasarkan order yang dikerjakan.
+Modul Karyawan mengelola data seluruh staff bengkel termasuk mekanik, helper, kasir, dan admin. Tampilan utama didesain dalam bentuk **Card Grid** interaktif dan memiliki **Pagination** di sudut kanan bawah. Setiap kartu karyawan menampilkan nama, inisial avatar, ID unik, status keaktifan (`"Aktif"` atau `"Non"`), nomor telepon, skema gaji, dan nominal/persentase rate gaji. 
 
-Dialog detail karyawan menampilkan ringkasan lengkap termasuk total order yang ditangani, total komisi yang sudah earned, komisi yang belum dibayar (unpaid), dan histori pembayaran. Admin dapat melakukan pembayaran komisi langsung dari dialog ini dengan konfirmasi yang jelas. Sistem juga mendukung soft-delete dimana karyawan dapat dinonaktifkan (inactive) tanpa menghapus data historis, dan dapat direaktivasi kembali jika diperlukan.
+Sistem mengintegrasikan master data jabatan melalui tabel **D14 Jabatan** (`/admin/employees/jabatan`) yang otomatis di-seeding saat pertama kali diakses. Pada dialog tambah/ubah karyawan, input text posisi diganti dengan dropdown pilihan dinamis dari tabel Jabatan untuk menjamin konsistensi data. Penonaktifan dan reaktivasi karyawan dilakukan dengan alur konfirmasi terstruktur yang membatasi tugas aktif namun tetap menjaga histori data keuangannya.
 
-### 6. Payroll & Penggajian (`/admin/employees` - Detail Dialog)
+### 6. Payroll & Penggajian (`/admin/payroll`)
 
-Sistem Payroll terintegrasi dalam modul karyawan dengan perhitungan otomatis berdasarkan data order. Untuk karyawan dengan tipe komisi, sistem mengagregasi seluruh OrderFee yang belum dibayar (isPaid: false) dan menampilkan total yang harus dibayarkan. Proses pembayaran gaji mencakup: perhitungan periode (tanggal mulai dan akhir), base salary, bonus (jika ada), dan total yang dibayarkan.
+Sistem Payroll terintegrasi dalam modul karyawan dengan perhitungan otomatis berdasarkan data order. Halaman **Gaji & Payroll** menampilkan history slip gaji dan mendukung bulk generation bagi Owner untuk menghitung gaji seluruh staff dalam rentang periode tertentu. Untuk karyawan bertipe komisi, sistem mengagregasi seluruh *OrderFee* yang belum dibayar (`isPaid: false`) dikali dengan **Rate Komisi % / Nominal (IDR)** karyawan.
 
-Ketika pembayaran dikonfirmasi, sistem akan: (1) membuat record Payroll baru, (2) mengubah status isPaid pada semua OrderFee terkait menjadi true, (3) mencatat Payment baru, dan (4) membuat JournalEntry untuk pencatatan akuntansi dengan double-entry (Debit: Beban Gaji, Credit: Kas). Histori pembayaran payroll dapat dilihat dalam detail karyawan.
+Proses pencairan gaji mendukung pembayaran via Cash atau Bank Transfer (terhubung ke buku besar kas & bank). Ketika pembayaran dikonfirmasi, sistem secara otomatis: (1) membuat record Payroll baru dengan status `PAID`, (2) mengubah status `isPaid` pada semua transaksi *OrderFee* mekanik menjadi `true`, (3) membuat record pengeluaran kas (Money Out), dan (4) memposting JournalEntry dengan double-entry bookkeeping (Debit: Beban Gaji, Credit: Kas/Bank). Slip gaji yang digenerate dapat dicetak dalam format slip fisik terstruktur.
 
 ### 7. Pencatatan Pemasukan (`/admin/income`)
 

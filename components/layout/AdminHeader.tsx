@@ -51,6 +51,18 @@ export function AdminHeader() {
     if (pathname.startsWith("/admin/transactions")) {
       return "Transaksi & Pembayaran";
     }
+    if (pathname === "/admin/employees") {
+      return "Data Karyawan";
+    }
+    if (pathname === "/admin/employees/jabatan") {
+      return "Data Jabatan";
+    }
+    if (pathname === "/admin/employees/approval") {
+      return "Approval Gaji";
+    }
+    if (pathname === "/admin/employees/slip") {
+      return "Slip Gaji";
+    }
     if (pathname.startsWith("/admin/employees")) {
       return "Karyawan";
     }

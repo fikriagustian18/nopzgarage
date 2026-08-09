@@ -515,3 +515,14 @@ model STOK_KELUAR {
   barang      INVENTORY @relation(fields: [id_barang], references: [id_barang])
 }
 
+model Jabatan {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("JABATAN")
+}
+
+

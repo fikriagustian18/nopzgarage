@@ -48,6 +48,7 @@ export function MobileSidebar() {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const { data: session } = useSession();
+  const userRole = session?.user?.role;
 
   const menuItems: MenuItem[] = [
     {
@@ -65,6 +66,11 @@ export function MobileSidebar() {
       href: "/admin/pelayanan",
       label: "Pelayanan",
       icon: Wrench,
+    },
+    {
+      href: "/admin/employees",
+      label: "Karyawan",
+      icon: Users,
     },
     {
       href: "/admin/payroll",
@@ -128,7 +134,7 @@ export function MobileSidebar() {
     },
   ];
 
-  const userRole = session?.user?.role;
+  // Map and filter menu items based on role
   const filteredMenuItems = menuItems.filter((item) => {
     if (userRole === "ADMIN") {
       return [
@@ -168,13 +174,16 @@ export function MobileSidebar() {
         <Button
           variant="ghost"
           size="icon"
-          className="md:hidden mr-2"
+          className="md:hidden mr-2 cursor-pointer"
         >
           <Menu className="h-5 w-5" />
           <span className="sr-only">Toggle menu</span>
         </Button>
       </SheetTrigger>
-      <SheetContent side="left" className="p-0 w-72 bg-sidebar border-r border-sidebar-border text-sidebar-foreground">
+      <SheetContent
+        side="left"
+        className="p-0 w-72 bg-sidebar border-r border-sidebar-border text-sidebar-foreground"
+      >
         <SheetTitle className="sr-only">Mobile Navigation</SheetTitle>
         <div className="flex flex-col h-full p-6">
           <div
@@ -200,7 +209,7 @@ export function MobileSidebar() {
             </div>
           </div>
 
-          <nav className="space-y-1 flex-1">
+          <nav className="space-y-1 flex-1 overflow-y-auto pr-1">
             {filteredMenuItems.map((item) => {
               const Icon = item.icon;
               const active = isActive(item.href, item.exact);
@@ -210,13 +219,17 @@ export function MobileSidebar() {
                   key={item.href}
                   href={item.href}
                   onClick={() => setOpen(false)}
-                  className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 group ${
+                  className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 group cursor-pointer ${
                     active
-                      ? "bg-sidebar-primary text-sidebar-primary-foreground"
+                      ? "bg-sidebar-primary text-sidebar-primary-foreground font-semibold"
                       : "text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
                   }`}
                 >
-                  <Icon className={`h-5 w-5 ${active ? "text-white" : "text-muted-foreground group-hover:text-primary transition-colors"}`} />
+                  <Icon
+                    className={`h-5 w-5 ${
+                      active ? "text-white" : "text-muted-foreground group-hover:text-primary transition-colors"
+                    }`}
+                  />
                   <span className="font-medium">
                     {item.href === "/admin/payroll" && userRole === "ADMIN" ? "Slip Gaji" : item.label}
                   </span>
@@ -225,21 +238,21 @@ export function MobileSidebar() {
             })}
           </nav>
 
-          <div className="pt-6 mt-auto border-t border-sidebar-border space-y-3">
+          <div className="pt-6 mt-auto border-t border-sidebar-border space-y-3 shrink-0">
             {session && (
               <div className="px-2 py-2 mb-2 flex items-center gap-3 rounded-lg bg-sidebar-accent/50">
                 <div className="h-8 w-8 rounded-full bg-primary/20 flex items-center justify-center">
                   <User className="h-4 w-4 text-primary" />
                 </div>
                 <div className="overflow-hidden">
-                  <p className="text-sm font-medium truncate">{session.user?.employeeName || "Admin"}</p>
+                  <p className="text-sm font-medium truncate">{session.user?.employeeName || "Owner"}</p>
                   <p className="text-xs text-muted-foreground truncate">{session.user?.email}</p>
                 </div>
               </div>
             )}
             <Button
               variant="outline"
-              className="w-full justify-start gap-3 border-sidebar-border hover:bg-sidebar-accent hover:text-sidebar-accent-foreground text-muted-foreground"
+              className="w-full justify-start gap-3 border-sidebar-border hover:bg-sidebar-accent hover:text-sidebar-accent-foreground text-muted-foreground cursor-pointer"
               onClick={handleLogout}
             >
               <LogOut className="h-5 w-5" />

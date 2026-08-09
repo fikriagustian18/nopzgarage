@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
@@ -33,12 +34,13 @@ interface MenuItem {
 }
 
 /**
- * Desktop sidebar navigation component for Admin Panel.
+ * Desktop sidebar navigation component.
  */
 export function AdminSidebar() {
   const pathname = usePathname();
   const router = useRouter();
   const { data: session } = useSession();
+  const userRole = session?.user?.role;
 
   const menuItems: MenuItem[] = [
     {
@@ -56,6 +58,11 @@ export function AdminSidebar() {
       href: "/admin/pelayanan",
       label: "Pelayanan",
       icon: Wrench,
+    },
+    {
+      href: "/admin/employees",
+      label: "Karyawan",
+      icon: Users,
     },
     {
       href: "/admin/payroll",
@@ -119,7 +126,7 @@ export function AdminSidebar() {
     },
   ];
 
-  const userRole = session?.user?.role;
+  // Map and filter menu items based on role
   const filteredMenuItems = menuItems.filter((item) => {
     if (userRole === "ADMIN") {
       return [
@@ -187,13 +194,17 @@ export function AdminSidebar() {
               <Link
                 key={item.href}
                 href={item.href}
-                className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 group ${
+                className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 group cursor-pointer ${
                   active
-                    ? "bg-sidebar-primary text-sidebar-primary-foreground"
+                    ? "bg-sidebar-primary text-sidebar-primary-foreground font-semibold"
                     : "text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
                 }`}
               >
-                <Icon className={`h-5 w-5 ${active ? "text-white" : "text-muted-foreground group-hover:text-primary transition-colors"}`} />
+                <Icon
+                  className={`h-5 w-5 ${
+                    active ? "text-white" : "text-muted-foreground group-hover:text-primary transition-colors"
+                  }`}
+                />
                 <span className="font-medium">
                   {item.href === "/admin/payroll" && userRole === "ADMIN" ? "Slip Gaji" : item.label}
                 </span>
@@ -203,31 +214,26 @@ export function AdminSidebar() {
         </nav>
       </div>
 
-      {/* Bottom Section - Fixed at bottom within flex container */}
-      <div className="p-6 border-t border-sidebar-border bg-sidebar mt-auto">
-        <div className="space-y-3">
-          {session && (
-            <div className="px-2 py-2 mb-2 flex items-center gap-3 rounded-lg bg-sidebar-accent/50">
-              <div className="h-8 w-8 rounded-full bg-primary/20 flex items-center justify-center">
-                <User className="h-4 w-4 text-primary" />
-              </div>
-              <div className="overflow-hidden">
-                <p className="text-sm font-medium truncate">{session.user?.employeeName || "Admin"}</p>
-                <p className="text-xs text-muted-foreground truncate">{session.user?.email}</p>
-              </div>
+      <div className="p-4 border-t border-sidebar-border space-y-3 shrink-0">
+        {session && (
+          <div className="px-2 py-2 flex items-center gap-3 rounded-lg bg-sidebar-accent/50">
+            <div className="h-8 w-8 rounded-full bg-primary/20 flex items-center justify-center">
+              <User className="h-4 w-4 text-primary" />
             </div>
-          )}
-
-          {/* Logout Button */}
-          <Button
-            variant="outline"
-            className="w-full justify-start gap-3 border-sidebar-border hover:bg-sidebar-accent hover:text-sidebar-accent-foreground text-muted-foreground"
-            onClick={handleLogout}
-          >
-            <LogOut className="h-5 w-5" />
-            Logout
-          </Button>
-        </div>
+            <div className="overflow-hidden">
+              <p className="text-sm font-medium truncate">{session.user?.employeeName || "Owner"}</p>
+              <p className="text-xs text-muted-foreground truncate">{session.user?.email}</p>
+            </div>
+          </div>
+        )}
+        <Button
+          variant="outline"
+          className="w-full justify-start gap-3 border-sidebar-border hover:bg-sidebar-accent hover:text-sidebar-accent-foreground text-muted-foreground cursor-pointer"
+          onClick={handleLogout}
+        >
+          <LogOut className="h-5 w-5" />
+          Logout
+        </Button>
       </div>
     </aside>
   );
