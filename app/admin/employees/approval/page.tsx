@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { toast } from "sonner";
 import {
   Users,
   DollarSign,
@@ -13,6 +12,8 @@ import {
   RefreshCw,
   CheckCircle,
 } from "lucide-react";
+import { toast } from "sonner";
+
 import { RoleGuard } from "@/components/shared/RoleGuard";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
@@ -43,13 +44,15 @@ import {
   SelectValue,
 } from "@/components/ui/Select";
 import { Textarea } from "@/components/ui/Textarea";
+
 import {
   getPayrolls,
   updatePayroll,
   deletePayroll,
 } from "@/lib/actions/payroll";
 import { getBankAccounts } from "@/lib/actions/bank";
-import { createPayment } from "@/lib/actions/payments";
+import { createPayrollPayment } from "@/lib/actions/payments";
+
 
 interface Payroll {
   id: string;
@@ -248,10 +251,10 @@ export default function Page() {
 
     setPaying(true);
     try {
-      const res = await createPayment({
+      const res = await createPayrollPayment({
         amount: payAmountNum,
         note: payNote,
-        payrollId: selectedPayroll.id,
+        employeeId: selectedPayroll.employeeId,
         paymentMethod: payMethod,
         bankAccountId: payMethod === "TRANSFER" ? selectedBankId : undefined,
       });

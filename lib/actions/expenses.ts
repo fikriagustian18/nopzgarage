@@ -1,8 +1,8 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
+import { prisma } from "@/lib/prisma";
 import { createLog } from "./logs";
 
 export interface CreateExpenseInput {
@@ -38,7 +38,6 @@ export interface ExpenseActionResult {
   error?: string;
 }
 
-// Static Expense Categories List
 const EXPENSE_CATEGORIES: ExpenseCategory[] = [
   { id: "OPERATIONAL", code: "EXP", name: "Beban Operasional" },
   { id: "EQUIPMENT", code: "EXP", name: "Peralatan & Perlengkapan" },
@@ -50,28 +49,23 @@ const EXPENSE_CATEGORIES: ExpenseCategory[] = [
 ];
 
 /**
- * Fetch expense categories for manual entry.
- *
- * @returns Object containing categories list or error message.
+ * Fetches configured expense categories.
+ * 
+ * @returns Expense categories list.
  */
 export async function getExpenseCategories(): Promise<ExpenseActionResult> {
   const session = await auth();
   if (!session || session.user?.role !== "OWNER") {
     return {
       success: false,
-      error: "Akses ditolak: Hanya Owner yang dapat mengambil kategori pengeluaran.",
+      error: "Access denied: Only Owner can access expense categories.",
     };
   }
 
   return { success: true, accounts: EXPENSE_CATEGORIES };
 }
 
-/**
- * Record a new manual expense transaction.
- *
- * @param data - The expense details to create.
- * @returns Success indicator or error message.
- */
+
 export async function createExpense(
   data: CreateExpenseInput
 ): Promise<ExpenseActionResult> {
@@ -84,7 +78,7 @@ export async function createExpense(
       };
     }
 
-    const { description, amount, category, accountId, date, reference } = data;
+    const { description, amount, category, date, reference } = data;
 
     if (!description || !amount || amount <= 0) {
       return {
@@ -95,81 +89,27 @@ export async function createExpense(
 
     const categoryName = category || "Pengeluaran Umum";
 
-    // Provision main cash account (Credit)
-    let cashAccount = await prisma.account.findFirst({
-      where: { code: "101" },
+    const payment = await prisma.payment.create({
+      data: {
+        type: "EXPENSE",
+        amount: amount,
+        note: `[${categoryName}] ${description}`,
+        createdAt: date ?? new Date(),
+        paymentMethod: "CASH",
+        journalItems: [
+          { category: categoryName, reference: reference ?? null, amount }
+        ]
+      },
     });
 
-    if (!cashAccount) {
-      cashAccount = await prisma.account.create({
-        data: {
-          code: "101",
-          name: "Kas Utama",
-          type: "ASSET",
-          category: "Current Asset",
-        },
-      });
-    }
-
-    // Provision target expense account (Debit)
-    let targetAccount = null;
-    if (accountId) {
-      targetAccount = await prisma.account.findUnique({
-        where: { id: accountId },
-      });
-    }
-
-    if (!targetAccount) {
-      targetAccount = await prisma.account.findFirst({
-        where: { name: { equals: categoryName, mode: "insensitive" } },
-      });
-    }
-
-    if (!targetAccount) {
-      const uniqueSuffix = Date.now().toString(36).slice(-4).toUpperCase();
-      targetAccount = await prisma.account.create({
-        data: {
-          code: `EXP-${uniqueSuffix}`,
-          name: categoryName,
-          type: "EXPENSE",
-          category: "Expense",
-        },
-      });
-    }
-
-    // Create journal entry transaction
-    await prisma.$transaction(
-      async (transaction) => {
-        const journal = await transaction.journalEntry.create({
-          data: {
-            date: date ?? new Date(),
-            description: description,
-            reference: reference ?? null,
-            items: {
-              create: [
-                { accountId: targetAccount!.id, debit: amount, credit: 0 },
-                { accountId: cashAccount!.id, debit: 0, credit: amount },
-              ],
-            },
-          },
-        });
-
-        await createLog({
-          action: "CREATE_EXPENSE",
-          title: "Pengeluaran Dicatat",
-          details: `Pengeluaran Rp ${amount.toLocaleString("id-ID")} - ${categoryName} (${description})`,
-          metadata: { journalId: journal.id },
-          userName: "Admin",
-          role: "ADMIN",
-        });
-
-        return journal;
-      },
-      {
-        maxWait: 5000,
-        timeout: 15000,
-      }
-    );
+    await createLog({
+      action: "CREATE_EXPENSE",
+      title: "Pengeluaran Dicatat",
+      details: `Pengeluaran Rp ${amount.toLocaleString("id-ID")} - ${categoryName} (${description})`,
+      metadata: { paymentId: payment.id },
+      userName: "Admin",
+      role: "ADMIN",
+    });
 
     revalidatePath("/admin/expenses");
     revalidatePath("/admin/reports");
@@ -181,11 +121,6 @@ export async function createExpense(
   }
 }
 
-/**
- * Fetch list of recent expense records.
- *
- * @returns Array of formatted expense items or error message.
- */
 export async function getExpenses(): Promise<ExpenseActionResult> {
   try {
     const session = await auth();
@@ -196,38 +131,32 @@ export async function getExpenses(): Promise<ExpenseActionResult> {
       };
     }
 
-    const journals = await prisma.journalEntry.findMany({
+    const payments = await prisma.payment.findMany({
       where: {
-        items: {
-          some: {
-            debit: { gt: 0 },
-            account: { type: "EXPENSE" },
-          },
-        },
+        type: "EXPENSE",
       },
-      orderBy: { date: "desc" },
+      orderBy: { createdAt: "desc" },
       take: 100,
-      include: {
-        items: {
-          include: { account: true },
-        },
-      },
     });
 
-    const expenses: ExpenseItem[] = journals.map((journal) => {
-      const debitItem = journal.items.find((item) => Number(item.debit) > 0);
-      const creditItem = journal.items.find((item) => Number(item.credit) > 0);
-      const amount = debitItem ? Number(debitItem.debit) : 0;
+    const expenses: ExpenseItem[] = payments.map((p) => {
+      let category = "Pengeluaran Umum";
+      let description = p.note || "";
+      if (p.note && p.note.startsWith("[")) {
+        const parts = p.note.split("] ");
+        category = parts[0].replace("[", "");
+        description = parts.slice(1).join("] ");
+      }
 
       return {
-        id: journal.id,
-        date: journal.date.toISOString(),
-        description: journal.description,
-        reference: journal.reference,
-        amount,
-        category: debitItem?.account.name ?? "Pengeluaran Umum",
-        categoryCode: debitItem?.account.code ?? "EXP",
-        source: creditItem?.account.name ?? "Kas",
+        id: p.id,
+        date: p.createdAt.toISOString(),
+        description,
+        reference: p.orderId || null,
+        amount: Number(p.amount),
+        category,
+        categoryCode: "EXP",
+        source: p.paymentMethod || "Kas",
       };
     });
 
@@ -238,12 +167,6 @@ export async function getExpenses(): Promise<ExpenseActionResult> {
   }
 }
 
-/**
- * Delete an expense record by journal entry ID.
- *
- * @param journalId - Journal entry identifier to delete.
- * @returns Success indicator or error message.
- */
 export async function deleteExpense(
   journalId: string
 ): Promise<ExpenseActionResult> {
@@ -260,27 +183,25 @@ export async function deleteExpense(
       };
     }
 
-    const journal = await prisma.journalEntry.findUnique({
+    const payment = await prisma.payment.findUnique({
       where: { id: journalId },
-      include: { items: { include: { account: true } } },
     });
 
-    if (!journal) {
+    if (!payment) {
       return { success: false, error: "Data pengeluaran tidak ditemukan." };
     }
 
-    const debitItem = journal.items.find((item) => Number(item.debit) > 0);
-    const amount = debitItem ? Number(debitItem.debit) : 0;
+    const amount = Number(payment.amount);
 
-    await prisma.journalEntry.delete({
+    await prisma.payment.delete({
       where: { id: journalId },
     });
 
     await createLog({
       action: "DELETE_EXPENSE",
       title: "Pengeluaran Dihapus",
-      details: `Hapus pengeluaran Rp ${amount.toLocaleString("id-ID")} - ${debitItem?.account.name ?? "Unknown"} (${journal.description})`,
-      metadata: { journalId },
+      details: `Hapus pengeluaran Rp ${amount.toLocaleString("id-ID")} (${payment.note})`,
+      metadata: { paymentId: journalId },
       userName: "Admin",
       role: "ADMIN",
     });

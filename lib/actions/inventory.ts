@@ -1,9 +1,8 @@
-// lib/actions/inventory.ts
-'use server';
+"use server";
 
-import { prisma } from '@/lib/prisma';
-import { revalidatePath } from 'next/cache';
-import { createLog } from './logs';
+import { revalidatePath } from "next/cache";
+import { prisma } from "@/lib/prisma";
+import { createLog } from "./logs";
 
 export interface CreateSparePartInput {
   code: string;
@@ -127,17 +126,15 @@ export async function createSparePart(data: CreateSparePartInput) {
         update: {}
       });
 
-      await prisma.journalEntry.create({
+      await prisma.payment.create({
         data: {
-          date: new Date(),
-          description: `Persediaan Awal - ${sparePart.name} (${data.stock} ${data.unit}) @ Rp ${data.buyPrice.toLocaleString('id-ID')}`,
-          reference: sparePart.id,
-          items: {
-            create: [
-              { accountId: inventoryAccount.id, debit: initialValue, credit: 0 },
-              { accountId: capitalAccount.id, debit: 0, credit: initialValue }
-            ]
-          }
+          type: 'EXPENSE',
+          amount: initialValue,
+          note: `Persediaan Awal - ${sparePart.name} (${data.stock} ${data.unit})`,
+          journalItems: [
+            { accountId: inventoryAccount.id, debit: initialValue, credit: 0 },
+            { accountId: capitalAccount.id, debit: 0, credit: initialValue }
+          ]
         }
       });
     }
@@ -213,17 +210,15 @@ export async function updateSparePart(id: string, data: Partial<CreateSparePartI
         update: {}
       });
 
-      await prisma.journalEntry.create({
+      await prisma.payment.create({
         data: {
-          date: new Date(),
-          description: `Pembelian Persediaan - ${sparePart.name} (+${stockChange} ${sparePart.unit}) @ Rp ${buyPrice.toLocaleString('id-ID')}`,
-          reference: sparePart.id,
-          items: {
-            create: [
-              { accountId: inventoryAccount.id, debit: purchaseValue, credit: 0 },
-              { accountId: cashAccount.id, debit: 0, credit: purchaseValue }
-            ]
-          }
+          type: 'EXPENSE',
+          amount: purchaseValue,
+          note: `Pembelian Persediaan - ${sparePart.name} (+${stockChange} ${sparePart.unit})`,
+          journalItems: [
+            { accountId: inventoryAccount.id, debit: purchaseValue, credit: 0 },
+            { accountId: cashAccount.id, debit: 0, credit: purchaseValue }
+          ]
         }
       });
     }
@@ -458,17 +453,15 @@ export async function addStock(
       update: {}
     });
 
-    await prisma.journalEntry.create({
+    await prisma.payment.create({
       data: {
-        date: new Date(date),
-        description: `Stok Masuk - ${sparePart.name} (+${quantity} ${sparePart.unit}) dari ${supplier}`,
-        reference: sparePart.id,
-        items: {
-          create: [
-            { accountId: inventoryAccount.id, debit: purchaseValue, credit: 0 },
-            { accountId: cashAccount.id, debit: 0, credit: purchaseValue }
-          ]
-        }
+        type: 'EXPENSE',
+        amount: purchaseValue,
+        note: `Stok Masuk - ${sparePart.name} (+${quantity} ${sparePart.unit}) dari ${supplier}`,
+        journalItems: [
+          { accountId: inventoryAccount.id, debit: purchaseValue, credit: 0 },
+          { accountId: cashAccount.id, debit: 0, credit: purchaseValue }
+        ]
       }
     });
 

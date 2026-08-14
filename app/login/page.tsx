@@ -1,10 +1,9 @@
-// Login page — handles authentication and role-based redirect
 "use client";
 
 import { useState } from "react";
-import { signIn } from "next-auth/react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
+import { signIn } from "next-auth/react";
 import {
   AlertCircle,
   Eye,
@@ -99,8 +98,17 @@ export default function Page() {
       });
 
       if (result?.error) {
-        setError(result.error);
         setLoading(false);
+        const errStr = result.error;
+        if (errStr.includes("tidak aktif")) {
+          const msg = "Akun Anda telah dinonaktifkan. Hubungi admin.";
+          setError(msg);
+          toast.error(msg);
+        } else {
+          const msg = "Username atau password salah. Silakan periksa kembali.";
+          setError(msg);
+          toast.error(msg);
+        }
         return;
       }
 
@@ -108,16 +116,41 @@ export default function Page() {
       const sessionRes = await fetch("/api/auth/session");
       const session = await sessionRes.json();
 
-      if (session?.user?.role === "EMPLOYEE") {
+      if (!session?.user) {
+        setLoading(false);
+        const msg = "Gagal mengambil sesi. Silakan coba lagi.";
+        setError(msg);
+        toast.error(msg);
+        return;
+      }
+
+      toast.success(`Selamat datang kembali, ${session.user.employeeName || session.user.email}!`);
+
+      if (
+        session.user.role === "EMPLOYEE" ||
+        session.user.role === "MECHANIC" ||
+        session.user.role === "Mekanik"
+      ) {
         router.push("/employee");
       } else {
         router.push("/admin");
       }
 
       router.refresh();
-    } catch {
-      setError("Terjadi kesalahan. Silakan coba lagi.");
+    } catch (err: unknown) {
       setLoading(false);
+      console.error("[LOGIN_ERROR]", err);
+
+      const errMessage = err instanceof Error ? err.message : String(err || "");
+      if (errMessage.includes("tidak aktif")) {
+        const msg = "Akun Anda telah dinonaktifkan. Hubungi admin.";
+        setError(msg);
+        toast.error(msg);
+      } else {
+        const msg = "Username atau password salah. Silakan periksa kembali.";
+        setError(msg);
+        toast.error(msg);
+      }
     }
   }
 

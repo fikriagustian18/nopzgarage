@@ -1,8 +1,8 @@
-// lib/auth.ts - NextAuth v5 Configuration
 import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
-import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
+
+import { prisma } from "@/lib/prisma";
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
   providers: [
@@ -13,23 +13,31 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       },
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) {
-          throw new Error("Email dan password harus diisi");
+          return null;
         }
 
-        const user = await prisma.user.findUnique({
-          where: { email: credentials.email as string },
+        const inputEmail = (credentials.email as string).trim();
+
+        const user = await prisma.user.findFirst({
+          where: {
+            OR: [
+              { email: { equals: inputEmail, mode: "insensitive" } },
+              { email: { equals: `${inputEmail}@nopzgarage.com`, mode: "insensitive" } }
+            ]
+          },
           include: {
             employee: true
           }
         });
 
         if (!user) {
-          throw new Error("Email atau password salah");
+          return null;
         }
 
         if (!user.isActive) {
-          throw new Error("Akun Anda tidak aktif. Hubungi admin.");
+          throw new Error("Your account is inactive. Please contact administrator.");
         }
+
 
         const isPasswordValid = await bcrypt.compare(
           credentials.password as string,
@@ -37,7 +45,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         );
 
         if (!isPasswordValid) {
-          throw new Error("Email atau password salah");
+          return null;
         }
 
         return {
@@ -77,6 +85,21 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
   session: {
     strategy: "jwt",
     maxAge: 30 * 24 * 60 * 60, // 30 days
+  },
+  logger: {
+    error(error) {
+      // Suppress noisy server console stack traces for expected failed login attempts
+      const errName = error.name || "";
+      const errCode = (error as any).code || "";
+      if (
+        errName === "CredentialsSignin" ||
+        errName === "CallbackRouteError" ||
+        errCode === "credentials"
+      ) {
+        return;
+      }
+      console.error(error);
+    },
   },
   secret: process.env.AUTH_SECRET || process.env.NEXTAUTH_SECRET,
   trustHost: true,

@@ -1,10 +1,8 @@
-// app/actions/logs.ts
 "use server";
 
 import { prisma } from "@/lib/prisma";
-import { revalidatePath } from "next/cache";
 
-type CreateLogInput = {
+export interface CreateLogInput {
   action: string;
   title: string;
   details: string;
@@ -12,28 +10,27 @@ type CreateLogInput = {
   userId?: string;
   userName?: string;
   role?: string;
-};
+}
 
 /**
- * Membuat catatan log aktivitas sistem.
+ * Creates a system activity log entry.
  * 
- * @param {CreateLogInput} data - Data log (aksi, judul, detail, user).
- * @returns {Object} Status sukses.
+ * @param data - Log entry payload (action, title, details, user context).
+ * @returns Status object indicating success or failure.
  */
 export async function createLog(data: CreateLogInput) {
   try {
-    await prisma.activityLog.create({
+    await prisma.systemConfig.create({
       data: {
-        action: data.action,
-        title: data.title,
-        details: data.details,
-        metadata: data.metadata || {},
+        category: "LOG",
+        key: undefined,
+        title: `${data.action}: ${data.title}`,
+        subtitle: data.details,
+        content: data.metadata || {},
         userId: data.userId,
         userName: data.userName,
-        role: data.role,
       },
     });
-    // Optional: revalidatePath('/admin/logs') if we had that page
     return { success: true };
   } catch (error) {
     console.error("Create log error:", error);
@@ -42,22 +39,28 @@ export async function createLog(data: CreateLogInput) {
 }
 
 /**
- * Mengambil daftar log aktivitas terbaru.
+ * Fetches recent system activity logs.
  * 
- * @param {number} limit - Jumlah log yang diambil (default 20).
- * @returns {Object} Daftar log.
+ * @param limit - Maximum number of logs to retrieve (default: 20).
+ * @returns List of formatted logs.
  */
 export async function getRecentLogs(limit = 20) {
   try {
-    const logs = await prisma.activityLog.findMany({
+    const logs = await prisma.systemConfig.findMany({
+      where: { category: "LOG" },
       orderBy: { createdAt: "desc" },
       take: limit,
     });
     
-    // Serialize dates
-    const serializedLogs = logs.map(log => ({
-      ...log,
-      createdAt: log.createdAt.toISOString()
+    const serializedLogs = logs.map((log) => ({
+      id: log.id,
+      action: log.title ? log.title.split(":")[0] : "LOG",
+      title: log.title || "",
+      details: log.subtitle || "",
+      metadata: log.content || {},
+      userId: log.userId,
+      userName: log.userName,
+      createdAt: log.createdAt.toISOString(),
     }));
     
     return { success: true, logs: serializedLogs };
@@ -66,3 +69,4 @@ export async function getRecentLogs(limit = 20) {
     return { success: false, error: "Failed to fetch logs" };
   }
 }
+

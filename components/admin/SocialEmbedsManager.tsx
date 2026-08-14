@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { SocialPlatform } from "@prisma/client";
 import {
   Share2,
   Trash2,
@@ -15,6 +14,7 @@ import {
   Youtube,
 } from "lucide-react";
 import { toast } from "sonner";
+
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Label } from "@/components/ui/Label";
@@ -41,13 +41,16 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/Card";
+
 import {
   getSocialEmbeds,
   createSocialEmbed,
   updateSocialEmbed,
   deleteSocialEmbed,
-  SocialEmbedItem,
 } from "@/lib/actions/socialEmbeds";
+import type { SocialEmbedItem } from "@/lib/actions/socialEmbeds";
+
+type SocialPlatform = "INSTAGRAM" | "TIKTOK" | "YOUTUBE";
 
 const PLATFORM_ICONS = {
   INSTAGRAM: Instagram,
@@ -60,6 +63,7 @@ const PLATFORM_COLORS = {
   TIKTOK: "bg-black",
   YOUTUBE: "bg-red-600",
 };
+
 
 export function SocialEmbedsManager() {
   const [items, setItems] = useState<SocialEmbedItem[]>([]);

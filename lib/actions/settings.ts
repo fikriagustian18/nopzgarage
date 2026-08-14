@@ -1,8 +1,9 @@
-'use server';
+"use server";
 
-import { prisma } from "@/lib/prisma";
-import { auth } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
+
+import { auth } from "@/lib/auth";
+import { prisma } from "@/lib/prisma";
 import { createLog } from "@/lib/actions/logs";
 import { DEFAULT_SERVICES } from "@/lib/constants/serviceDefaults";
 
@@ -93,12 +94,12 @@ export interface SettingsResult {
  */
 export async function getSetting<T>(key: string, defaultValue: T): Promise<T> {
   try {
-    const setting = await prisma.systemSetting.findUnique({
+    const setting = await prisma.systemConfig.findUnique({
       where: { key }
     });
 
-    if (setting && setting.value) {
-      return JSON.parse(setting.value) as T;
+    if (setting && setting.content) {
+      return setting.content as T;
     }
     return defaultValue;
   } catch (error) {
@@ -124,13 +125,12 @@ export async function updateSetting(key: string, value: unknown): Promise<Update
         error: "Access denied: Only Owner can update settings." 
       };
     }
-    const stringValue = JSON.stringify(value);
-    console.log(`[SETTINGS] Updating ${key}:`, stringValue);
+    console.log(`[SETTINGS] Updating ${key}:`, value);
     
-    await prisma.systemSetting.upsert({
+    await prisma.systemConfig.upsert({
       where: { key },
-      update: { value: stringValue },
-      create: { key, value: stringValue }
+      update: { content: value as any, category: "SETTING" },
+      create: { key, content: value as any, category: "SETTING" }
     });
 
     revalidatePath("/", "layout");
@@ -226,13 +226,15 @@ export async function getAllSettings(): Promise<SettingsResult> {
 
   const savedContent = await getSetting<LandingPageContent>("landing_content", defaultContent);
   
-  const allSections = await prisma.contentSection.findMany();
+  const allSections = await prisma.systemConfig.findMany({ where: { category: "CONTENT" } });
 
   const dynamicSections = allSections.reduce((acc: Record<string, unknown>, sec) => {
-    acc[sec.sectionKey] = {
+    const key = sec.key || sec.id;
+    acc[key] = {
       ...sec,
+      sectionKey: key,
       updatedAt: sec.updatedAt instanceof Date ? sec.updatedAt.toISOString() : sec.updatedAt,
-      content: sec.content || {} 
+      content: (sec.content as Record<string, unknown>) || {} 
     };
     return acc;
   }, {} as Record<string, unknown>);

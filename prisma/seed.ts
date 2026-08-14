@@ -1,461 +1,252 @@
-// prisma/seed.ts
-import { PrismaClient } from '@prisma/client';
-import bcrypt from 'bcryptjs';
+import { PrismaClient } from "@prisma/client";
+import bcrypt from "bcryptjs";
 
 const prisma = new PrismaClient();
 
 async function main() {
-  console.log('🌱 Seeding database...');
+  console.log("🌱 Seeding 8 consolidated database tables...");
 
-  // ==================== Chart of Accounts ====================
+  // ==================== 1. Chart of Accounts & Bank Accounts (Account) ====================
   const accounts = [
-    // ASSETS (1xx)
-    { code: '101', name: 'Kas', type: 'ASSET', category: 'CURRENT_ASSET' },
-    { code: '102', name: 'Bank', type: 'ASSET', category: 'CURRENT_ASSET' },
-    { code: '103', name: 'Piutang Usaha', type: 'ASSET', category: 'CURRENT_ASSET' },
-    { code: '111', name: 'Persediaan Sparepart', type: 'ASSET', category: 'CURRENT_ASSET' },
-    { code: '121', name: 'Peralatan Bengkel', type: 'ASSET', category: 'FIXED_ASSET' },
-    { code: '122', name: 'Akumulasi Penyusutan Peralatan', type: 'ASSET', category: 'FIXED_ASSET' },
+    // ASSETS
+    { code: "101", name: "Kas Utama", type: "ASSET", category: "CURRENT_ASSET", bankCode: "CASH", currentBalance: 5000000 },
+    { code: "102", name: "Bank BCA", type: "BANK", category: "CURRENT_ASSET", bankCode: "BCA", accountNumber: "1234567890", accountName: "NOPZ GARAGE", currentBalance: 25000000 },
+    { code: "103", name: "Bank Mandiri", type: "BANK", category: "CURRENT_ASSET", bankCode: "MANDIRI", accountNumber: "0987654321", accountName: "NOPZ GARAGE", currentBalance: 15000000 },
+    { code: "104", name: "Piutang Usaha", type: "ASSET", category: "CURRENT_ASSET" },
+    { code: "111", name: "Persediaan Sparepart", type: "ASSET", category: "CURRENT_ASSET" },
+    { code: "121", name: "Peralatan Bengkel", type: "ASSET", category: "FIXED_ASSET" },
 
-    // LIABILITIES (2xx)
-    { code: '201', name: 'Hutang Usaha', type: 'LIABILITY', category: 'CURRENT_LIABILITY' },
-    { code: '202', name: 'Hutang Gaji', type: 'LIABILITY', category: 'CURRENT_LIABILITY' },
+    // LIABILITIES
+    { code: "201", name: "Hutang Usaha", type: "LIABILITY", category: "CURRENT_LIABILITY" },
+    { code: "202", name: "Hutang Gaji", type: "LIABILITY", category: "CURRENT_LIABILITY" },
 
-    // EQUITY (3xx)
-    { code: '301', name: 'Modal Pemilik', type: 'EQUITY', category: 'CAPITAL' },
-    { code: '302', name: 'Prive', type: 'EQUITY', category: 'WITHDRAWAL' },
-    { code: '303', name: 'Laba Ditahan', type: 'EQUITY', category: 'RETAINED_EARNINGS' },
+    // EQUITY
+    { code: "301", name: "Modal Pemilik", type: "EQUITY", category: "CAPITAL" },
+    { code: "302", name: "Prive", type: "EQUITY", category: "WITHDRAWAL" },
 
-    // REVENUE (4xx)
-    { code: '401', name: 'Pendapatan Jasa Servis', type: 'REVENUE', category: 'OPERATING_REVENUE' },
-    { code: '402', name: 'Pendapatan Penjualan Sparepart', type: 'REVENUE', category: 'OPERATING_REVENUE' },
-    { code: '403', name: 'Pendapatan Modifikasi', type: 'REVENUE', category: 'OPERATING_REVENUE' },
+    // REVENUE
+    { code: "401", name: "Pendapatan Jasa Servis", type: "REVENUE", category: "OPERATING_REVENUE" },
+    { code: "402", name: "Pendapatan Penjualan Sparepart", type: "REVENUE", category: "OPERATING_REVENUE" },
 
-    // EXPENSES (5xx)
-    { code: '501', name: 'Beban Gaji Karyawan', type: 'EXPENSE', category: 'OPERATING_EXPENSE' },
-    { code: '502', name: 'Beban Listrik', type: 'EXPENSE', category: 'OPERATING_EXPENSE' },
-    { code: '503', name: 'Beban Air', type: 'EXPENSE', category: 'OPERATING_EXPENSE' },
-    { code: '504', name: 'Beban Sewa Tempat', type: 'EXPENSE', category: 'OPERATING_EXPENSE' },
-    { code: '505', name: 'Beban Supplies', type: 'EXPENSE', category: 'OPERATING_EXPENSE' },
-    { code: '511', name: 'Harga Pokok Penjualan', type: 'EXPENSE', category: 'COST_OF_GOODS_SOLD' },
+    // EXPENSES
+    { code: "501", name: "Beban Gaji Karyawan", type: "EXPENSE", category: "OPERATING_EXPENSE" },
+    { code: "502", name: "Beban Operasional", type: "EXPENSE", category: "OPERATING_EXPENSE" },
+    { code: "511", name: "Harga Pokok Penjualan", type: "EXPENSE", category: "COST_OF_GOODS_SOLD" },
   ];
 
-  console.log('📊 Creating Chart of Accounts...');
+  console.log("📊 Creating Accounts...");
   for (const account of accounts) {
     await prisma.account.upsert({
       where: { code: account.code },
-      update: {},
+      update: account,
       create: account,
     });
   }
-  console.log(`✅ Created ${accounts.length} accounts`);
 
-  // ==================== Sample Employees ====================
-  console.log('👷 Creating sample employees...');
-  
-  const owner = await prisma.employee.upsert({
-    where: { id: 'owner-001' },
+  // ==================== 2. Employees (Employee) ====================
+  console.log("👷 Creating Employees...");
+
+
+  const ownerEmp = await prisma.employee.upsert({
+    where: { id: 'emp-owner-001' },
     update: {},
     create: {
-      id: 'owner-001',
+      id: 'emp-owner-001',
       name: 'Budi Santoso',
       role: 'Owner',
       phone: '081234567890',
+      jabatan: 'Pemilik Bengkel',
       salaryType: 'DAILY',
       dailyRate: 0,
     },
   });
 
-  const mechanic1 = await prisma.employee.upsert({
-    where: { id: 'mech-001' },
+  const adminEmp = await prisma.employee.upsert({
+    where: { id: 'emp-admin-001' },
     update: {},
     create: {
-      id: 'mech-001',
-      name: 'Agus Prasetyo',
-      role: 'Mekanik Senior',
+      id: 'emp-admin-001',
+      name: 'Agus Pratama',
+      role: 'Admin',
       phone: '081234567891',
-      salaryType: 'DAILY',
-      dailyRate: 150000,
+      jabatan: 'Admin Kasir',
+      salaryType: 'MONTHLY',
+      dailyRate: 100000,
     },
   });
 
-  const mechanic2 = await prisma.employee.upsert({
-    where: { id: 'mech-002' },
+  const mechanicEmp = await prisma.employee.upsert({
+    where: { id: 'emp-mech-001' },
     update: {},
     create: {
-      id: 'mech-002',
+      id: 'emp-mech-001',
       name: 'Dedi Kurniawan',
       role: 'Mekanik',
       phone: '081234567892',
+      jabatan: 'Mekanik Senior',
       salaryType: 'COMMISSION',
       commissionRate: 50000,
     },
   });
 
-  console.log('✅ Created 3 employees');
+  // ==================== 3. Users (User) ====================
+  console.log('👤 Creating Users...');
+  const hashedPassword = await bcrypt.hash('123456', 10);
 
-  // ==================== Sample Spare Parts ====================
-  console.log('🔧 Creating sample spare parts...');
-  
+  await prisma.user.upsert({
+    where: { email: 'owner@nopzgarage.com' },
+    update: {},
+    create: {
+      email: 'owner@nopzgarage.com',
+      password: hashedPassword,
+      role: 'Owner',
+      employeeId: ownerEmp.id,
+      isActive: true,
+    },
+  });
+
+  await prisma.user.upsert({
+    where: { email: 'admin@nopzgarage.com' },
+    update: {},
+    create: {
+      email: 'admin@nopzgarage.com',
+      password: hashedPassword,
+      role: 'Admin',
+      employeeId: adminEmp.id,
+      isActive: true,
+    },
+  });
+
+  await prisma.user.upsert({
+    where: { email: 'mekanik@nopzgarage.com' },
+    update: {},
+    create: {
+      email: 'mekanik@nopzgarage.com',
+      password: hashedPassword,
+      role: 'Mekanik',
+      employeeId: mechanicEmp.id,
+      isActive: true,
+    },
+  });
+
+  // ==================== 4. Spare Parts (SparePart) ====================
+  console.log('🔧 Creating Spare Parts...');
   const spareParts = [
-    { code: 'OLI-001', name: 'Oli Mesin Matic 0.8L', stock: 20, minStock: 5, unit: 'botol', buyPrice: 35000, sellPrice: 50000 },
-    { code: 'OLI-002', name: 'Oli Mesin Manual 1L', stock: 15, minStock: 5, unit: 'botol', buyPrice: 40000, sellPrice: 60000 },
-    { code: 'FIL-001', name: 'Filter Oli', stock: 30, minStock: 10, unit: 'pcs', buyPrice: 15000, sellPrice: 25000 },
-    { code: 'BRK-001', name: 'Kampas Rem Depan', stock: 10, minStock: 5, unit: 'set', buyPrice: 45000, sellPrice: 75000 },
-    { code: 'BRK-002', name: 'Kampas Rem Belakang', stock: 8, minStock: 5, unit: 'set', buyPrice: 40000, sellPrice: 70000 },
+    { code: 'OLI-001', name: 'Oli Mesin Matic 0.8L', category: 'Oli', stock: 25, minStock: 5, unit: 'botol', buyPrice: 35000, sellPrice: 50000 },
+    { code: 'OLI-002', name: 'Oli Mesin Manual 1L', category: 'Oli', stock: 15, minStock: 5, unit: 'botol', buyPrice: 40000, sellPrice: 60000 },
+    { code: 'FIL-001', name: 'Filter Udara Beat', category: 'Sparepart', stock: 20, minStock: 5, unit: 'pcs', buyPrice: 20000, sellPrice: 35000 },
+    { code: 'BRK-001', name: 'Kampas Rem Depan', category: 'Sparepart', stock: 12, minStock: 5, unit: 'set', buyPrice: 45000, sellPrice: 75000 },
+    { code: 'BRK-002', name: 'Kampas Rem Belakang', category: 'Sparepart', stock: 10, minStock: 5, unit: 'set', buyPrice: 40000, sellPrice: 70000 },
   ];
 
   for (const part of spareParts) {
     await prisma.sparePart.upsert({
       where: { code: part.code },
-      update: {},
+      update: part,
       create: part,
     });
   }
-  console.log(`✅ Created ${spareParts.length} spare parts`);
 
-  // ==================== System Settings ====================
-  console.log('⚙️  Creating system settings...');
-  
-  await prisma.systemSetting.upsert({
-    where: { key: 'max_booking_per_hour' },
+  // ==================== 5. Orders & 6. OrderItems ====================
+  console.log('📋 Creating Sample Orders & OrderItems...');
+
+  const oliPart = await prisma.sparePart.findUnique({ where: { code: 'OLI-001' } });
+  const kampasPart = await prisma.sparePart.findUnique({ where: { code: 'BRK-001' } });
+
+  const sampleOrder = await prisma.order.upsert({
+    where: { id: 'order-sample-001' },
     update: {},
     create: {
-      key: 'max_booking_per_hour',
-      value: '3', // Max 3 motorcycles per hour
+      id: 'order-sample-001',
+      custName: 'Rudi Hermawan',
+      custPhone: '08122334455',
+      vehicle: 'Honda Beat 2021',
+      plateNumber: 'B 1234 ABC',
+      complaint: 'Ganti oli rutin dan cek rem depan',
+      serviceType: 'LIGHT_SERVICE',
+      status: 'COMPLETED',
+      totalPrice: 150000,
+      totalPaid: 150000,
+      paymentStatus: 'PAID',
+      mechanicId: mechanicEmp.id,
+      feedback: 'Servis sangat cepat dan memuaskan',
+      rating: 5,
     },
   });
 
-  await prisma.systemSetting.upsert({
-    where: { key: 'whatsapp_api_key' },
-    update: {},
-    create: {
-      key: 'whatsapp_api_key',
-      value: '', // Leave empty, fill manually
+  if (oliPart) {
+    await prisma.orderItem.create({
+      data: {
+        orderId: sampleOrder.id,
+        itemType: 'SPAREPART',
+        itemName: oliPart.name,
+        quantity: 1,
+        unitPrice: oliPart.sellPrice,
+        totalPrice: oliPart.sellPrice,
+        sparePartId: oliPart.id,
+      },
+    });
+  }
+
+  if (kampasPart) {
+    await prisma.orderItem.create({
+      data: {
+        orderId: sampleOrder.id,
+        itemType: 'SPAREPART',
+        itemName: kampasPart.name,
+        quantity: 1,
+        unitPrice: kampasPart.sellPrice,
+        totalPrice: kampasPart.sellPrice,
+        sparePartId: kampasPart.id,
+      },
+    });
+  }
+
+  await prisma.orderItem.create({
+    data: {
+      orderId: sampleOrder.id,
+      itemType: 'SERVICE',
+      itemName: 'Jasa Servis Ringan',
+      quantity: 1,
+      unitPrice: 25000,
+      totalPrice: 25000,
+      employeeId: mechanicEmp.id,
     },
   });
 
-  await prisma.systemSetting.upsert({
-    where: { key: 'business_hours' },
-    update: {},
-    create: {
-      key: 'business_hours',
-      value: JSON.stringify({
-        open: '08:00',
-        close: '17:00',
-        daysOff: [0], // 0 = Sunday
-      }),
+  // ==================== 7. Payments ====================
+  console.log('💳 Creating Payments...');
+  const cashAccount = await prisma.account.findUnique({ where: { code: '101' } });
+
+  await prisma.payment.create({
+    data: {
+      amount: 150000,
+      type: 'ORDER_PAYMENT',
+      note: 'Pembayaran Order Rudi Hermawan',
+      orderId: sampleOrder.id,
+      bankAccountId: cashAccount?.id,
+      paymentMethod: 'CASH',
     },
   });
 
-  console.log('✅ Created system settings');
+  // ==================== 8. SystemConfig ====================
+  console.log('⚙️ Creating SystemConfigs...');
+  const configs = [
+    { key: 'max_booking_per_hour', category: 'SETTING', title: 'Max Booking Per Jam', content: { value: '3' } },
+    { key: 'business_hours', category: 'SETTING', title: 'Jam Operasional', content: { open: '08:00', close: '17:00', daysOff: [0] } },
+    { key: 'hero_section', category: 'CONTENT', title: 'NOPZ GARAGE', subtitle: 'Spesialis Servis & Modifikasi Motor', content: { description: 'Pelayanan profesional dengan garansi hasil terbaik.' } },
+  ];
 
-  // ==================== Seed new ERD Tables ====================
-  await seedERDTables();
+  for (const cfg of configs) {
+    await prisma.systemConfig.upsert({
+      where: { key: cfg.key },
+      update: cfg,
+      create: cfg,
+    });
+  }
 
   console.log('');
-  console.log('🎉 Seeding completed successfully!');
-  console.log('');
-  console.log('📝 Summary:');
-  console.log(`   - ${accounts.length} Chart of Accounts`);
-  console.log('   - 3 Employees (1 Owner, 2 Mechanics)');
-  console.log(`   - ${spareParts.length} Spare Parts`);
-  console.log('   - 3 System Settings');
-  console.log('   - 14 ERD Tables populated with sample records');
-}
-
-async function seedERDTables() {
-  console.log('🔄 Seeding ERD Tables...');
-
-  // 1. USERS
-  const hashedPassword = await bcrypt.hash('123456', 10);
-  const userOwner = await prisma.uSERS.upsert({
-    where: { username: 'owner_erd' },
-    update: {},
-    create: {
-      nama: 'Budi Santoso ERD',
-      username: 'owner_erd',
-      password: hashedPassword,
-      role: 'Owner',
-      no_telp: '081234567890',
-      alamat: 'Jl. Pemuda No. 12',
-      status: true,
-    },
-  });
-
-  const userAdmin = await prisma.uSERS.upsert({
-    where: { username: 'admin_erd' },
-    update: {},
-    create: {
-      nama: 'Agus Admin ERD',
-      username: 'admin_erd',
-      password: hashedPassword,
-      role: 'Admin',
-      no_telp: '081234567891',
-      alamat: 'Jl. Merdeka No. 45',
-      status: true,
-    },
-  });
-
-  const userMekanik = await prisma.uSERS.upsert({
-    where: { username: 'mekanik_erd' },
-    update: {},
-    create: {
-      nama: 'Dedi Mekanik ERD',
-      username: 'mekanik_erd',
-      password: hashedPassword,
-      role: 'Mekanik',
-      no_telp: '081234567892',
-      alamat: 'Jl. Sudirman No. 89',
-      status: true,
-    },
-  });
-
-  // 2. KENDARAAN
-  let kendaraanBeat = await prisma.kENDARAAN.findFirst({ where: { no_polisi: 'B 1234 ABC' } });
-  if (!kendaraanBeat) {
-    kendaraanBeat = await prisma.kENDARAAN.create({
-      data: {
-        no_polisi: 'B 1234 ABC',
-        merek: 'Honda',
-        tipe: 'Beat',
-        tahun: 2020,
-        warna: 'Hitam',
-        no_rangka: 'MHK123456789',
-        no_mesin: 'E123456789',
-      },
-    });
-  }
-
-  // 3. LAYANAN_SERVIS
-  let layananServisRingan = await prisma.lAYANAN_SERVIS.findFirst({ where: { nama_layanan: 'Servis Ringan ERD' } });
-  if (!layananServisRingan) {
-    layananServisRingan = await prisma.lAYANAN_SERVIS.create({
-      data: {
-        nama_layanan: 'Servis Ringan ERD',
-        kategori: 'Regular',
-        deskripsi: 'Servis rutin berkala motor matic/manual',
-        harga_jasa: 75000,
-        status: true,
-      },
-    });
-  }
-
-  // 4. BOOKING_SERVIS
-  let booking = await prisma.bOOKING_SERVIS.findFirst({ where: { nama_pelanggan: 'Rudi Hermawan ERD' } });
-  if (!booking) {
-    booking = await prisma.bOOKING_SERVIS.create({
-      data: {
-        nama_pelanggan: 'Rudi Hermawan ERD',
-        no_telp: '08122334455',
-        alamat: 'Jl. Melati No. 5',
-        id_kendaraan: kendaraanBeat.id_kendaraan,
-        id_layanan: layananServisRingan.id_layanan,
-        keluhan: 'Tarikan gas agak berat dan rem belakang kurang pakem',
-        tanggal_booking: new Date(),
-        jam_booking: '10:00',
-        status_booking: 'Konfirmasi',
-      },
-    });
-  }
-
-  // 5. ORDER_SERVIS
-  let order = await prisma.oRDER_SERVIS.findFirst({ where: { no_order: 'ORD-ERD-001' } });
-  if (!order) {
-    order = await prisma.oRDER_SERVIS.create({
-      data: {
-        id_booking: booking.id_booking,
-        id_user: userMekanik.id_user,
-        no_order: 'ORD-ERD-001',
-        tanggal_order: new Date(),
-        status_order: 'Proses',
-        estimasi_selesai: new Date(Date.now() + 2 * 60 * 60 * 1000), // 2 hours from now
-        catatan: 'Minta cek kampas rem belakang sekalian',
-      },
-    });
-  }
-
-  // 6. DETAIL_SERVIS
-  let detailServis = await prisma.dETAIL_SERVIS.findFirst({ where: { id_order: order.id_order } });
-  if (!detailServis) {
-    detailServis = await prisma.dETAIL_SERVIS.create({
-      data: {
-        id_order: order.id_order,
-        id_layanan: layananServisRingan.id_layanan,
-        keterangan: 'Servis Ringan rutin',
-        biaya_jasa: 75000,
-      },
-    });
-  }
-
-  // 7. INVENTORY (BARANG)
-  let inventoryOli = await prisma.iNVENTORY.findUnique({ where: { kode_barang: 'OLI-ERD-001' } });
-  if (!inventoryOli) {
-    inventoryOli = await prisma.iNVENTORY.create({
-      data: {
-        kode_barang: 'OLI-ERD-001',
-        nama_barang: 'Oli Matic Castrol 0.8L',
-        kategori: 'Pelumas',
-        satuan: 'botol',
-        harga_beli: 35000,
-        harga_jual: 50000,
-        stok_akhir: 20,
-        lokasi: 'Rak A-1',
-        status: true,
-      },
-    });
-  }
-
-  // 8. DETAIL_ORDER_SUKUCADANG
-  let detailSc = await prisma.dETAIL_ORDER_SUKUCADANG.findFirst({
-    where: {
-      id_order: order.id_order,
-      id_barang: inventoryOli.id_barang,
-    },
-  });
-  if (!detailSc) {
-    detailSc = await prisma.dETAIL_ORDER_SUKUCADANG.create({
-      data: {
-        id_order: order.id_order,
-        id_barang: inventoryOli.id_barang,
-        jumlah: 1,
-        harga_satuan: 50000,
-        subtotal: 50000,
-      },
-    });
-  }
-
-  // 9. TRANSAKSI
-  let transaksi = await prisma.tRANSAKSI.findUnique({ where: { id_order: order.id_order } });
-  if (!transaksi) {
-    transaksi = await prisma.tRANSAKSI.create({
-      data: {
-        id_order: order.id_order,
-        tanggal_transaksi: new Date(),
-        total_tagihan: 125000, // 75000 service + 50000 oil
-        total_bayar: 125000,
-        metode_bayar: 'Tunai',
-        jumlah_bayar: 150000,
-        kembalian: 25000,
-        status_pembayaran: 'Lunas',
-      },
-    });
-  }
-
-  // 10. DETAIL_TRANSAKSI
-  let detailTransaksiJasa = await prisma.dETAIL_TRANSAKSI.findFirst({
-    where: {
-      id_transaksi: transaksi.id_transaksi,
-      tipe_item: 'Jasa',
-    },
-  });
-  if (!detailTransaksiJasa) {
-    await prisma.dETAIL_TRANSAKSI.create({
-      data: {
-        id_transaksi: transaksi.id_transaksi,
-        tipe_item: 'Jasa',
-        id_referensi: detailServis.id_detail_servis,
-        nama_item: 'Servis Ringan ERD',
-        jumlah: 1,
-        harga_satuan: 75000,
-        subtotal: 75000,
-      },
-    });
-  }
-
-  let detailTransaksiPart = await prisma.dETAIL_TRANSAKSI.findFirst({
-    where: {
-      id_transaksi: transaksi.id_transaksi,
-      tipe_item: 'Suku Cadang',
-    },
-  });
-  if (!detailTransaksiPart) {
-    await prisma.dETAIL_TRANSAKSI.create({
-      data: {
-        id_transaksi: transaksi.id_transaksi,
-        tipe_item: 'Suku Cadang',
-        id_referensi: detailSc.id_detail_sc,
-        nama_item: 'Oli Matic Castrol 0.8L',
-        jumlah: 1,
-        harga_satuan: 50000,
-        subtotal: 50000,
-      },
-    });
-  }
-
-  // 11. RIWAYAT_PEMBAYARAN
-  let riwayatPembayaran = await prisma.rIWAYAT_PEMBAYARAN.findFirst({
-    where: { id_transaksi: transaksi.id_transaksi },
-  });
-  if (!riwayatPembayaran) {
-    riwayatPembayaran = await prisma.rIWAYAT_PEMBAYARAN.create({
-      data: {
-        id_transaksi: transaksi.id_transaksi,
-        tanggal: new Date(),
-        keterangan: 'Pembayaran Lunas via Kasir',
-        nominal: 125000,
-      },
-    });
-  }
-
-  // 12. RIWAYAT_ORDER
-  let riwayatOrder = await prisma.rIWAYAT_ORDER.findFirst({
-    where: { id_order: order.id_order },
-  });
-  if (!riwayatOrder) {
-    await prisma.rIWAYAT_ORDER.createMany({
-      data: [
-        {
-          id_order: order.id_order,
-          tanggal: new Date(Date.now() - 30 * 60 * 1000), // 30 minutes ago
-          status_order: 'Menunggu Servis',
-          keterangan: 'Booking dikonfirmasi menjadi antrian order',
-        },
-        {
-          id_order: order.id_order,
-          tanggal: new Date(),
-          status_order: 'Proses',
-          keterangan: 'Pekerjaan dimulai oleh Mekanik Dedi',
-        },
-      ],
-    });
-  }
-
-  // 13. STOK_MASUK
-  let stokMasuk = await prisma.sTOK_MASUK.findFirst({
-    where: { id_barang: inventoryOli.id_barang },
-  });
-  if (!stokMasuk) {
-    stokMasuk = await prisma.sTOK_MASUK.create({
-      data: {
-        id_barang: inventoryOli.id_barang,
-        tanggal: new Date(Date.now() - 24 * 60 * 60 * 1000), // 1 day ago
-        supplier: 'Castrol Indonesia Distributor',
-        jumlah: 21, // 20 remaining + 1 used
-        harga_beli: 35000,
-        total: 21 * 35000,
-        keterangan: 'Stock masuk awal untuk testing ERD',
-      },
-    });
-  }
-
-  // 14. STOK_KELUAR
-  let stokKeluar = await prisma.sTOK_KELUAR.findFirst({
-    where: { id_barang: inventoryOli.id_barang },
-  });
-  if (!stokKeluar) {
-    stokKeluar = await prisma.sTOK_KELUAR.create({
-      data: {
-        id_barang: inventoryOli.id_barang,
-        tanggal: new Date(),
-        referensi: 'Order',
-        jumlah: 1,
-        keterangan: 'Digunakan pada order no ORD-ERD-001',
-      },
-    });
-  }
-
-  console.log('✅ Seeding ERD Tables completed successfully!');
+  console.log('🎉 Seeding 8 consolidated tables completed successfully!');
 }
 
 main()

@@ -1,12 +1,13 @@
-'use server';
+"use server";
 
-import { prisma } from '@/lib/prisma';
-import { auth } from '@/lib/auth';
-import { OrderStatus, ServiceType, PaymentStatus } from '@prisma/client';
-import { revalidatePath } from 'next/cache';
-import { createLog } from './logs';
-import { format, startOfDay, endOfDay } from 'date-fns';
-import { serializeData } from '@/lib/utils';
+import { revalidatePath } from "next/cache";
+import { format, startOfDay, endOfDay } from "date-fns";
+import type { OrderStatus, ServiceType, PaymentStatus } from "@prisma/client";
+
+import { auth } from "@/lib/auth";
+import { prisma } from "@/lib/prisma";
+import { serializeData } from "@/lib/utils";
+import { createLog } from "./logs";
 
 // ==================== Interfaces ====================
 export interface OrderItem {
@@ -97,8 +98,7 @@ export async function processOrder(data: ProcessOrderInput): Promise<
           status: 'IN_PROGRESS',
           scheduledAt: new Date(),
           // Clear old relations if re-processing to avoid duplicates
-          orderItems: { deleteMany: {} }, 
-          orderFees: { deleteMany: {} }
+          orderItems: { deleteMany: {} },
         },
         include: { mechanic: true }
       });
@@ -127,32 +127,17 @@ export async function processOrder(data: ProcessOrderInput): Promise<
 
             // === COGS (Cost of Goods Sold) JOURNAL ===
             const hpp = Number(part.buyPrice) * item.qty;
-            
-            // Ensure accounts exist: 511 (COGS) and 111 (Spare Part Inventory)
-            const hppAccount = await tx.account.upsert({
-              where: { code: '511' },
-              create: { code: '511', name: 'Harga Pokok Penjualan', type: 'EXPENSE', category: 'COST_OF_GOODS' },
-              update: {}
-            });
-            
-            const inventoryAccount = await tx.account.upsert({
-              where: { code: '111' },
-              create: { code: '111', name: 'Persediaan Sparepart', type: 'ASSET', category: 'CURRENT_ASSET' },
-              update: {}
-            });
-
-            // Create Journal Entry for COGS (HPP)
-            await tx.journalEntry.create({
+            // Record COGS via Payment with journalItems
+            await tx.payment.create({
               data: {
-                date: new Date(),
-                description: `HPP - ${item.name} (${item.qty} ${part.unit}) - Order #${order.id.slice(-6)}`,
-                reference: order.id,
-                items: {
-                  create: [
-                    { accountId: hppAccount.id, debit: hpp, credit: 0 }, // Debit: COGS
-                    { accountId: inventoryAccount.id, debit: 0, credit: hpp } // Credit: Inventory
-                  ]
-                }
+                type: 'EXPENSE',
+                amount: hpp,
+                note: `HPP - ${item.name} (${item.qty} ${part.unit}) - Order #${order.id.slice(-6)}`,
+                orderId: order.id,
+                journalItems: [
+                  { accountCode: '511', name: 'Harga Pokok Penjualan', debit: hpp, credit: 0 },
+                  { accountCode: '111', name: 'Persediaan Sparepart', debit: 0, credit: hpp },
+                ],
               }
             });
           }
@@ -172,57 +157,25 @@ export async function processOrder(data: ProcessOrderInput): Promise<
         });
       }
 
-      // 4. Process Order Fees & Create Accounting Journal (Accrual)
+      // 4. Process Order Fees as OrderItem with itemType='FEE'
       let totalFeeAmount = 0;
       if (fees && fees.length > 0) {
-        
-        // Ensure Accounts Exist (Idempotent)
-        // 501: Beban Gaji & Komisi
-        // 202: Utang Gaji & Komisi
-        const expenseAcc = await tx.account.upsert({
-            where: { code: '501' },
-            create: { code: '501', name: 'Beban Gaji & Komisi', type: 'EXPENSE', category: 'OPERATING_EXPENSE' },
-            update: {}
-        });
-        
-        const liabilityAcc = await tx.account.upsert({
-            where: { code: '202' },
-            create: { code: '202', name: 'Utang Gaji & Komisi', type: 'LIABILITY', category: 'CURRENT_LIABILITY' },
-            update: {}
-        });
-
         for (const fee of fees) {
           if (fee.amount > 0 && fee.employeeId) {
-             const createdFee = await tx.orderFee.create({
+             await tx.orderItem.create({
                data: {
                  orderId: order.id,
+                 itemType: 'FEE',
+                 itemName: fee.note || `Komisi: ${fee.name}`,
+                 quantity: 1,
+                 unitPrice: fee.amount,
+                 totalPrice: fee.amount,
                  employeeId: fee.employeeId,
-                 amount: fee.amount,
-                 description: fee.note || `Komisi: ${fee.name}`, // Use admin note or default
                  isPaid: false
                }
              });
              totalFeeAmount += fee.amount;
           }
-        }
-
-        // CREATE JOURNAL ENTRY (ACCRUAL)
-        // Debit: Expense (501)
-        // Credit: Payable (202)
-        if (totalFeeAmount > 0) {
-            await tx.journalEntry.create({
-                data: {
-                    date: new Date(),
-                    description: `Accrual Fee Order #${order.id.slice(-6)}`,
-                    reference: order.id,
-                    items: {
-                        create: [
-                            { accountId: expenseAcc.id, debit: totalFeeAmount, credit: 0 },
-                            { accountId: liabilityAcc.id, debit: 0, credit: totalFeeAmount }
-                        ]
-                    }
-                }
-            });
         }
       }
 
@@ -565,8 +518,7 @@ export async function getOrderDetail(orderId: string) {
       include: {
         mechanic: true,
         payments: { orderBy: { date: 'desc' } },
-        orderFees: { include: { employee: true } }, // Include Order Fees
-        orderItems: true // Include Order Items
+        orderItems: { include: { employee: true, sparePart: true } }, // Includes FEE items for commissions
       },
     });
 
@@ -771,17 +723,18 @@ export async function getOrderHistory(orderId: string) {
       return { success: false, error: 'Access denied' };
     }
 
-    const logs = await prisma.activityLog.findMany({
+    const logs = await prisma.systemConfig.findMany({
       where: {
+        category: 'LOG',
         OR: [
           {
-            metadata: {
+            content: {
               path: ['orderId'],
               equals: orderId
             }
           },
           {
-            details: {
+            subtitle: {
               contains: orderId
             }
           }
@@ -792,20 +745,21 @@ export async function getOrderHistory(orderId: string) {
       }
     });
 
-    return { success: true, logs: serializeData(logs) };
+    return { success: true, logs: serializeData(logs.map(l => ({ id: l.id, action: l.title?.split(':')[0] || 'LOG', title: l.title || '', details: l.subtitle || '', metadata: l.content, createdAt: l.createdAt }))) };
   } catch (error) {
     console.error('Get order history error:', error);
     // Fallback in case JSON querying throws an error on some DB environments
     try {
-      const logs = await prisma.activityLog.findMany({
+      const logs = await prisma.systemConfig.findMany({
         where: {
-          details: {
+          category: 'LOG',
+          subtitle: {
             contains: orderId
           }
         },
         orderBy: { createdAt: 'asc' }
       });
-      return { success: true, logs: serializeData(logs) };
+      return { success: true, logs: serializeData(logs.map(l => ({ id: l.id, action: l.title?.split(':')[0] || 'LOG', title: l.title || '', details: l.subtitle || '', metadata: l.content, createdAt: l.createdAt }))) };
     } catch (fallbackError) {
       console.error('Fallback get order history error:', fallbackError);
       return { success: false, error: 'Gagal memuat riwayat order' };

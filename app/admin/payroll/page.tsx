@@ -3,7 +3,6 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
-import { toast } from "sonner";
 import {
   Users,
   DollarSign,
@@ -18,6 +17,8 @@ import {
   Printer,
   Eye,
 } from "lucide-react";
+import { toast } from "sonner";
+
 import { RoleGuard } from "@/components/shared/RoleGuard";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
@@ -49,6 +50,7 @@ import {
 } from "@/components/ui/Select";
 import { Textarea } from "@/components/ui/Textarea";
 import { ExportButton } from "@/components/export/ExportButton";
+
 import {
   getPayrolls,
   bulkGeneratePayroll,
@@ -56,8 +58,9 @@ import {
   deletePayroll,
 } from "@/lib/actions/payroll";
 import { getBankAccounts } from "@/lib/actions/bank";
-import { createPayment } from "@/lib/actions/payments";
+import { createPayrollPayment } from "@/lib/actions/payments";
 import type { PayrollSummary } from "@/lib/export/types";
+
 
 interface Payroll {
   id: string;
@@ -295,10 +298,10 @@ export default function Page() {
 
     setPaying(true);
     try {
-      const res = await createPayment({
+      const res = await createPayrollPayment({
         amount: payAmountNum,
         note: payNote,
-        payrollId: selectedPayroll.id,
+        employeeId: selectedPayroll.employeeId,
         paymentMethod: payMethod,
         bankAccountId: payMethod === "TRANSFER" ? selectedBankId : undefined,
       });

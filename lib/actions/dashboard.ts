@@ -1,11 +1,10 @@
-'use server';
+"use server";
 
-import { prisma } from '@/lib/prisma';
-import { format, subDays, startOfMonth, endOfMonth, startOfDay, endOfDay } from 'date-fns';
-import { id } from 'date-fns/locale';
-import { OrderStatus } from '@prisma/client'; // Import enum if needed
+import { format, subDays, startOfMonth, endOfMonth, startOfDay, endOfDay } from "date-fns";
+import { id } from "date-fns/locale";
 
-// Tipe data untuk struktur response dashboard
+import { prisma } from "@/lib/prisma";
+
 export interface DashboardStats {
   financial: {
     revenueMonth: number;
@@ -40,10 +39,10 @@ export interface DashboardStats {
   }[];
   recentActivities: {
     id: string;
-    type: 'ORDER' | 'EXPENSE' | 'INCOME';
+    type: "ORDER" | "EXPENSE" | "INCOME";
     description: string;
     amount: number;
-    date: string; // ISO string instead of Date for serialization
+    date: string;
     status?: string;
   }[];
   bankAccounts: {
@@ -57,19 +56,12 @@ export interface DashboardStats {
 }
 
 /**
- * Mengambil semua statistik untuk Dashboard Utama.
+ * Computes consolidated dashboard statistics across financial, operational, and inventory modules.
  * 
- * Fungsi ini melakukan query paralel (Promise.all) untuk performa maksimal:
- * 1. Financial: Pendapatan bulan ini, hari ini, pengeluaran, saldo kas.
- * 2. Operational: Order bulan ini, order aktif, order selesai.
- * 3. Inventory: Total item, stok menipis, nilai aset.
- * 4. Chart: Data pendapatan 7 hari terakhir.
- * 5. Recent Activity: 5 transaksi terakhir (order/expense).
- * 6. Bank: Saldo rekening bank.
- * 
- * @returns {Object} Data lengkap dashboard.
+ * @returns Dashboard statistics payload.
  */
 export async function getDashboardStats(): Promise<{ success: boolean; data?: DashboardStats; error?: string }> {
+
   try {
     const now = new Date();
     const firstDayOfMonth = startOfMonth(now);
@@ -80,12 +72,11 @@ export async function getDashboardStats(): Promise<{ success: boolean; data?: Da
     const startOfYesterday = startOfDay(yesterday);
     const endOfYesterday = endOfDay(yesterday);
 
-    // ==================== 1. Parallelize Main Queries ====================
     const [
         orderRevenueAgg,
         todayRevenueAgg,
         expenseAgg,
-        cashAccount,
+        kasAccounts,
         totalOrdersMonth,
         activeOrders,
         completedOrdersMonth,
@@ -94,7 +85,6 @@ export async function getDashboardStats(): Promise<{ success: boolean; data?: Da
         recentOrders,
         recentExpenses,
         bankAccountsRaw,
-        // Detailed Operational & Comparison metrics
         bookingsToday,
         bookingsYesterday,
         ordersInProgress,
@@ -122,16 +112,24 @@ export async function getDashboardStats(): Promise<{ success: boolean; data?: Da
                 paymentStatus: 'PAID'
             }
         }),
-        // Financial - Month Expense
-        prisma.journalItem.aggregate({
-            _sum: { debit: true },
+        // Financial - Month Expense (from Payment table)
+        prisma.payment.aggregate({
+            _sum: { amount: true },
             where: {
-                account: { type: 'EXPENSE' },
-                journalEntry: { date: { gte: firstDayOfMonth, lte: lastDayOfMonth } }
+                type: { in: ['EXPENSE', 'PAYROLL'] },
+                createdAt: { gte: firstDayOfMonth, lte: lastDayOfMonth }
             }
         }),
-        // Financial - Cash Account ID Lookup
-        prisma.account.findFirst({ where: { code: '101' } }),
+        // Financial - Cash & Bank Accounts for Saldo Kas
+        prisma.account.findMany({
+            where: {
+                OR: [
+                    { code: '101' },
+                    { type: 'BANK' },
+                ],
+                isActive: true,
+            }
+        }),
         
         // Operational Stats
         prisma.order.count({ where: { createdAt: { gte: firstDayOfMonth, lte: lastDayOfMonth } } }),
@@ -144,51 +142,35 @@ export async function getDashboardStats(): Promise<{ success: boolean; data?: Da
         
         // Recent Activities
         prisma.order.findMany({ take: 5, orderBy: { createdAt: 'desc' } }),
-        prisma.journalEntry.findMany({
+        prisma.payment.findMany({
             take: 5,
-            orderBy: { date: 'desc' },
-            where: { items: { some: { credit: { gt: 0 }, account: { code: '101' } } } },
-            include: { items: { where: { account: { code: '101' }, credit: { gt: 0 } } } }
+            where: { type: { in: ['EXPENSE', 'PAYROLL'] } },
+            orderBy: { createdAt: 'desc' }
         }),
         // Bank Accounts
-        prisma.bankAccount.findMany({
-            where: { isActive: true },
-            orderBy: { createdAt: 'asc' },
-            select: {
-                id: true,
-                bankCode: true,
-                bankName: true,
-                accountNumber: true,
-                accountName: true,
-                currentBalance: true
-            }
+        prisma.account.findMany({
+            where: { type: 'BANK', isActive: true },
+            orderBy: { createdAt: 'asc' }
         }),
-        // Detailed Operational & Comparison queries
-        // bookingsToday
+        // Comparison metrics
         prisma.order.count({
             where: { createdAt: { gte: startOfToday, lte: endOfToday } }
         }),
-        // bookingsYesterday
         prisma.order.count({
             where: { createdAt: { gte: startOfYesterday, lte: endOfYesterday } }
         }),
-        // ordersInProgress
         prisma.order.count({
             where: { status: 'IN_PROGRESS' }
         }),
-        // ordersInProgressYesterday
         prisma.order.count({
             where: { status: 'IN_PROGRESS', createdAt: { gte: startOfYesterday, lte: endOfYesterday } }
         }),
-        // completedToday
         prisma.order.count({
             where: { status: { in: ['COMPLETED', 'READY'] }, updatedAt: { gte: startOfToday, lte: endOfToday } }
         }),
-        // completedYesterday
         prisma.order.count({
             where: { status: { in: ['COMPLETED', 'READY'] }, updatedAt: { gte: startOfYesterday, lte: endOfYesterday } }
         }),
-        // revenueYesterdayAgg
         prisma.order.aggregate({
             _sum: { totalPrice: true },
             where: {
@@ -196,85 +178,72 @@ export async function getDashboardStats(): Promise<{ success: boolean; data?: Da
                 paymentStatus: 'PAID'
             }
         }),
-        // pendingCount
         prisma.order.count({
             where: { status: { in: ['PENDING', 'ESTIMATED', 'CONFIRMED', 'QUEUE'] } }
         }),
-        // inProgressCount
         prisma.order.count({
             where: { status: 'IN_PROGRESS' }
         }),
-        // completedCount
         prisma.order.count({
             where: { status: { in: ['READY', 'COMPLETED'] } }
         })
     ]);
 
-    // ==================== 2. Process Results & Dependent Queries ====================
-    
-    // Financial Processing
     const revenueMonth = Number(orderRevenueAgg._sum.totalPrice ?? 0);
     const todayRevenue = Number(todayRevenueAgg._sum.totalPrice ?? 0);
-    const expenseMonth = Number(expenseAgg._sum.debit ?? 0);
+    const expenseMonth = Number(expenseAgg._sum.amount ?? 0);
     const revenueYesterday = Number(revenueYesterdayAgg._sum.totalPrice ?? 0);
     
-    // Cash Balance (Dependent on Cash Account)
-    let cashBalance = 0;
-    if (cashAccount) {
-        const [cashDebit, cashCredit] = await Promise.all([
-             prisma.journalItem.aggregate({ _sum: { debit: true }, where: { accountId: cashAccount.id } }),
-             prisma.journalItem.aggregate({ _sum: { credit: true }, where: { accountId: cashAccount.id } })
-        ]);
-        cashBalance = Number(cashDebit._sum.debit ?? 0) - Number(cashCredit._sum.credit ?? 0);
-    }
+    const cashBalance = kasAccounts.reduce((sum, acc) => sum + Number(acc.currentBalance || 0), 0);
 
-    // Inventory Processing
     const totalAssetValue = allParts.reduce((sum, part) => sum + (part.stock * Number(part.buyPrice)), 0);
     const lowStockCount = allParts.filter(p => p.stock <= p.minStock).length;
 
-    // Chart Data (7 Days) - Parallelize Loop
-    const chartPromises = [];
-    for (let i = 6; i >= 0; i--) {
-        const d = subDays(now, i);
-        chartPromises.push(
-            prisma.order.aggregate({
-                _sum: { totalPrice: true },
-                where: {
-                    createdAt: { gte: startOfDay(d), lte: endOfDay(d) },
-                    paymentStatus: 'PAID'
-                }
-            }).then(res => ({
-                date: format(d, 'dd MMM', { locale: id }),
-                revenue: Number(res._sum.totalPrice ?? 0)
-            }))
-        );
-    }
-    const chartData = await Promise.all(chartPromises);
+    const sevenDaysAgo = startOfDay(subDays(now, 6));
+    const recentPaidOrders = await prisma.order.findMany({
+      where: {
+        createdAt: { gte: sevenDaysAgo },
+        paymentStatus: 'PAID'
+      },
+      select: {
+        createdAt: true,
+        totalPrice: true
+      }
+    });
 
-    // Normalize and Merge
+    const chartData = [];
+    for (let i = 6; i >= 0; i--) {
+      const d = subDays(now, i);
+      const dayStart = startOfDay(d);
+      const dayEnd = endOfDay(d);
+      const dayRevenue = recentPaidOrders
+        .filter(o => o.createdAt >= dayStart && o.createdAt <= dayEnd)
+        .reduce((sum, o) => sum + Number(o.totalPrice || 0), 0);
+      chartData.push({
+        date: format(d, 'dd MMM', { locale: id }),
+        revenue: dayRevenue
+      });
+    }
+
     const activities = [
         ...recentOrders.map(o => ({
             id: o.id,
             type: 'ORDER' as const,
-            description: `Order ${o.custName} - ${o.vehicle}`, // Pakai custName dan vehicle
+            description: `Order ${o.custName} - ${o.vehicle}`,
             amount: Number(o.totalPrice),
-            date: o.createdAt.toISOString(), // Convert Date to ISO string
+            date: o.createdAt.toISOString(),
             status: o.status
         })),
-        ...recentExpenses.map(e => {
-            const totalOut = e.items.reduce((sum, item) => sum + Number(item.credit), 0);
-            return {
-                id: e.id,
-                type: 'EXPENSE' as const,
-                description: e.description,
-                amount: totalOut, 
-                date: e.date.toISOString(), // Convert Date to ISO string
-                status: 'Done'
-            };
-        })
+        ...recentExpenses.map(e => ({
+            id: e.id,
+            type: 'EXPENSE' as const,
+            description: e.note || `Pengeluaran ${e.type}`,
+            amount: Number(e.amount),
+            date: e.createdAt.toISOString(),
+            status: 'Done'
+        }))
     ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).slice(0, 7);
 
-    // Calculate percentages and guard against division by zero
     const bookingsTodayChange = bookingsYesterday === 0 ? 15 : Math.round(((bookingsToday - bookingsYesterday) / bookingsYesterday) * 100);
     const ordersInProgressChange = ordersInProgressYesterday === 0 ? 8 : Math.round(((ordersInProgress - ordersInProgressYesterday) / ordersInProgressYesterday) * 100);
     const completedTodayChange = completedYesterday === 0 ? 20 : Math.round(((completedToday - completedYesterday) / completedYesterday) * 100);
@@ -314,10 +283,10 @@ export async function getDashboardStats(): Promise<{ success: boolean; data?: Da
         recentActivities: activities,
         bankAccounts: bankAccountsRaw.map(acc => ({
           id: acc.id,
-          bankCode: acc.bankCode,
-          bankName: acc.bankName,
-          accountNumber: acc.accountNumber,
-          accountName: acc.accountName,
+          bankCode: acc.bankCode || 'OTHER',
+          bankName: acc.name.split(' - ')[0] || acc.name,
+          accountNumber: acc.accountNumber || '',
+          accountName: acc.accountName || acc.name,
           currentBalance: Number(acc.currentBalance)
         }))
       }

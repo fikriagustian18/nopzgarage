@@ -7,6 +7,42 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+model User {
+  id               String    @id @default(cuid())
+  email            String    @unique
+  password         String
+  role             String
+  employeeId       String?   @unique
+  resetToken       String?   @unique
+  resetTokenExpiry DateTime?
+  forgotRequests   Json?
+  isActive         Boolean   @default(true)
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  employee         Employee? @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@index([email])
+  @@index([role])
+}
+
+model Employee {
+  id             String      @id @default(cuid())
+  name           String
+  role           String
+  phone          String?
+  jabatan        String?
+  salaryType     SalaryType  @default(DAILY)
+  dailyRate      Decimal     @default(0) @db.Decimal(10, 2)
+  commissionRate Decimal     @default(0) @db.Decimal(10, 2)
+  isActive       Boolean     @default(true)
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+  user           User?
+  orders         Order[]
+  orderItems     OrderItem[]
+  payments       Payment[]
+}
+
 model Order {
   id            String        @id @default(cuid())
   custName      String
@@ -22,12 +58,11 @@ model Order {
   totalPaid     Decimal       @default(0) @db.Decimal(12, 2)
   paymentStatus PaymentStatus @default(UNPAID)
   mechanicId    String?
-  createdAt     DateTime      @default(now())
-  updatedAt     DateTime      @updatedAt
   feedback      String?
   rating        Int?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
   mechanic      Employee?     @relation(fields: [mechanicId], references: [id])
-  orderFees     OrderFee[]
   orderItems    OrderItem[]
   payments      Payment[]
 
@@ -45,182 +80,16 @@ model OrderItem {
   unitPrice   Decimal    @db.Decimal(12, 2)
   totalPrice  Decimal    @db.Decimal(12, 2)
   sparePartId String?
+  employeeId  String?
+  isPaid      Boolean    @default(false)
   createdAt   DateTime   @default(now())
   order       Order      @relation(fields: [orderId], references: [id], onDelete: Cascade)
   sparePart   SparePart? @relation(fields: [sparePartId], references: [id])
+  employee    Employee?  @relation(fields: [employeeId], references: [id])
 
   @@index([orderId])
   @@index([sparePartId])
-}
-
-model OrderFee {
-  id          String    @id @default(cuid())
-  orderId     String
-  employeeId  String
-  amount      Decimal   @db.Decimal(12, 2)
-  description String?
-  isPaid      Boolean   @default(false)
-  paidAt      DateTime?
-  createdAt   DateTime  @default(now())
-  employee    Employee  @relation(fields: [employeeId], references: [id])
-  order       Order     @relation(fields: [orderId], references: [id], onDelete: Cascade)
-
-  @@index([orderId])
   @@index([employeeId])
-}
-
-model User {
-  id                     String                  @id @default(cuid())
-  email                  String                  @unique
-  password               String
-  role                   String
-  employeeId             String?                 @unique
-  resetToken             String?                 @unique
-  resetTokenExpiry       DateTime?
-  isActive               Boolean                 @default(true)
-  createdAt              DateTime                @default(now())
-  updatedAt              DateTime                @updatedAt
-  forgotPasswordRequests ForgotPasswordRequest[]
-  employee               Employee?               @relation(fields: [employeeId], references: [id], onDelete: Cascade)
-
-  @@index([email])
-  @@index([role])
-}
-
-model ForgotPasswordRequest {
-  id         String    @id @default(cuid())
-  userId     String
-  status     String    @default("PENDING")
-  resolvedBy String?
-  resolvedAt DateTime?
-  createdAt  DateTime  @default(now())
-  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([userId])
-  @@index([status])
-}
-
-model Employee {
-  id             String     @id @default(cuid())
-  name           String
-  role           String
-  phone          String?
-  salaryType     SalaryType @default(DAILY)
-  dailyRate      Decimal    @default(0) @db.Decimal(10, 2)
-  commissionRate Decimal    @default(0) @db.Decimal(10, 2)
-  isActive       Boolean    @default(true)
-  createdAt      DateTime   @default(now())
-  updatedAt      DateTime   @updatedAt
-  orders         Order[]
-  orderFees      OrderFee[]
-  payrolls       Payroll[]
-  user           User?
-}
-
-model Payroll {
-  id          String        @id @default(cuid())
-  startDate   DateTime
-  endDate     DateTime
-  employeeId  String
-  baseSalary  Decimal       @default(0) @db.Decimal(12, 2)
-  bonus       Decimal       @default(0) @db.Decimal(12, 2)
-  totalEarned Decimal       @db.Decimal(12, 2)
-  details     String?
-  totalPaid   Decimal       @default(0) @db.Decimal(12, 2)
-  status      PaymentStatus @default(UNPAID)
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @updatedAt
-  payments    Payment[]
-  employee    Employee      @relation(fields: [employeeId], references: [id], onDelete: Cascade)
-
-  @@index([employeeId])
-  @@index([startDate, endDate])
-}
-
-model BankAccount {
-  id             String    @id @default(cuid())
-  bankCode       String    @default("OTHER") // Kode bank (BCA, BNI, BRI, etc.)
-  bankName       String    // Nama lengkap bank
-  accountNumber  String
-  accountName    String
-  currentBalance Decimal   @default(0) @db.Decimal(15, 2) // Saldo saat ini
-  isActive       Boolean   @default(true)
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
-  payments       Payment[]
-
-  @@index([bankCode])
-}
-
-model Payment {
-  id            String        @id @default(cuid())
-  date          DateTime      @default(now())
-  amount        Decimal       @db.Decimal(12, 2)
-  note          String?
-  orderId       String?
-  payrollId     String?
-  createdAt     DateTime      @default(now())
-  bankAccountId String?
-  paymentMethod String        @default("CASH")
-  journal       JournalEntry?
-  bankAccount   BankAccount?  @relation(fields: [bankAccountId], references: [id])
-  order         Order?        @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  payroll       Payroll?      @relation(fields: [payrollId], references: [id], onDelete: Cascade)
-
-  @@index([orderId])
-  @@index([payrollId])
-  @@index([date])
-  @@index([bankAccountId])
-}
-
-model ContentSection {
-  id         String   @id @default(cuid())
-  sectionKey String   @unique
-  title      String?
-  subtitle   String?
-  content    Json?
-  imageUrl   String?
-  isVisible  Boolean  @default(true)
-  updatedAt  DateTime @updatedAt
-}
-
-model Account {
-  id           String        @id @default(cuid())
-  code         String        @unique
-  name         String
-  type         String
-  category     String?
-  isActive     Boolean       @default(true)
-  createdAt    DateTime      @default(now())
-  journalItems JournalItem[]
-
-  @@index([type])
-}
-
-model JournalEntry {
-  id          String        @id @default(cuid())
-  date        DateTime      @default(now())
-  description String
-  reference   String?
-  paymentId   String?       @unique
-  createdAt   DateTime      @default(now())
-  payment     Payment?      @relation(fields: [paymentId], references: [id])
-  items       JournalItem[]
-
-  @@index([date])
-}
-
-model JournalItem {
-  id             String       @id @default(cuid())
-  journalEntryId String
-  accountId      String
-  debit          Decimal      @default(0) @db.Decimal(12, 2)
-  credit         Decimal      @default(0) @db.Decimal(12, 2)
-  account        Account      @relation(fields: [accountId], references: [id])
-  journalEntry   JournalEntry @relation(fields: [journalEntryId], references: [id], onDelete: Cascade)
-
-  @@index([journalEntryId])
-  @@index([accountId])
 }
 
 model SparePart {
@@ -242,74 +111,64 @@ model SparePart {
   @@index([category])
 }
 
-model SystemSetting {
-  id        String   @id @default(cuid())
-  key       String   @unique
-  value     String
-  updatedAt DateTime @updatedAt
-}
-
-model ActivityLog {
-  id        String   @id @default(cuid())
-  action    String
-  title     String
-  details   String
-  metadata  Json?
-  userId    String?
-  userName  String?
-  role      String?
-  createdAt DateTime @default(now())
-
-  @@index([action])
-  @@index([createdAt])
-}
-
-model MediaGallery {
-  id          String   @id @default(cuid())
-  title       String
-  description String?
-  imageUrl    String   // URL gambar yang di-upload
-  type        MediaType @default(GALLERY) // GALLERY, POSTER, BANNER
-  category    String?  // Kategori: "service", "project", "event", dll
-  isActive    Boolean  @default(true)
-  displayOrder Int     @default(0) // Urutan tampilan
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+model Account {
+  id             String    @id @default(cuid())
+  code           String    @unique
+  name           String
+  type           String
+  category       String?
+  bankCode       String?   @default("OTHER")
+  accountNumber  String?
+  accountName    String?
+  currentBalance Decimal   @default(0) @db.Decimal(15, 2)
+  isActive       Boolean   @default(true)
+  createdAt      DateTime  @default(now())
+  payments       Payment[]
 
   @@index([type])
-  @@index([isActive])
-  @@index([displayOrder])
 }
 
-model SocialEmbed {
-  id          String      @id @default(cuid())
-  platform    SocialPlatform // INSTAGRAM, TIKTOK
-  embedUrl    String      // URL post Instagram/TikTok
-  embedCode   String?     // Embed code jika ada
-  title       String?
-  description String?
-  thumbnail   String?     // URL thumbnail preview
-  isActive    Boolean     @default(true)
-  displayOrder Int        @default(0)
-  createdAt   DateTime    @default(now())
-  updatedAt   DateTime    @updatedAt
+model Payment {
+  id            String    @id @default(cuid())
+  date          DateTime  @default(now())
+  amount        Decimal   @db.Decimal(12, 2)
+  type          String    @default("ORDER_PAYMENT")
+  note          String?
+  orderId       String?
+  employeeId    String?
+  bankAccountId String?
+  paymentMethod String    @default("CASH")
+  journalItems  Json?
+  createdAt     DateTime  @default(now())
+  order         Order?    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  employee      Employee? @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  bankAccount   Account?  @relation(fields: [bankAccountId], references: [id])
 
-  @@index([platform])
-  @@index([isActive])
-  @@index([displayOrder])
+  @@index([orderId])
+  @@index([employeeId])
+  @@index([date])
+  @@index([bankAccountId])
 }
 
-enum MediaType {
-  GALLERY
-  POSTER
-  BANNER
-  CAROUSEL
-}
+model SystemConfig {
+  id           String   @id @default(cuid())
+  category     String   @default("SETTING")
+  key          String?  @unique
+  title        String?
+  subtitle     String?
+  content      Json?
+  imageUrl     String?
+  embedUrl     String?
+  platform     String?
+  userId       String?
+  userName     String?
+  isVisible    Boolean  @default(true)
+  displayOrder Int      @default(0)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 
-enum SocialPlatform {
-  INSTAGRAM
-  TIKTOK
-  YOUTUBE
+  @@index([category])
+  @@index([key])
 }
 
 enum OrderStatus {
@@ -339,190 +198,3 @@ enum SalaryType {
   COMMISSION
   MONTHLY
 }
-
-model USERS {
-  id_user      String         @id @default(cuid())
-  nama         String
-  username     String         @unique
-  password     String
-  role         String         // Owner/Admin/Mekanik
-  no_telp      String?
-  alamat       String?
-  status       Boolean        @default(true)
-  created_at   DateTime       @default(now())
-  orders       ORDER_SERVIS[]
-}
-
-model KENDARAAN {
-  id_kendaraan String           @id @default(cuid())
-  no_polisi    String
-  merek        String
-  tipe         String
-  tahun        Int
-  warna        String
-  no_rangka    String?
-  no_mesin     String?
-  bookings     BOOKING_SERVIS[]
-}
-
-model BOOKING_SERVIS {
-  id_booking      String         @id @default(cuid())
-  nama_pelanggan  String
-  no_telp         String
-  alamat          String
-  id_kendaraan    String
-  id_layanan      String
-  keluhan         String
-  tanggal_booking DateTime
-  jam_booking     String
-  status_booking  String         // Menunggu/Konfirmasi/Batal/Selesai
-  kendaraan       KENDARAAN      @relation(fields: [id_kendaraan], references: [id_kendaraan])
-  layanan         LAYANAN_SERVIS @relation(fields: [id_layanan], references: [id_layanan])
-  orders          ORDER_SERVIS[]
-}
-
-model LAYANAN_SERVIS {
-  id_layanan   String           @id @default(cuid())
-  nama_layanan String
-  kategori     String
-  deskripsi    String?
-  harga_jasa   Decimal          @db.Decimal(12, 2)
-  status       Boolean          @default(true)
-  bookings     BOOKING_SERVIS[]
-  details      DETAIL_SERVIS[]
-}
-
-model ORDER_SERVIS {
-  id_order         String                      @id @default(cuid())
-  id_booking       String?
-  id_user          String
-  no_order         String                      @unique
-  tanggal_order    DateTime                    @default(now())
-  status_order     String                      // Menunggu Servis/Proses/Selesai/Lunas
-  estimasi_selesai DateTime?
-  catatan          String?
-  booking          BOOKING_SERVIS?             @relation(fields: [id_booking], references: [id_booking])
-  user             USERS                       @relation(fields: [id_user], references: [id_user])
-  details          DETAIL_SERVIS[]
-  sukucadang       DETAIL_ORDER_SUKUCADANG[]
-  transaksi        TRANSAKSI?
-  riwayat_orders   RIWAYAT_ORDER[]
-}
-
-model DETAIL_SERVIS {
-  id_detail_servis String         @id @default(cuid())
-  id_order         String
-  id_layanan       String
-  keterangan       String?
-  biaya_jasa       Decimal        @db.Decimal(12, 2)
-  order            ORDER_SERVIS   @relation(fields: [id_order], references: [id_order], onDelete: Cascade)
-  layanan          LAYANAN_SERVIS @relation(fields: [id_layanan], references: [id_layanan])
-}
-
-model DETAIL_ORDER_SUKUCADANG {
-  id_detail_sc String    @id @default(cuid())
-  id_order     String
-  id_barang    String
-  jumlah       Int
-  harga_satuan Decimal   @db.Decimal(12, 2)
-  subtotal     Decimal   @db.Decimal(12, 2)
-  order        ORDER_SERVIS @relation(fields: [id_order], references: [id_order], onDelete: Cascade)
-  barang       INVENTORY @relation(fields: [id_barang], references: [id_barang])
-}
-
-model INVENTORY {
-  id_barang    String                    @id @default(cuid())
-  kode_barang  String                    @unique
-  nama_barang  String
-  kategori     String
-  satuan       String
-  harga_beli   Decimal                   @db.Decimal(12, 2)
-  harga_jual   Decimal                   @db.Decimal(12, 2)
-  stok_akhir   Int                       @default(0)
-  lokasi       String?
-  status       Boolean                   @default(true)
-  sukucadang   DETAIL_ORDER_SUKUCADANG[]
-  stok_masuk   STOK_MASUK[]
-  stok_keluar  STOK_KELUAR[]
-
-  @@map("INVENTORY")
-}
-
-model TRANSAKSI {
-  id_transaksi       String               @id @default(cuid())
-  id_order           String               @unique
-  tanggal_transaksi  DateTime             @default(now())
-  total_tagihan      Decimal              @db.Decimal(12, 2)
-  total_bayar        Decimal              @db.Decimal(12, 2)
-  metode_bayar       String               // Tunai/Transfer/QRIS/Kartu
-  jumlah_bayar       Decimal              @db.Decimal(12, 2)
-  kembalian          Decimal              @default(0) @db.Decimal(12, 2)
-  status_pembayaran  String               // Belum Lunas/Lunas
-  order              ORDER_SERVIS         @relation(fields: [id_order], references: [id_order], onDelete: Cascade)
-  details            DETAIL_TRANSAKSI[]
-  riwayat_pembayaran RIWAYAT_PEMBAYARAN[]
-}
-
-model DETAIL_TRANSAKSI {
-  id_detail_transaksi String    @id @default(cuid())
-  id_transaksi        String
-  tipe_item           String    // Jasa/Suku Cadang
-  id_referensi        String?
-  nama_item           String
-  jumlah              Int
-  harga_satuan        Decimal   @db.Decimal(12, 2)
-  subtotal            Decimal   @db.Decimal(12, 2)
-  transaksi           TRANSAKSI @relation(fields: [id_transaksi], references: [id_transaksi], onDelete: Cascade)
-}
-
-model RIWAYAT_PEMBAYARAN {
-  id_riwayat_bayar String    @id @default(cuid())
-  id_transaksi     String
-  tanggal          DateTime  @default(now())
-  keterangan       String?
-  nominal          Decimal   @db.Decimal(12, 2)
-  transaksi        TRANSAKSI @relation(fields: [id_transaksi], references: [id_transaksi], onDelete: Cascade)
-}
-
-model RIWAYAT_ORDER {
-  id_riwayat_order String       @id @default(cuid())
-  id_order         String
-  tanggal          DateTime     @default(now())
-  status_order     String
-  keterangan       String?
-  order            ORDER_SERVIS @relation(fields: [id_order], references: [id_order], onDelete: Cascade)
-}
-
-model STOK_MASUK {
-  id_masuk    String    @id @default(cuid())
-  id_barang   String
-  tanggal     DateTime  @default(now())
-  supplier    String?
-  jumlah      Int
-  harga_beli  Decimal   @db.Decimal(12, 2)
-  total       Decimal   @db.Decimal(12, 2)
-  keterangan  String?
-  barang      INVENTORY @relation(fields: [id_barang], references: [id_barang])
-}
-
-model STOK_KELUAR {
-  id_keluar   String    @id @default(cuid())
-  id_barang   String
-  tanggal     DateTime  @default(now())
-  referensi   String    // Order/Servis/Lainnya
-  jumlah      Int
-  keterangan  String?
-  barang      INVENTORY @relation(fields: [id_barang], references: [id_barang])
-}
-
-model Jabatan {
-  id          String   @id @default(cuid())
-  name        String   @unique
-  description String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  @@map("JABATAN")
-}
-
-

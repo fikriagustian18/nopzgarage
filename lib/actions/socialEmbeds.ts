@@ -1,11 +1,12 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { revalidatePath } from "next/cache";
-import { SocialPlatform } from "@prisma/client";
 
-export type SocialEmbedItem = {
+type SocialPlatform = "INSTAGRAM" | "TIKTOK" | "YOUTUBE";
+
+export interface SocialEmbedItem {
   id: string;
   platform: SocialPlatform;
   embedUrl: string;
@@ -17,22 +18,22 @@ export type SocialEmbedItem = {
   displayOrder: number;
   createdAt: Date;
   updatedAt: Date;
-};
+}
 
-// Get all social embeds
 /**
- * Mengambil semua konten social media embed yang aktif.
- * Diurutkan berdasarkan Display Order lalu Tanggal.
+ * Fetches all active social media embed content.
+ * Ordered by Display Order then Date.
  * 
- * @param {SocialPlatform} platform - Filter platform (IG, TikTok, YT).
- * @returns {Array} List embed items.
+ * @param platform - Filter platform (Instagram, TikTok, YouTube).
+ * @returns List of embed items.
  */
-export async function getSocialEmbeds(platform?: SocialPlatform): Promise<SocialEmbedItem[]> {
+export async function getSocialEmbeds(platform?: string): Promise<SocialEmbedItem[]> {
   try {
-    const items = await prisma.socialEmbed.findMany({
+    const items = await prisma.systemConfig.findMany({
       where: {
+        category: "EMBED",
         ...(platform && { platform }),
-        isActive: true,
+        isVisible: true,
       },
       orderBy: [
         { displayOrder: "asc" },
@@ -40,27 +41,54 @@ export async function getSocialEmbeds(platform?: SocialPlatform): Promise<Social
       ],
     });
 
-    return items;
+    return items.map((item) => ({
+      id: item.id,
+      platform: (item.platform as any) || "INSTAGRAM",
+      embedUrl: item.embedUrl || "",
+      embedCode: item.subtitle || null,
+      title: item.title || null,
+      description: item.content ? (item.content as any).description || null : null,
+      thumbnail: item.imageUrl || null,
+      isActive: item.isVisible,
+      displayOrder: item.displayOrder,
+      createdAt: item.createdAt,
+      updatedAt: item.updatedAt,
+    }));
   } catch (error) {
     console.error("Error fetching social embeds:", error);
     return [];
   }
 }
 
-// Get single social embed
 /**
- * Mengambil satu item embed berdasarkan ID.
+ * Fetches a single social media embed by ID.
  * 
- * @param {string} id - ID Embed.
- * @returns {Object} Detail embed item.
+ * @param id - Embed ID.
+ * @returns Embed item if found.
  */
 export async function getSocialEmbed(id: string): Promise<SocialEmbedItem | null> {
   try {
-    const item = await prisma.socialEmbed.findUnique({
+    const item = await prisma.systemConfig.findUnique({
       where: { id },
     });
 
-    return item;
+    if (!item) {
+      return null;
+    }
+
+    return {
+      id: item.id,
+      platform: (item.platform as any) || "INSTAGRAM",
+      embedUrl: item.embedUrl || "",
+      embedCode: item.subtitle || null,
+      title: item.title || null,
+      description: item.content ? (item.content as any).description || null : null,
+      thumbnail: item.imageUrl || null,
+      isActive: item.isVisible,
+      displayOrder: item.displayOrder,
+      createdAt: item.createdAt,
+      updatedAt: item.updatedAt,
+    };
   } catch (error) {
     console.error("Error fetching social embed:", error);
     return null;
@@ -73,12 +101,14 @@ function extractInstagramPostId(url: string): string | null {
     /instagram\.com\/p\/([A-Za-z0-9_-]+)/,
     /instagram\.com\/reel\/([A-Za-z0-9_-]+)/,
     /instagr\.am\/p\/([A-Za-z0-9_-]+)/,
-    /instagram\.com\/.*\/p\/([A-Za-z0-9_-]+)/, // Support nested paths
+    /instagram\.com\/.*\/p\/([A-Za-z0-9_-]+)/,
   ];
 
   for (const pattern of patterns) {
     const match = url.match(pattern);
-    if (match) return match[1];
+    if (match) {
+      return match[1];
+    }
   }
 
   return null;
@@ -90,12 +120,14 @@ function extractTikTokVideoId(url: string): string | null {
     /tiktok\.com\/@[\w.-]+\/video\/(\d+)/,
     /vm\.tiktok\.com\/([A-Za-z0-9]+)/,
     /vt\.tiktok\.com\/([A-Za-z0-9]+)/,
-    /tiktok\.com\/.*\/video\/(\d+)/, // Flexible path
+    /tiktok\.com\/.*\/video\/(\d+)/,
   ];
 
   for (const pattern of patterns) {
     const match = url.match(pattern);
-    if (match) return match[1];
+    if (match) {
+      return match[1];
+    }
   }
 
   return null;
@@ -109,32 +141,39 @@ function extractYouTubeVideoId(url: string): string | null {
 
   for (const pattern of patterns) {
     const match = url.match(pattern);
-    if (match) return match[1];
+    if (match) {
+      return match[1];
+    }
   }
 
   return null;
 }
 
-
 // Generate embed code based on platform
 function generateEmbedCode(platform: SocialPlatform, url: string): string | null {
   if (platform === "INSTAGRAM") {
     const postId = extractInstagramPostId(url);
-    if (!postId) return null;
+    if (!postId) {
+      return null;
+    }
 
     return `<blockquote class="instagram-media" data-instgrm-permalink="https://www.instagram.com/p/${postId}/" data-instgrm-version="14"></blockquote>`;
   }
 
   if (platform === "TIKTOK") {
     const videoId = extractTikTokVideoId(url);
-    if (!videoId) return null;
+    if (!videoId) {
+      return null;
+    }
 
     return `<blockquote class="tiktok-embed" cite="${url}" data-video-id="${videoId}"></blockquote>`;
   }
 
   if (platform === "YOUTUBE") {
     const videoId = extractYouTubeVideoId(url);
-    if (!videoId) return null;
+    if (!videoId) {
+      return null;
+    }
 
     return `<iframe width="560" height="315" src="https://www.youtube.com/embed/${videoId}" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>`;
   }
@@ -142,13 +181,12 @@ function generateEmbedCode(platform: SocialPlatform, url: string): string | null
   return null;
 }
 
-// Create new social embed
 /**
- * Menambahkan embed social media baru.
- * Otomatis mendeteksi platform dan men-generate kode embed (iframe/blockquote).
+ * Adds a new social media embed.
+ * Automatically detects platform and generates embed code (iframe/blockquote).
  * 
- * @param {Object} data - Data embed (URL, Platform).
- * @returns {Object} Item yang dibuat.
+ * @param data - Embed data payload.
+ * @returns Created embed object.
  */
 export async function createSocialEmbed(data: {
   platform: SocialPlatform;
@@ -160,25 +198,25 @@ export async function createSocialEmbed(data: {
   const session = await auth();
   if (!session || session.user.role !== "OWNER") {
     console.error("[CREATE_EMBED] Unauthorized access attempt:", session?.user?.role);
-    return { success: false, error: "Unauthorized: Anda tidak memiliki akses" };
+    return { success: false, error: "Unauthorized: Access denied" };
   }
 
   try {
     console.log("[CREATE_EMBED] Processing URL:", data.embedUrl, "Platform:", data.platform);
 
-    // Generate embed code automatically
     const embedCode = generateEmbedCode(data.platform, data.embedUrl);
     console.log("[CREATE_EMBED] Generated Code:", embedCode ? "Success" : "Failed (Null)");
 
-    const item = await prisma.socialEmbed.create({
+    const item = await prisma.systemConfig.create({
       data: {
+        category: "EMBED",
         platform: data.platform,
         embedUrl: data.embedUrl,
-        embedCode,
+        subtitle: embedCode,
         title: data.title,
-        description: data.description,
+        content: data.description ? { description: data.description } : undefined,
         displayOrder: data.displayOrder || 0,
-        isActive: true,
+        isVisible: true,
       },
     });
 
@@ -190,20 +228,17 @@ export async function createSocialEmbed(data: {
     return { success: true, data: item };
   } catch (error) {
     console.error("[CREATE_EMBED] Error creating social embed:", error);
-    // Return the actual error message if possible to help debug
-    const errorMessage = error instanceof Error ? error.message : "Gagal menambahkan embed";
+    const errorMessage = error instanceof Error ? error.message : "Failed to create embed";
     return { success: false, error: errorMessage };
   }
 }
 
-// Update social embed
 /**
- * Mengupdate data social embed.
- * Jika URL berubah, kode embed akan digenerate ulang.
+ * Updates an existing social media embed.
  * 
- * @param {string} id - ID Embed.
- * @param {Object} data - Data update.
- * @returns {Object} Data updated.
+ * @param id - Embed ID.
+ * @param data - Updated embed fields.
+ * @returns Updated embed item.
  */
 export async function updateSocialEmbed(
   id: string,
@@ -219,22 +254,26 @@ export async function updateSocialEmbed(
   const session = await auth();
   if (!session || session.user.role !== "OWNER") {
     console.error("[UPDATE_EMBED] Unauthorized access attempt:", session?.user?.role);
-    return { success: false, error: "Unauthorized: Anda tidak memiliki akses" };
+    return { success: false, error: "Unauthorized: Access denied" };
   }
 
   try {
-    // Regenerate embed code if URL or platform changed
     let embedCode = undefined;
     if (data.embedUrl && data.platform) {
       console.log("[UPDATE_EMBED] Regenerating code for URL:", data.embedUrl);
       embedCode = generateEmbedCode(data.platform, data.embedUrl);
     }
 
-    const item = await prisma.socialEmbed.update({
+    const item = await prisma.systemConfig.update({
       where: { id },
       data: {
-        ...data,
-        ...(embedCode && { embedCode }),
+        ...(data.platform && { platform: data.platform }),
+        ...(data.embedUrl && { embedUrl: data.embedUrl }),
+        ...(embedCode && { subtitle: embedCode }),
+        ...(data.title !== undefined && { title: data.title }),
+        ...(data.description !== undefined && { content: { description: data.description } }),
+        ...(data.displayOrder !== undefined && { displayOrder: data.displayOrder }),
+        ...(data.isActive !== undefined && { isVisible: data.isActive }),
       },
     });
 
@@ -244,11 +283,17 @@ export async function updateSocialEmbed(
     return { success: true, data: item };
   } catch (error) {
     console.error("[UPDATE_EMBED] Error updating social embed:", error);
-    const errorMessage = error instanceof Error ? error.message : "Gagal mengupdate embed";
+    const errorMessage = error instanceof Error ? error.message : "Failed to update embed";
     return { success: false, error: errorMessage };
   }
 }
 
+/**
+ * Deletes a social media embed by ID.
+ * 
+ * @param id - Embed ID.
+ * @returns Success response.
+ */
 export async function deleteSocialEmbed(id: string) {
   const session = await auth();
   if (!session || session.user.role !== "OWNER") {
@@ -256,7 +301,7 @@ export async function deleteSocialEmbed(id: string) {
   }
 
   try {
-    await prisma.socialEmbed.delete({
+    await prisma.systemConfig.delete({
       where: { id },
     });
 
@@ -266,17 +311,15 @@ export async function deleteSocialEmbed(id: string) {
     return { success: true };
   } catch (error) {
     console.error("Error deleting social embed:", error);
-    return { success: false, error: "Gagal menghapus embed" };
+    return { success: false, error: "Failed to delete embed" };
   }
 }
 
-// Reorder social embeds
-// Reorder social embeds
 /**
- * Mengubah urutan tampilan (Drag & Drop sorting).
+ * Reorders social media embeds display order.
  * 
- * @param {Array} items - List {id, displayOrder}.
- * @returns {Object} Status sukses.
+ * @param items - List of items with their new displayOrder.
+ * @returns Success response.
  */
 export async function reorderSocialEmbeds(items: { id: string; displayOrder: number }[]) {
   const session = await auth();
@@ -287,7 +330,7 @@ export async function reorderSocialEmbeds(items: { id: string; displayOrder: num
   try {
     await Promise.all(
       items.map((item) =>
-        prisma.socialEmbed.update({
+        prisma.systemConfig.update({
           where: { id: item.id },
           data: { displayOrder: item.displayOrder },
         })
@@ -300,6 +343,6 @@ export async function reorderSocialEmbeds(items: { id: string; displayOrder: num
     return { success: true };
   } catch (error) {
     console.error("Error reordering social embeds:", error);
-    return { success: false, error: "Gagal mengubah urutan" };
+    return { success: false, error: "Failed to reorder embeds" };
   }
 }

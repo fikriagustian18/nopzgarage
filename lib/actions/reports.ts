@@ -1,16 +1,15 @@
-// app/actions/reports.ts
-'use server';
+"use server";
 
-import { prisma } from '@/lib/prisma';
-import { auth } from '@/lib/auth';
+import { auth } from "@/lib/auth";
+import { prisma } from "@/lib/prisma";
+import { serializeData } from "@/lib/utils";
 
-// ==================== Types ====================
-export type DateRange = {
+export interface DateRange {
   startDate: Date;
   endDate: Date;
-};
+}
 
-export type BalanceSheetData = {
+export interface BalanceSheetData {
   assets: {
     currentAssets: { name: string; amount: number }[];
     fixedAssets: { name: string; amount: number }[];
@@ -25,9 +24,9 @@ export type BalanceSheetData = {
     retainedEarnings: number;
     totalEquity: number;
   };
-};
+}
 
-export type IncomeStatementData = {
+export interface IncomeStatementData {
   revenue: {
     items: { name: string; amount: number }[];
     total: number;
@@ -37,84 +36,61 @@ export type IncomeStatementData = {
     total: number;
   };
   netIncome: number;
-};
+}
 
-// ==================== Balance Sheet (Neraca) ====================
-// ==================== Balance Sheet (Neraca) ====================
 /**
- * Membuat Laporan Neraca (Balance Sheet).
- * Menampilkan posisi keuangan per tanggal tertentu.
+ * Generates the Balance Sheet report as of a specific date.
  * 
- * Komponen:
- * 1. ASSET (Aset Lancar & Tetap).
- * 2. LIABILITY (Kewajiban/Utang).
- * 3. EQUITY (Modal & Laba Ditahan).
- * 
- * @param {Date} asOfDate - Posisi per tanggal (opsional, default hari ini).
- * @returns {Object} Data Neraca.
+ * @param asOfDate - Optional cutoff date.
+ * @returns Balance sheet data structure.
  */
 export async function getBalanceSheet(asOfDate?: Date) {
   try {
     const session = await auth();
-    if (!session || session.user?.role !== 'OWNER') {
-      return { success: false, error: 'Akses ditolak: Hanya Owner yang dapat mengakses neraca.' };
+    if (!session || session.user?.role !== "OWNER") {
+      return { success: false, error: "Access denied: Only Owner can access balance sheet." };
     }
-    const date = asOfDate || new Date();
 
-    // Ambil semua akun dan hitung saldonya
     const accounts = await prisma.account.findMany({
       include: {
-        journalItems: {
-          where: {
-            journalEntry: {
-              date: {
-                lte: date,
-              },
-            },
-          },
-        },
+        payments: true,
       },
     });
 
-    // Hitung saldo per akun
     const accountBalances = accounts.map((account) => {
-      let balance = 0;
-      
-      account.journalItems.forEach((item) => {
-        const debit = Number(item.debit);
-        const credit = Number(item.credit);
-        
-        // Normal balance rules
-        if (account.type === 'ASSET' || account.type === 'EXPENSE') {
-          balance += debit - credit;
-        } else {
-          balance += credit - debit;
-        }
-      });
+      const balance = Number(account.currentBalance || 0);
 
       return {
-        ...account,
+        id: account.id,
+        code: account.code,
+        name: account.name,
+        type: account.type,
+        category: account.category,
+        bankCode: account.bankCode,
+        accountNumber: account.accountNumber,
+        accountName: account.accountName,
+        currentBalance: balance,
+        isActive: account.isActive,
+        createdAt: account.createdAt instanceof Date ? account.createdAt.toISOString() : account.createdAt,
+        updatedAt: account.createdAt instanceof Date ? account.createdAt.toISOString() : account.createdAt,
         balance,
       };
     });
 
-    // Kelompokkan berdasarkan tipe
-    const assets = accountBalances.filter((a) => a.type === 'ASSET');
-    const liabilities = accountBalances.filter((a) => a.type === 'LIABILITY');
-    const equity = accountBalances.filter((a) => a.type === 'EQUITY');
+    const assets = accountBalances.filter((a) => a.type === "ASSET" || a.type === "BANK");
+    const liabilities = accountBalances.filter((a) => a.type === "LIABILITY");
+    const equity = accountBalances.filter((a) => a.type === "EQUITY");
 
-    // Kategorisasi assets
     const currentAssets = assets
-      .filter((a) => a.category?.includes('CURRENT'))
+      .filter((a) => a.category?.includes("CURRENT") || a.type === "BANK")
       .map((a) => ({ name: a.name, amount: a.balance }));
 
     const fixedAssets = assets
-      .filter((a) => a.category?.includes('FIXED'))
+      .filter((a) => a.category?.includes("FIXED"))
       .map((a) => ({ name: a.name, amount: a.balance }));
 
     const totalAssets = assets.reduce((sum, a) => sum + a.balance, 0);
 
-    // Liabilities
     const currentLiabilities = liabilities.map((a) => ({
       name: a.name,
       amount: a.balance,
@@ -122,13 +98,12 @@ export async function getBalanceSheet(asOfDate?: Date) {
 
     const totalLiabilities = liabilities.reduce((sum, a) => sum + a.balance, 0);
 
-    // Equity
     const capital = equity
-      .filter((a) => a.category === 'CAPITAL')
+      .filter((a) => a.category === "CAPITAL")
       .reduce((sum, a) => sum + a.balance, 0);
 
     const retainedEarnings = equity
-      .filter((a) => a.category === 'RETAINED_EARNINGS')
+      .filter((a) => a.category === "RETAINED_EARNINGS")
       .reduce((sum, a) => sum + a.balance, 0);
 
     const totalEquity = equity.reduce((sum, a) => sum + a.balance, 0);
@@ -150,256 +125,28 @@ export async function getBalanceSheet(asOfDate?: Date) {
       },
     };
 
-    return { success: true, data: balanceSheet };
+    return { success: true, data: serializeData(balanceSheet) };
   } catch (error) {
-    console.error('Get balance sheet error:', error);
-    return { success: false, error: 'Gagal generate neraca' };
+    console.error("Get balance sheet error:", error);
+    return { success: false, error: "Failed to generate balance sheet" };
   }
 }
 
-// ==================== Income Statement (Laba Rugi) ====================
-// ==================== Income Statement (Laba Rugi) ====================
 /**
- * Membuat Laporan Laba Rugi (Income Statement).
- * Menghitung profitabilitas dalam rentang waktu tertentu.
+ * Generates the Income Statement (Profit & Loss) report for a date range.
  * 
- * Rumus:
- * Net Income = Total Revenue (Pendapatan) - Total Expenses (Beban).
- * 
- * @param {DateRange} dateRange - Periode laporan.
- * @returns {Object} Data Laba Rugi.
+ * @param dateRange - Period date range (start & end).
+ * @returns Income statement report data.
  */
 export async function getIncomeStatement(dateRange: DateRange) {
   try {
     const session = await auth();
-    if (!session || session.user?.role !== 'OWNER') {
-      return { success: false, error: 'Akses ditolak: Hanya Owner yang dapat mengakses laporan laba rugi.' };
+    if (!session || session.user?.role !== "OWNER") {
+      return { success: false, error: "Access denied: Only Owner can access income statement." };
     }
     const { startDate, endDate } = dateRange;
 
-    // Ambil akun revenue dan expense
-    const accounts = await prisma.account.findMany({
-      where: {
-        type: {
-          in: ['REVENUE', 'EXPENSE'],
-        },
-      },
-      include: {
-        journalItems: {
-          where: {
-            journalEntry: {
-              date: {
-                gte: startDate,
-                lte: endDate,
-              },
-            },
-          },
-        },
-      },
-    });
-
-    // Hitung total per akun
-    const accountTotals = accounts.map((account) => {
-      let total = 0;
-
-      account.journalItems.forEach((item) => {
-        const debit = Number(item.debit);
-        const credit = Number(item.credit);
-
-        if (account.type === 'REVENUE') {
-          total += credit - debit;
-        } else {
-          total += debit - credit;
-        }
-      });
-
-      return {
-        name: account.name,
-        type: account.type,
-        amount: total,
-      };
-    });
-
-    // Pisahkan revenue dan expense
-    const revenueItems = accountTotals
-      .filter((a) => a.type === 'REVENUE')
-      .map((a) => ({ name: a.name, amount: a.amount }));
-
-    const expenseItems = accountTotals
-      .filter((a) => a.type === 'EXPENSE')
-      .map((a) => ({ name: a.name, amount: a.amount }));
-
-    const totalRevenue = revenueItems.reduce((sum, i) => sum + i.amount, 0);
-    const totalExpense = expenseItems.reduce((sum, i) => sum + i.amount, 0);
-    const netIncome = totalRevenue - totalExpense;
-
-    const incomeStatement: IncomeStatementData = {
-      revenue: {
-        items: revenueItems,
-        total: totalRevenue,
-      },
-      expenses: {
-        items: expenseItems,
-        total: totalExpense,
-      },
-      netIncome,
-    };
-
-    return { success: true, data: incomeStatement };
-  } catch (error) {
-    console.error('Get income statement error:', error);
-    return { success: false, error: 'Gagal generate laporan laba rugi' };
-  }
-}
-
-// ==================== Cash Flow Statement ====================
-// ==================== Cash Flow Statement ====================
-/**
- * Membuat Laporan Arus Kas (Cash Flow).
- * Melacak semua transaksi yang melibatkan akun KAS (101).
- * 
- * @param {DateRange} dateRange - Periode laporan.
- * @returns {Object} Data Arus Kas (Masuk/Keluar/Net).
- */
-export async function getCashFlow(dateRange: DateRange) {
-  try {
-    const session = await auth();
-    if (!session || session.user?.role !== 'OWNER') {
-      return { success: false, error: 'Akses ditolak: Hanya Owner yang dapat mengakses laporan arus kas.' };
-    }
-    const { startDate, endDate } = dateRange;
-
-    // Ambil semua journal items yang menyentuh akun Kas
-    const kasAccount = await prisma.account.findFirst({
-      where: { code: '101' },
-    });
-
-    if (!kasAccount) {
-      return { success: false, error: 'Akun Kas tidak ditemukan' };
-    }
-
-    const journalItems = await prisma.journalItem.findMany({
-      where: {
-        accountId: kasAccount.id,
-        journalEntry: {
-          date: {
-            gte: startDate,
-            lte: endDate,
-          },
-        },
-      },
-      include: {
-        journalEntry: {
-          include: {
-            items: {
-              include: {
-                account: true,
-              },
-            },
-          },
-        },
-      },
-      orderBy: {
-        journalEntry: {
-          date: 'asc',
-        },
-      },
-    });
-
-    // Hitung cash in dan cash out
-    let cashIn = 0;
-    let cashOut = 0;
-
-    const transactions = journalItems.map((item) => {
-      const isInflow = Number(item.debit) > 0;
-      const amount = isInflow ? Number(item.debit) : Number(item.credit);
-
-      if (isInflow) {
-        cashIn += amount;
-      } else {
-        cashOut += amount;
-      }
-
-      return {
-        date: item.journalEntry.date instanceof Date ? item.journalEntry.date.toISOString() : item.journalEntry.date,
-        description: item.journalEntry.description,
-        amount,
-        type: isInflow ? 'IN' : 'OUT',
-      };
-    });
-
-    const netCashFlow = cashIn - cashOut;
-
-    return {
-      success: true,
-      data: {
-        cashIn,
-        cashOut,
-        netCashFlow,
-        transactions,
-      },
-    };
-  } catch (error) {
-    console.error('Get cash flow error:', error);
-    return { success: false, error: 'Gagal generate laporan arus kas' };
-  }
-}
-
-// ==================== Dashboard Summary ====================
-// ==================== Dashboard Summary ====================
-/**
- * Ringkasan cepat untuk Dashboard Admin.
- * Menggabungkan metrik utama: Profit, Omzet, Order Selesai, dan Kas.
- * 
- * @param {DateRange} dateRange - Periode statistik.
- * @returns {Object} Ringkasan metrik.
- */
-export async function getDashboardSummary(dateRange: DateRange) {
-  try {
-    const session = await auth();
-    if (!session || session.user?.role !== 'OWNER') {
-      return { success: false, error: 'Akses ditolak: Hanya Owner yang dapat mengakses ringkasan laporan.' };
-    }
-    const { startDate, endDate } = dateRange;
-
-    // Total Pendapatan
-    const revenue = await prisma.journalItem.aggregate({
-      where: {
-        account: {
-          type: 'REVENUE',
-        },
-        journalEntry: {
-          date: {
-            gte: startDate,
-            lte: endDate,
-          },
-        },
-      },
-      _sum: {
-        credit: true,
-      },
-    });
-
-    // Total Pengeluaran
-    const expenses = await prisma.journalItem.aggregate({
-      where: {
-        account: {
-          type: 'EXPENSE',
-        },
-        journalEntry: {
-          date: {
-            gte: startDate,
-            lte: endDate,
-          },
-        },
-      },
-      _sum: {
-        debit: true,
-      },
-    });
-
-    // Jumlah Order
-    const totalOrders = await prisma.order.count({
+    const payments = await prisma.payment.findMany({
       where: {
         createdAt: {
           gte: startDate,
@@ -408,62 +155,188 @@ export async function getDashboardSummary(dateRange: DateRange) {
       },
     });
 
-    const completedOrders = await prisma.order.count({
+    let totalRevenue = 0;
+    let totalExpense = 0;
+
+    payments.forEach((p) => {
+      const amt = Number(p.amount);
+      if (p.type === "ORDER_PAYMENT" || p.type === "INCOME") {
+        totalRevenue += amt;
+      } else if (p.type === "EXPENSE" || p.type === "PAYROLL") {
+        totalExpense += amt;
+      }
+    });
+
+    const incomeStatement: IncomeStatementData = {
+      revenue: {
+        items: [{ name: "Operating Revenue", amount: totalRevenue }],
+        total: totalRevenue,
+      },
+      expenses: {
+        items: [{ name: "Operating & Salary Expenses", amount: totalExpense }],
+        total: totalExpense,
+      },
+      netIncome: totalRevenue - totalExpense,
+    };
+
+    return { success: true, data: serializeData(incomeStatement) };
+  } catch (error) {
+    console.error("Get income statement error:", error);
+    return { success: false, error: "Failed to generate income statement" };
+  }
+}
+
+/**
+ * Generates the Cash Flow report for a date range.
+ * 
+ * @param dateRange - Period date range (start & end).
+ * @returns Cash flow analysis and list of cash transactions.
+ */
+export async function getCashFlow(dateRange: DateRange) {
+  try {
+    const session = await auth();
+    if (!session || session.user?.role !== "OWNER") {
+      return { success: false, error: "Access denied: Only Owner can access cash flow report." };
+    }
+    const { startDate, endDate } = dateRange;
+
+    const payments = await prisma.payment.findMany({
       where: {
-        status: 'COMPLETED',
-        updatedAt: {
+        createdAt: {
           gte: startDate,
           lte: endDate,
         },
       },
+      orderBy: { createdAt: "asc" },
     });
 
-    // Piutang
-    const receivables = await prisma.order.aggregate({
-      where: {
-        paymentStatus: {
-          in: ['UNPAID', 'PARTIAL'],
+    let cashIn = 0;
+    let cashOut = 0;
+
+    const transactions = payments.map((p) => {
+      const amt = Number(p.amount);
+      const isInflow = p.type === "ORDER_PAYMENT" || p.type === "INCOME";
+      if (isInflow) {
+        cashIn += amt;
+      } else {
+        cashOut += amt;
+      }
+
+      return {
+        date: p.createdAt.toISOString(),
+        description: p.note || `Transaction ${p.type}`,
+        amount: amt,
+        type: isInflow ? "IN" : "OUT",
+      };
+    });
+
+    return {
+      success: true,
+      data: serializeData({
+        cashIn,
+        cashOut,
+        netCashFlow: cashIn - cashOut,
+        transactions,
+      }),
+    };
+  } catch (error) {
+    console.error("Get cash flow error:", error);
+    return { success: false, error: "Failed to generate cash flow report" };
+  }
+}
+
+/**
+ * Retrieves summary metrics for financial and operational dashboard widgets.
+ * 
+ * @param dateRange - Period date range (start & end).
+ * @returns Combined financial & operational summary.
+ */
+export async function getDashboardSummary(dateRange: DateRange) {
+  try {
+    const session = await auth();
+    if (!session || session.user?.role !== "OWNER") {
+      return { success: false, error: "Access denied: Only Owner can access dashboard report summary." };
+    }
+    const { startDate, endDate } = dateRange;
+
+    const [payments, totalOrders, completedOrders, receivables, kasAccounts] = await Promise.all([
+      prisma.payment.findMany({
+        where: {
+          createdAt: {
+            gte: startDate,
+            lte: endDate,
+          },
         },
-      },
-      _sum: {
-        totalPrice: true,
-        totalPaid: true,
-      },
+      }),
+      prisma.order.count({
+        where: {
+          createdAt: {
+            gte: startDate,
+            lte: endDate,
+          },
+        },
+      }),
+      prisma.order.count({
+        where: {
+          status: "COMPLETED",
+          updatedAt: {
+            gte: startDate,
+            lte: endDate,
+          },
+        },
+      }),
+      prisma.order.aggregate({
+        where: {
+          paymentStatus: {
+            in: ["UNPAID", "PARTIAL"],
+          },
+        },
+        _sum: {
+          totalPrice: true,
+          totalPaid: true,
+        },
+      }),
+      prisma.account.findMany({
+        where: {
+          OR: [
+            { code: "101" },
+            { type: "BANK" },
+          ],
+        },
+      }),
+    ]);
+
+    let revenue = 0;
+    let expenses = 0;
+    payments.forEach((p) => {
+      const amt = Number(p.amount);
+      if (p.type === "ORDER_PAYMENT" || p.type === "INCOME") {
+        revenue += amt;
+      } else {
+        expenses += amt;
+      }
     });
 
     const totalReceivables =
       Number(receivables._sum.totalPrice || 0) -
       Number(receivables._sum.totalPaid || 0);
 
-    // Saldo Kas
-    const kasAccount = await prisma.account.findFirst({
-      where: { code: '101' },
-      include: {
-        journalItems: true,
-      },
-    });
-
-    let cashBalance = 0;
-    if (kasAccount) {
-      kasAccount.journalItems.forEach((item) => {
-        cashBalance += Number(item.debit) - Number(item.credit);
-      });
-    }
+    const cashBalance = kasAccounts.reduce((sum, acc) => sum + Number(acc.currentBalance || 0), 0);
 
     return {
       success: true,
-      data: {
-        revenue: Number(revenue._sum.credit || 0),
-        expenses: Number(expenses._sum.debit || 0),
-        netIncome: Number(revenue._sum.credit || 0) - Number(expenses._sum.debit || 0),
+      data: serializeData({
+        revenue,
+        expenses,
+        netIncome: revenue - expenses,
         totalOrders,
         completedOrders,
         totalReceivables,
         cashBalance,
-      },
+      }),
     };
   } catch (error) {
-    console.error('Get dashboard summary error:', error);
-    return { success: false, error: 'Gagal load dashboard' };
+    console.error("Get dashboard summary error:", error);
+    return { success: false, error: "Failed to load dashboard summary" };
   }
 }

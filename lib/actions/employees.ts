@@ -1,13 +1,12 @@
-// lib/actions/employees.ts
-'use server';
+"use server";
 
-import { prisma } from '@/lib/prisma';
-import { auth } from '@/lib/auth';
-import { revalidatePath } from 'next/cache';
-import { createLog } from './logs';
-import { serializeData } from '@/lib/utils';
+import { revalidatePath } from "next/cache";
+import type { SalaryType } from "@prisma/client";
 
-import type { SalaryType } from '@prisma/client';
+import { auth } from "@/lib/auth";
+import { prisma } from "@/lib/prisma";
+import { serializeData } from "@/lib/utils";
+import { createLog } from "./logs";
 
 // ==================== Types ====================
 export interface CreateEmployeeInput {
@@ -32,17 +31,6 @@ export interface UpdateEmployeeInput {
 
 // Infer TransactionClient strictly
 type TransactionClient = Parameters<Parameters<typeof prisma.$transaction>[0]>[0];
-
-// Helper to ensure accounts exist (same as in payments.ts)
-async function ensureAccount(tx: TransactionClient, code: string, name: string, type: string, category: string) {
-  const existing = await tx.account.findUnique({ where: { code } });
-  if (!existing) {
-    console.log(`Auto-creating account ${code} - ${name}`);
-    await tx.account.create({
-      data: { code, name, type, category }
-    });
-  }
-}
 
 // Function to pay all pending commissions for an employee
 /**
@@ -74,9 +62,10 @@ export async function payAllCommissions(employeeId: string, paymentMethod: "CASH
       }
 
       // 2. Get Unpaid Fees
-      const unpaidFees = await tx.orderFee.findMany({
+      const unpaidFees = await tx.orderItem.findMany({
         where: { 
           employeeId: employeeId,
+          itemType: 'FEE',
           isPaid: false 
         },
         include: { order: true }
@@ -86,75 +75,32 @@ export async function payAllCommissions(employeeId: string, paymentMethod: "CASH
         return { success: false, error: "Tidak ada komisi yang perlu dibayar." };
       }
 
-      const totalAmount = unpaidFees.reduce((sum: number, fee: any) => sum + Number(fee.amount), 0);
+      const totalAmount = unpaidFees.reduce((sum: number, fee: any) => sum + Number(fee.totalPrice), 0);
 
       console.log(`[PAY_COMMISSION] Total commission to pay: ${totalAmount}`);
 
       // 3. Mark Fees as Paid
-      await tx.orderFee.updateMany({
+      await tx.orderItem.updateMany({
         where: { 
           id: { in: unpaidFees.map((f: any) => f.id) }
         },
         data: {
-          isPaid: true,
-          paidAt: new Date()
+          isPaid: true
         }
       });
 
-      // 4. Create Payment Record (Money Out)
+      // 4. Create Payment Record (consolidated — replaces Payroll + JournalEntry)
       const payment = await tx.payment.create({
         data: {
+          type: 'PAYROLL',
           amount: totalAmount,
+          employeeId: employeeId,
           paymentMethod: paymentMethod,
           note: note || `Pencairan Komisi ${employee.name} (${unpaidFees.length} order)`,
-          payrollId: undefined, 
-        }
-      });
-
-      // 4b. Create Payroll Wrapper 
-      const payroll = await tx.payroll.create({
-        data: {
-          startDate: new Date(), 
-          endDate: new Date(),
-          employeeId: employeeId,
-          baseSalary: 0,
-          bonus: 0,
-          totalEarned: totalAmount,
-          totalPaid: totalAmount,
-          status: 'PAID',
-          details: `Pencairan Komisi Manual via Admin Panel (${unpaidFees.length} tasks)`,
-        }
-      });
-
-      // Link payment to payroll
-      await tx.payment.update({
-        where: { id: payment.id },
-        data: { payrollId: payroll.id }
-      });
-
-      // 5. Journaling
-      await ensureAccount(tx, "101", "Kas Tunai", "ASSET", "CURRENT_ASSET");
-      await ensureAccount(tx, "102", "Bank", "ASSET", "CURRENT_ASSET");
-      await ensureAccount(tx, "202", "Utang Gaji & Komisi", "LIABILITY", "CURRENT_LIABILITY");
-
-      const cashAccount = paymentMethod === "TRANSFER" ? "102" : "101";
-
-      await tx.journalEntry.create({
-        data: {
-          description: `Pembayaran Komisi ${employee.name}`,
-          reference: payroll.id,
-          items: {
-            create: [
-              {
-                account: { connect: { code: "202" } }, 
-                debit: totalAmount
-              },
-              {
-                account: { connect: { code: cashAccount } }, 
-                credit: totalAmount
-              }
-            ]
-          }
+          journalItems: [
+            { accountCode: '202', name: 'Utang Gaji & Komisi', debit: totalAmount, credit: 0 },
+            { accountCode: paymentMethod === 'TRANSFER' ? '102' : '101', name: paymentMethod === 'TRANSFER' ? 'Bank' : 'Kas Tunai', debit: 0, credit: totalAmount },
+          ],
         }
       });
 
@@ -191,7 +137,7 @@ export async function payCommission(feeId: string, paymentMethod: "CASH" | "TRAN
 
     const result = await prisma.$transaction(async (tx: TransactionClient) => {
       // 1. Get Fee
-      const fee = await tx.orderFee.findUnique({
+      const fee = await tx.orderItem.findUnique({
         where: { id: feeId },
         include: { 
           order: true,
@@ -206,71 +152,28 @@ export async function payCommission(feeId: string, paymentMethod: "CASH" | "TRAN
         throw new Error("Komisi sudah dibayar");
       }
 
-      const amount = Number(fee.amount);
+      const amount = Number(fee.totalPrice);
 
       // 2. Mark Fee as Paid
-      await tx.orderFee.update({
+      await tx.orderItem.update({
         where: { id: feeId },
         data: {
-          isPaid: true,
-          paidAt: new Date()
+          isPaid: true
         }
       });
 
-      // 3. Create Payment Record (Money Out)
+      // 3. Create Payment Record (consolidated — replaces Payroll + JournalEntry)
       const payment = await tx.payment.create({
         data: {
+          type: 'PAYROLL',
           amount: amount,
+          employeeId: fee.employeeId,
           paymentMethod: paymentMethod,
           note: note || `Pencairan Komisi Order #${fee.order?.vehicle || feeId}`,
-          payrollId: undefined, 
-        }
-      });
-
-      // 3b. Create Single Payroll Record
-      const payroll = await tx.payroll.create({
-        data: {
-          startDate: new Date(), 
-          endDate: new Date(),
-          employeeId: fee.employeeId,
-          baseSalary: 0,
-          bonus: 0,
-          totalEarned: amount,
-          totalPaid: amount,
-          status: 'PAID',
-          details: `Pencairan Komisi ${fee.order?.vehicle || ''} (${fee.order?.plateNumber || ''})`,
-        }
-      });
-
-      // Link payment to payroll
-      await tx.payment.update({
-        where: { id: payment.id },
-        data: { payrollId: payroll.id }
-      });
-
-      // 4. Journaling
-      await ensureAccount(tx, "101", "Kas Tunai", "ASSET", "CURRENT_ASSET");
-      await ensureAccount(tx, "102", "Bank", "ASSET", "CURRENT_ASSET");
-      await ensureAccount(tx, "202", "Utang Gaji & Komisi", "LIABILITY", "CURRENT_LIABILITY");
-
-      const cashAccount = paymentMethod === "TRANSFER" ? "102" : "101";
-
-      await tx.journalEntry.create({
-        data: {
-          description: `Pembayaran Komisi ${fee.employee.name} - Order #${fee.order?.vehicle}`,
-          reference: payroll.id,
-          items: {
-            create: [
-              {
-                account: { connect: { code: "202" } }, 
-                debit: amount
-              },
-              {
-                account: { connect: { code: cashAccount } }, 
-                credit: amount
-              }
-            ]
-          }
+          journalItems: [
+            { accountCode: '202', name: 'Utang Gaji & Komisi', debit: amount, credit: 0 },
+            { accountCode: paymentMethod === 'TRANSFER' ? '102' : '101', name: paymentMethod === 'TRANSFER' ? 'Bank' : 'Kas Tunai', debit: 0, credit: amount },
+          ],
         }
       });
 
@@ -320,22 +223,19 @@ export async function getEmployees(activeOnly: boolean = false) {
         _count: {
           select: {
             orders: true,
-            payrolls: true,
-            orderFees: true // Include count of fees/tasks
+            orderItems: true
           },
         },
-        orderFees: {
-            where: { isPaid: false },
-            select: { amount: true }
+        orderItems: {
+            where: { isPaid: false, itemType: 'FEE' },
+            select: { totalPrice: true }
         }
       },
     });
 
     const employeesWithUnpaid = employees.map((emp: any) => {
-        const unpaidAmount = emp.orderFees.reduce((sum: number, fee: any) => sum + Number(fee.amount), 0);
-        // Remove orderFees from object to prevent Decimal error,
-        // as we only needed it for calculation
-        const { orderFees, ...rest } = emp;
+        const unpaidAmount = emp.orderItems.reduce((sum: number, fee: any) => sum + Number(fee.totalPrice), 0);
+        const { orderItems, ...rest } = emp;
         return {
             ...rest,
             unpaidAmount
@@ -400,9 +300,9 @@ export async function getEmployeeStats() {
       return { success: false, error: 'Access denied: Only Owner has access.' };
     }
     const [fees, activeOrders, totalMechanics] = await Promise.all([
-      prisma.orderFee.aggregate({
-        where: { isPaid: false },
-        _sum: { amount: true },
+      prisma.orderItem.aggregate({
+        where: { itemType: 'FEE', isPaid: false },
+        _sum: { totalPrice: true },
         _count: { id: true }
       }),
       prisma.order.findMany({
@@ -413,7 +313,7 @@ export async function getEmployeeStats() {
       prisma.employee.count({
         where: { 
           isActive: true,
-          role: { contains: 'Mekanik', mode: 'insensitive' }
+          role: { in: ['Mekanik', 'MEKANIK', 'Mechanic', 'Karyawan'] }
         }
       })
     ]);
@@ -424,7 +324,7 @@ export async function getEmployeeStats() {
     return {
       success: true,
       stats: {
-        totalUnpaid: fees._sum.amount ? Number(fees._sum.amount) : 0,
+        totalUnpaid: fees._sum.totalPrice ? Number(fees._sum.totalPrice) : 0,
         unpaidCount: fees._count.id,
         workingMechanics: workingCount,
         standbyMechanics: standbyCount,
@@ -437,15 +337,6 @@ export async function getEmployeeStats() {
   }
 }
 
-// ==================== Get Single Employee with Wage History ====================
-// ==================== Get Single Employee with Wage History ====================
-/**
- * Fetch detailed information for a single employee.
- * Includes commission history, earnings stats, active order, and queue.
- * 
- * @param {string} id - Employee ID.
- * @returns {Object} Complete employee details.
- */
 export async function getEmployeeDetail(id: string) {
   try {
     const session = await auth();
@@ -458,12 +349,12 @@ export async function getEmployeeDetail(id: string) {
     if (!isOwner && !isAdmin && !isSelf) {
       return { success: false, error: 'Access denied: You do not have authorization to view this employee data.' };
     }
-    // 1. Fetch Basic Info & History in parallel with Stats
     const [employee, stats, unpaidStats] = await Promise.all([
         prisma.employee.findUnique({
             where: { id },
             include: {
-                orderFees: {
+                orderItems: {
+                    where: { itemType: 'FEE' },
                     include: {
                         order: {
                             select: {
@@ -480,20 +371,20 @@ export async function getEmployeeDetail(id: string) {
                     orderBy: { createdAt: 'desc' },
                     take: 20
                 },
-                payrolls: {
+                payments: {
                     orderBy: { createdAt: 'desc' },
                     take: 20
                 }
             },
         }),
-        prisma.orderFee.aggregate({
-            where: { employeeId: id },
-            _sum: { amount: true },
+        prisma.orderItem.aggregate({
+            where: { employeeId: id, itemType: 'FEE' },
+            _sum: { totalPrice: true },
             _count: { id: true }
         }),
-        prisma.orderFee.aggregate({
-            where: { employeeId: id, isPaid: false },
-            _sum: { amount: true },
+        prisma.orderItem.aggregate({
+            where: { employeeId: id, itemType: 'FEE', isPaid: false },
+            _sum: { totalPrice: true },
             _count: { id: true }
         })
     ]);
@@ -502,16 +393,12 @@ export async function getEmployeeDetail(id: string) {
       return { success: false, error: 'Employee not found' };
     }
 
-    // 2. Fetch Active Order & Queue
-    // Modified: Widen the search to ensure nothing is hidden
     const [activeOrder, queueOrders] = await Promise.all([
         prisma.order.findFirst({
             where: {
-                // Check if user is Lead Mechanic OR has a Fee/Commission
-                // entry in this order (Helper)
                 OR: [
                     { mechanicId: id },
-                    { orderFees: { some: { employeeId: id } } }
+                    { orderItems: { some: { employeeId: id } } }
                 ],
                 status: { in: ['IN_PROGRESS', 'READY'] } 
             },
@@ -545,8 +432,8 @@ export async function getEmployeeDetail(id: string) {
 
     console.log(`[DEBUG] Employee ${id}: Found active=${activeOrder?.id} (${activeOrder?.status}), queue=${queueOrders.length}`);
 
-    const totalEarned = stats._sum.amount ? Number(stats._sum.amount) : 0;
-    const totalUnpaid = unpaidStats._sum.amount ? Number(unpaidStats._sum.amount) : 0;
+    const totalEarned = stats._sum.totalPrice ? Number(stats._sum.totalPrice) : 0;
+    const totalUnpaid = unpaidStats._sum.totalPrice ? Number(unpaidStats._sum.totalPrice) : 0;
     const totalPaid = totalEarned - totalUnpaid;
 
     const serialized = {

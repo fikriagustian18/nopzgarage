@@ -1,11 +1,11 @@
-// lib/actions/jabatan.ts
-'use server';
+"use server";
 
-import { prisma } from '@/lib/prisma';
-import { auth } from '@/lib/auth';
-import { revalidatePath } from 'next/cache';
-import { serializeData } from '@/lib/utils';
-import { createLog } from './logs';
+import { revalidatePath } from "next/cache";
+
+import { auth } from "@/lib/auth";
+import { prisma } from "@/lib/prisma";
+import { serializeData } from "@/lib/utils";
+import { createLog } from "./logs";
 
 export interface CreateJabatanInput {
   name: string;
@@ -18,24 +18,24 @@ export interface UpdateJabatanInput {
   description?: string;
 }
 
-// ==================== Fetch All Positions ====================
 /**
- * Fetch all job positions (Jabatan) from the database.
- * Includes calculating the count of employees currently assigned to this position.
+ * Fetches all defined job positions (jabatans) with active employee counts.
+ * 
+ * @returns List of job positions.
  */
 export async function getJabatans() {
+
   try {
     const session = await auth();
     if (!session || !['OWNER', 'ADMIN'].includes(session.user?.role ?? '')) {
       return { success: false, error: 'Access denied: Only Owner and Admin have access.' };
     }
 
-    // 1. Fetch positions
-    let jabatans = await prisma.jabatan.findMany({
-      orderBy: { name: 'asc' },
+    let jabatans = await prisma.systemConfig.findMany({
+      where: { category: 'JABATAN' },
+      orderBy: { title: 'asc' },
     });
 
-    // Auto-seed default positions if empty
     if (jabatans.length === 0) {
       const defaults = [
         { name: 'Owner', description: 'Pemilik bengkel dengan akses penuh ke keuangan dan manajemen staff.' },
@@ -43,23 +43,29 @@ export async function getJabatans() {
         { name: 'Mekanik', description: 'Tenaga teknis yang menangani servis kendaraan dan menerima komisi.' },
       ];
       
-      await prisma.jabatan.createMany({
-        data: defaults,
-        skipDuplicates: true,
-      });
+      for (const d of defaults) {
+        await prisma.systemConfig.upsert({
+          where: { key: `jabatan_${d.name.toLowerCase()}` },
+          update: {},
+          create: {
+            category: 'JABATAN',
+            key: `jabatan_${d.name.toLowerCase()}`,
+            title: d.name,
+            subtitle: d.description,
+          },
+        });
+      }
 
-      jabatans = await prisma.jabatan.findMany({
-        orderBy: { name: 'asc' },
+      jabatans = await prisma.systemConfig.findMany({
+        where: { category: 'JABATAN' },
+        orderBy: { title: 'asc' },
       });
     }
 
-    // 2. Fetch employee counts grouped by role
     const employeeGroups = await prisma.employee.groupBy({
       by: ['role'],
       where: { isActive: true },
-      _count: {
-        id: true,
-      },
+      _count: { id: true },
     });
 
     const countMap = new Map<string, number>();
@@ -69,11 +75,12 @@ export async function getJabatans() {
       }
     });
 
-    // 3. Merge count into jabatan objects
     const jabatansWithCount = jabatans.map((j) => {
-      const activeEmployeeCount = countMap.get(j.name.toLowerCase()) ?? 0;
+      const activeEmployeeCount = countMap.get((j.title || '').toLowerCase()) ?? 0;
       return {
-        ...j,
+        id: j.id,
+        name: j.title || '',
+        description: j.subtitle || '',
         activeEmployeeCount,
       };
     });
@@ -85,10 +92,6 @@ export async function getJabatans() {
   }
 }
 
-// ==================== Create Position ====================
-/**
- * Create a new job position (Jabatan).
- */
 export async function createJabatan(data: CreateJabatanInput) {
   try {
     const session = await auth();
@@ -100,19 +103,21 @@ export async function createJabatan(data: CreateJabatanInput) {
       return { success: false, error: 'Nama jabatan wajib diisi' };
     }
 
-    // Check duplicate
-    const existing = await prisma.jabatan.findUnique({
-      where: { name: data.name },
+    const key = `jabatan_${data.name.toLowerCase().replace(/\s+/g, '_')}`;
+    const existing = await prisma.systemConfig.findUnique({
+      where: { key },
     });
 
     if (existing) {
       return { success: false, error: 'Nama jabatan sudah terdaftar' };
     }
 
-    const newJabatan = await prisma.jabatan.create({
+    const newJabatan = await prisma.systemConfig.create({
       data: {
-        name: data.name,
-        description: data.description ?? null,
+        category: 'JABATAN',
+        key,
+        title: data.name,
+        subtitle: data.description ?? null,
       },
     });
 
@@ -131,17 +136,13 @@ export async function createJabatan(data: CreateJabatanInput) {
       role: userRole as any,
     });
 
-    return { success: true, jabatan: serializeData(newJabatan) };
+    return { success: true, jabatan: serializeData({ id: newJabatan.id, name: newJabatan.title, description: newJabatan.subtitle }) };
   } catch (error) {
     console.error('Create jabatan error:', error);
     return { success: false, error: `Gagal menambahkan jabatan baru: ${error instanceof Error ? error.message : String(error)}` };
   }
 }
 
-// ==================== Update Position ====================
-/**
- * Update an existing position (Jabatan).
- */
 export async function updateJabatan(data: UpdateJabatanInput) {
   try {
     const session = await auth();
@@ -153,20 +154,7 @@ export async function updateJabatan(data: UpdateJabatanInput) {
       return { success: false, error: 'ID dan nama jabatan wajib diisi' };
     }
 
-    // Check duplicate name excluding current record
-    const existing = await prisma.jabatan.findFirst({
-      where: {
-        name: data.name,
-        NOT: { id: data.id },
-      },
-    });
-
-    if (existing) {
-      return { success: false, error: 'Nama jabatan sudah digunakan oleh record lain' };
-    }
-
-    // Capture old name for updating employee role values if they match
-    const current = await prisma.jabatan.findUnique({
+    const current = await prisma.systemConfig.findUnique({
       where: { id: data.id },
     });
 
@@ -174,18 +162,17 @@ export async function updateJabatan(data: UpdateJabatanInput) {
       return { success: false, error: 'Jabatan tidak ditemukan' };
     }
 
-    const updated = await prisma.jabatan.update({
+    const updated = await prisma.systemConfig.update({
       where: { id: data.id },
       data: {
-        name: data.name,
-        description: data.description ?? null,
+        title: data.name,
+        subtitle: data.description ?? null,
       },
     });
 
-    // Update Employee role strings to match the new position name
-    if (current.name !== data.name) {
+    if (current.title !== data.name && current.title) {
       await prisma.employee.updateMany({
-        where: { role: current.name },
+        where: { role: current.title },
         data: { role: data.name },
       });
     }
@@ -199,23 +186,19 @@ export async function updateJabatan(data: UpdateJabatanInput) {
     await createLog({
       action: "UPDATE_JABATAN",
       title: "Jabatan Updated",
-      details: `Jabatan ${current.name} updated to ${data.name}`,
+      details: `Jabatan ${current.title} updated to ${data.name}`,
       metadata: { positionId: updated.id },
       userName,
       role: userRole as any,
     });
 
-    return { success: true, jabatan: serializeData(updated) };
+    return { success: true, jabatan: serializeData({ id: updated.id, name: updated.title, description: updated.subtitle }) };
   } catch (error) {
     console.error('Update jabatan error:', error);
     return { success: false, error: `Gagal memperbarui jabatan: ${error instanceof Error ? error.message : String(error)}` };
   }
 }
 
-// ==================== Delete Position ====================
-/**
- * Delete a position (Jabatan).
- */
 export async function deleteJabatan(id: string) {
   try {
     const session = await auth();
@@ -223,18 +206,17 @@ export async function deleteJabatan(id: string) {
       return { success: false, error: 'Access denied: Only Owner can delete positions.' };
     }
 
-    const position = await prisma.jabatan.findUnique({
+    const position = await prisma.systemConfig.findUnique({
       where: { id },
     });
 
-    if (!position) {
+    if (!position || !position.title) {
       return { success: false, error: 'Jabatan tidak ditemukan' };
     }
 
-    // Check if any employees are using this role
     const activeStaffCount = await prisma.employee.count({
       where: {
-        role: position.name,
+        role: position.title,
         isActive: true,
       },
     });
@@ -246,7 +228,7 @@ export async function deleteJabatan(id: string) {
       };
     }
 
-    await prisma.jabatan.delete({
+    await prisma.systemConfig.delete({
       where: { id },
     });
 
@@ -259,8 +241,8 @@ export async function deleteJabatan(id: string) {
     await createLog({
       action: "DELETE_JABATAN",
       title: "Jabatan Deleted",
-      details: `Jabatan ${position.name} deleted from database`,
-      metadata: { positionName: position.name },
+      details: `Jabatan ${position.title} deleted from database`,
+      metadata: { positionName: position.title },
       userName,
       role: userRole as any,
     });

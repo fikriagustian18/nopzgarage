@@ -1,13 +1,13 @@
-// lib/actions/auth.ts - Authentication Server Actions
-'use server';
+"use server";
 
-import { prisma } from '@/lib/prisma';
-import { auth } from '@/lib/auth';
-import bcrypt from 'bcryptjs';
-import { revalidatePath } from 'next/cache';
-import { createLog } from './logs';
-import { serializeData } from '@/lib/utils';
-import type { SalaryType } from '@prisma/client';
+import bcrypt from "bcryptjs";
+import { revalidatePath } from "next/cache";
+import type { SalaryType } from "@prisma/client";
+
+import { auth } from "@/lib/auth";
+import { prisma } from "@/lib/prisma";
+import { serializeData } from "@/lib/utils";
+import { createLog } from "./logs";
 
 
 // ==================== Interfaces ====================
@@ -337,10 +337,17 @@ export async function createForgotPasswordRequest(email: string) {
     }
 
     // Create forgot password request
-    await prisma.forgotPasswordRequest.create({
+    const resetToken = Math.random().toString(36).substring(2, 10);
+    await prisma.user.update({
+      where: { id: user.id },
       data: {
-        userId: user.id,
-        status: 'PENDING'
+        resetToken,
+        resetTokenExpiry: new Date(Date.now() + 24 * 60 * 60 * 1000),
+        forgotRequests: {
+          status: 'PENDING',
+          requestedAt: new Date().toISOString(),
+          token: resetToken,
+        }
       }
     });
 
@@ -360,30 +367,27 @@ export async function createForgotPasswordRequest(email: string) {
   }
 }
 
-// ==================== Get Forgot Password Requests ====================
-/**
- * Retrieves all password reset requests with 'PENDING' status.
- * Used on the admin dashboard to review incoming requests.
- * 
- * @returns {Object} List of password reset requests.
- */
 export async function getForgotPasswordRequests() {
   try {
     const session = await auth();
     if (!session || session.user?.role !== 'OWNER') {
       return { success: false, error: 'Access denied: Only Owner can view forgot password requests.' };
     }
-    const requests = await prisma.forgotPasswordRequest.findMany({
-      where: { status: 'PENDING' },
-      include: {
-        user: {
-          include: {
-            employee: true
-          }
-        }
+    const users = await prisma.user.findMany({
+      where: {
+        resetToken: { not: null },
       },
-      orderBy: { createdAt: 'desc' }
+      include: { employee: true },
+      orderBy: { updatedAt: 'desc' }
     });
+
+    const requests = users.map(u => ({
+      id: u.id,
+      userId: u.id,
+      status: 'PENDING',
+      createdAt: u.updatedAt,
+      user: u,
+    }));
 
     return { success: true, requests: serializeData(requests) };
   } catch (error) {
@@ -392,15 +396,6 @@ export async function getForgotPasswordRequests() {
   }
 }
 
-// ==================== Resolve Forgot Password Request ====================
-/**
- * Resolves a password reset request (Admin executes reset).
- * 
- * @param {string} requestId - Password reset request ID.
- * @param {string} newPassword - New password set by admin.
- * @param {string} resolvedBy - Admin name/ID resolving the request.
- * @returns {Object} Resolution success status.
- */
 export async function resolveForgotPasswordRequest(
   requestId: string, 
   newPassword: string,
@@ -411,39 +406,35 @@ export async function resolveForgotPasswordRequest(
     if (!session || session.user?.role !== 'OWNER') {
       return { success: false, error: 'Access denied: Only Owner can resolve forgot password requests.' };
     }
-    const request = await prisma.forgotPasswordRequest.findUnique({
+    const user = await prisma.user.findUnique({
       where: { id: requestId },
-      include: { user: true }
     });
 
-    if (!request) {
+    if (!user) {
       return { success: false, error: 'Permintaan tidak ditemukan' };
     }
 
-    // Hash new password
     const hashedPassword = await bcrypt.hash(newPassword, 10);
 
-    // Update user password and mark request as resolved
-    await prisma.$transaction([
-      prisma.user.update({
-        where: { id: request.userId },
-        data: { password: hashedPassword }
-      }),
-      prisma.forgotPasswordRequest.update({
-        where: { id: requestId },
-        data: {
+    await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        password: hashedPassword,
+        resetToken: null,
+        resetTokenExpiry: null,
+        forgotRequests: {
           status: 'RESOLVED',
           resolvedBy,
-          resolvedAt: new Date()
+          resolvedAt: new Date().toISOString()
         }
-      })
-    ]);
+      }
+    });
 
     await createLog({
       action: "RESOLVE_FORGOT_PASSWORD",
       title: "Password Reset Resolved",
-      details: `Password reset for ${request.user.email} by ${resolvedBy}`,
-      metadata: { userId: request.userId, requestId },
+      details: `Password reset for ${user.email} by ${resolvedBy}`,
+      metadata: { userId: user.id, requestId },
       userName: resolvedBy,
       role: "ADMIN"
     });
@@ -508,13 +499,13 @@ export async function getCurrentProfile() {
       return { success: false, error: 'User not found' };
     }
 
-    // Get user activities from ActivityLog
-    const activities = await prisma.activityLog.findMany({
+    // Get user activities from systemConfig
+    const activities = await prisma.systemConfig.findMany({
       where: {
+        category: 'LOG',
         OR: [
           { userId: user.id },
-          { userName: user.employee?.name || undefined },
-          { details: { contains: user.email } }
+          { userName: user.employee?.name || undefined }
         ]
       },
       orderBy: { createdAt: 'desc' },
@@ -522,7 +513,10 @@ export async function getCurrentProfile() {
     });
 
     const serializedActivities = activities.map(a => ({
-      ...a,
+      id: a.id,
+      action: a.title ? a.title.split(':')[0] : 'LOG',
+      title: a.title || '',
+      details: a.subtitle || a.content || '',
       createdAt: a.createdAt.toISOString(),
     }));
 

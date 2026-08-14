@@ -1,57 +1,80 @@
 "use server";
 
-import { prisma } from "@/lib/prisma";
-import { auth } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
+import { auth } from "@/lib/auth";
+import { prisma } from "@/lib/prisma";
 
 /*
   Content Structure Example:
   sectionKey: "hero"
   content: {
-    title: "Servis Motor Terpercaya",
-    subtitle: "Booking servis mudah dan cepat",
-    ctaText: "Booking Sekarang",
+    title: "Reliable Motorcycle Service",
+    subtitle: "Easy and fast service booking",
+    ctaText: "Book Now",
     ctaLink: "/login"
   }
 */
 
+export interface ContentSectionData {
+  id: string;
+  sectionKey: string | null;
+  title: string | null;
+  subtitle: string | null;
+  content: unknown;
+  isVisible: boolean;
+  updatedAt: string;
+}
+
 /**
- * Mengambil konten website berdasarkan 'sectionKey'.
- * Contoh sectionKey: 'hero', 'about', 'services'.
+ * Fetches website content by 'sectionKey'.
+ * Example keys: 'hero', 'about', 'services'.
  * 
- * @param {string} sectionKey - Kunci unik bagian konten.
- * @returns {Object} Data konten jika ditemukan.
+ * @param sectionKey - Unique section key.
+ * @returns Content section data if found.
  */
 export async function getContent(sectionKey: string) {
   try {
-    const content = await prisma.contentSection.findUnique({
-      where: { sectionKey },
+    const config = await prisma.systemConfig.findUnique({
+      where: { key: sectionKey },
     });
-    const serialized = content ? {
-      ...content,
-      updatedAt: content.updatedAt.toISOString(),
-    } : null;
+    if (!config) {
+      return { success: true, data: null };
+    }
+
+    const serialized: ContentSectionData = {
+      id: config.id,
+      sectionKey: config.key,
+      title: config.title,
+      subtitle: config.subtitle,
+      content: config.content,
+      isVisible: config.isVisible,
+      updatedAt: config.updatedAt.toISOString(),
+    };
     return { success: true, data: serialized };
   } catch (error) {
-    return { success: false, error: "Gagal mengambil konten" };
+    console.error("Error getting content:", error);
+    return { success: false, error: "Failed to get content" };
   }
 }
 
 /**
- * Memperbarui atau membuat konten baru (Upsert).
+ * Updates or creates new content (Upsert).
  * 
- * @param {string} sectionKey - Kunci unik bagian konten.
- * @param {any} data - Data konten baru (title, subtitle, content object).
- * @returns {Object} Pesan sukses.
+ * @param sectionKey - Unique section key.
+ * @param data - New content payload (title, subtitle, content object).
+ * @returns Success message or error.
  */
 export async function updateContent(sectionKey: string, data: any) {
   try {
     const session = await auth();
-    if (!session || session.user?.role !== 'OWNER') {
-      return { success: false, error: 'Akses ditolak: Hanya Owner yang dapat mengupdate konten website.' };
+    if (!session || session.user?.role !== "OWNER") {
+      return {
+        success: false,
+        error: "Access denied: Only Owner can update website content.",
+      };
     }
-    await prisma.contentSection.upsert({
-      where: { sectionKey },
+    await prisma.systemConfig.upsert({
+      where: { key: sectionKey },
       update: {
         content: data.content,
         title: data.title,
@@ -59,38 +82,48 @@ export async function updateContent(sectionKey: string, data: any) {
         isVisible: data.isVisible ?? true,
       },
       create: {
-        sectionKey,
+        category: "CONTENT",
+        key: sectionKey,
         content: data.content,
         title: data.title,
         subtitle: data.subtitle,
         isVisible: data.isVisible ?? true,
       },
     });
-    
-    revalidatePath("/"); // Revalidate Landing Page
+
+    revalidatePath("/"); // Revalidate landing page
     revalidatePath("/admin/settings");
-    
-    return { success: true, message: "Konten berhasil diperbarui" };
+
+    return { success: true, message: "Content updated successfully" };
   } catch (error) {
     console.error("Content update error:", error);
-    return { success: false, error: "Gagal update konten" };
+    return { success: false, error: "Failed to update content" };
   }
 }
 
 /**
- * Mengambil SEMUA konten yang ada di database.
+ * Fetches ALL content sections from database.
  * 
- * @returns {Object} List semua konten.
+ * @returns List of all content items.
  */
 export async function getAllContent() {
-    try {
-        const contents = await prisma.contentSection.findMany();
-        const serialized = contents.map(c => ({
-          ...c,
-          updatedAt: c.updatedAt.toISOString(),
-        }));
-        return { success: true, data: serialized };
-    } catch(err) {
-        return { success: false, error: "Failed to load content" };
-    }
+  try {
+    const contents = await prisma.systemConfig.findMany({
+      where: { category: "CONTENT" },
+    });
+    const serialized = contents.map((c) => ({
+      id: c.id,
+      sectionKey: c.key,
+      title: c.title,
+      subtitle: c.subtitle,
+      content: c.content,
+      isVisible: c.isVisible,
+      updatedAt: c.updatedAt.toISOString(),
+    }));
+    return { success: true, data: serialized };
+  } catch (err) {
+    console.error("Failed to load content:", err);
+    return { success: false, error: "Failed to load content" };
+  }
 }
+

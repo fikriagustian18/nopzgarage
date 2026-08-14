@@ -321,7 +321,7 @@ CUSTOMER                    ADMIN/KASIR                 MEKANIK                 
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────────────────┐
-│                                    ERD - NOPZGARAGE                                     │
+│                           CONSOLIDATED 8-TABLE ERD - NOPZGARAGE                         │
 └─────────────────────────────────────────────────────────────────────────────────────────┘
 
 ┌─────────────────┐       ┌─────────────────┐       ┌─────────────────┐
@@ -332,13 +332,6 @@ CUSTOMER                    ADMIN/KASIR                 MEKANIK                 
 │    password     │  1:1  │    name         │  1:N  │    custPhone    │
 │    role         │       │    role         │       │    vehicle      │
 │ FK employeeId   │       │    phone        │       │    plateNumber  │
-│    isActive     │       │    salaryType   │       │    complaint    │
-│    resetToken   │       │    dailyRate    │       │    serviceType  │
-└────────┬────────┘       │    commission   │       │    status       │
-         │                │    isActive     │       │    totalPrice   │
-         │                └────────┬────────┘       │    totalPaid    │
-         │                         │                │    paymentStatus│
-         ▼                         │                │ FK mechanicId   │
 ┌─────────────────┐               │                └────────┬────────┘
 │ForgotPassword   │               │                         │
 │   Request       │               │                         │
