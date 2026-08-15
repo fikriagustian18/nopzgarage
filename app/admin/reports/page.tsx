@@ -1,7 +1,7 @@
 "use client";
 
 // 1. External Libraries
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import {
   TrendingUp,
@@ -44,16 +44,14 @@ import {
 import { ExportButton } from "@/components/export/ExportButton";
 import { Toaster } from "@/components/ui/Toaster";
 import { BankAccountsManager } from "@/components/admin/BankAccountsManager";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/Tabs";
 import { Badge } from "@/components/ui/Badge";
 
 // 3. Utilities & Logic
 import { getFinancialReports, getOperationalReports } from "@/lib/actions/finance";
-import { exportIncomeStatement, exportCashFlow, exportExpenses } from "@/lib/export/reports/financialExport";
-import { exportOrders } from "@/lib/export/reports/orderListExport";
+import { exportCashFlow, exportCombinedFinancialReport } from "@/lib/export/reports/financialExport";
 
 // 4. Types
-import type { IncomeStatementData, CashFlowData, ExpenseExportData } from "@/lib/export/types";
+import type { CashFlowData, CombinedFinancialExportData } from "@/lib/export/types";
 
 interface OrderItem {
   id: string;
@@ -122,13 +120,12 @@ interface CashFlowTransactionData {
   reference: string | null;
   inflow: number;
   outflow: number;
-  classification: "REVENUE" | "PARTS" | "OPERATING" | "OTHER";
+  classification: string;
   balance: number;
 }
 
 interface CashFlowStatementData {
   beginningCash: number;
-  endingCash: number;
   inflowRevenue: number;
   inflowOther: number;
   totalInflow: number;
@@ -137,16 +134,20 @@ interface CashFlowStatementData {
   outflowOther: number;
   totalOutflow: number;
   netChange: number;
+  endingCash: number;
   transactions: CashFlowTransactionData[];
 }
 
 interface FinancialReportData {
   trialBalance?: TrialBalanceAccount[];
   incomeStatement: {
-    period?: string;
+    period?: {
+      startDate?: string;
+      endDate?: string;
+    } | string;
     revenues: IncomeStatementAccount[];
-    totalRevenue: number;
     expenses: IncomeStatementAccount[];
+    totalRevenue: number;
     totalExpense: number;
     netIncome: number;
   };
@@ -162,9 +163,6 @@ export default function Page() {
   const [isMounted, setIsMounted] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-
-  // Tabs State
-  const [activeTab, setActiveTab] = useState("ringkasan");
 
   // Data States
   const [reportData, setReportData] = useState<FinancialReportData | null>(null);
@@ -245,31 +243,10 @@ export default function Page() {
     fetchData(startDate, endDate);
   }
 
-  if (loading || !isMounted) {
-    return (
-      <div className="flex items-center justify-center h-screen bg-background">
-        <RefreshCw className="h-8 w-8 animate-spin text-primary" />
-      </div>
-    );
-  }
+  // --- All useMemo hooks MUST be called before any early returns (Rules of Hooks) ---
 
-  if (error) {
-    return (
-      <div className="flex flex-col items-center justify-center h-screen bg-background gap-4">
-        <p className="text-destructive font-medium">{error}</p>
-        <Button
-          onClick={handleRetry}
-          variant="outline"
-          className="gap-2"
-        >
-          <RefreshCw className="h-4 w-4" /> Coba Lagi
-        </Button>
-      </div>
-    );
-  }
-
-  // --- Dynamic Filtering Logic ---
-  const filteredOrders = orders.filter((order) => {
+  // --- Dynamic Filtering Logic (memoized) ---
+  const filteredOrders = useMemo(() => orders.filter((order) => {
     const orderDate = toLocalDateString(order.createdAt);
     const inDateRange = (!startDate || orderDate >= startDate) && (!endDate || orderDate <= endDate);
 
@@ -294,294 +271,327 @@ export default function Page() {
     }
 
     return inDateRange && matchesType && matchesPayment;
-  });
+  }), [orders, startDate, endDate, filterType, filterPaymentMethod]);
 
-  const filteredExpenses = expenses.filter((expense) => {
+  const filteredExpenses = useMemo(() => expenses.filter((expense) => {
     const expenseDate = toLocalDateString(expense.date);
     const inDateRange = (!startDate || expenseDate >= startDate) && (!endDate || expenseDate <= endDate);
     return inDateRange;
-  });
+  }), [expenses, startDate, endDate]);
 
-  // --- Metrics Calculations ---
-  const totalRevenue = filteredOrders.reduce((sum, o) => sum + o.totalPaid, 0);
-  const totalExpense = filteredExpenses.reduce((sum, e) => sum + e.amount, 0);
-  const netProfit = totalRevenue - totalExpense;
-  const completedTransactionsCount = filteredOrders.filter((o) => o.status === "COMPLETED" || o.status === "READY").length;
+  // --- Metrics Calculations (memoized) ---
+  const { totalRevenue, totalExpense, netProfit, completedTransactionsCount } = useMemo(() => {
+    const rev = filteredOrders.reduce((sum, o) => sum + o.totalPaid, 0);
+    const exp = filteredExpenses.reduce((sum, e) => sum + e.amount, 0);
+    return {
+      totalRevenue: rev,
+      totalExpense: exp,
+      netProfit: rev - exp,
+      completedTransactionsCount: filteredOrders.filter((o) => o.status === "COMPLETED" || o.status === "READY").length,
+    };
+  }, [filteredOrders, filteredExpenses]);
 
-  // Static/semi-dynamic trends (percentages)
-  const revenueTrend = "+12.5%";
-  const expenseTrend = "+8.2%";
-  const profitTrend = "+15.3%";
-
-  // --- Chart 1: Cash Flow Line Chart Data ---
-  const dailyDataMap: Record<string, { date: string; Pendapatan: number; Pengeluaran: number }> = {};
-  
-  // Fill all days between start and end date
-  if (startDate && endDate) {
-    const start = new Date(`${startDate}T00:00:00`);
-    const end = new Date(`${endDate}T00:00:00`);
-    for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
-      const dateStr = toLocalDateString(d);
-      const dateLabel = `${d.getDate()} ${d.toLocaleString("id-ID", { month: "short" })}`;
-      dailyDataMap[dateStr] = {
-        date: dateLabel,
-        Pendapatan: 0,
-        Pengeluaran: 0,
-      };
+  // --- Chart 1: Cash Flow Line Chart Data (memoized) ---
+  const cashFlowChartData = useMemo(() => {
+    const dailyDataMap: Record<string, { date: string; Pendapatan: number; Pengeluaran: number }> = {};
+    
+    // Fill all days between start and end date
+    if (startDate && endDate) {
+      const start = new Date(`${startDate}T00:00:00`);
+      const end = new Date(`${endDate}T00:00:00`);
+      for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+        const dateStr = toLocalDateString(d);
+        const dateLabel = `${d.getDate()} ${d.toLocaleString("id-ID", { month: "short" })}`;
+        dailyDataMap[dateStr] = {
+          date: dateLabel,
+          Pendapatan: 0,
+          Pengeluaran: 0,
+        };
+      }
     }
-  }
 
-  // Populate revenues
-  filteredOrders.forEach((o) => {
-    const dateStr = toLocalDateString(o.createdAt);
-    if (dailyDataMap[dateStr]) {
-      dailyDataMap[dateStr].Pendapatan += o.totalPaid;
-    }
-  });
-
-  // Populate expenses
-  filteredExpenses.forEach((e) => {
-    const dateStr = toLocalDateString(e.date);
-    if (dailyDataMap[dateStr]) {
-      dailyDataMap[dateStr].Pengeluaran += e.amount;
-    }
-  });
-
-  const cashFlowChartData = Object.values(dailyDataMap);
-
-  // --- Chart 2: Donut Chart & Tables Data ---
-  let serviceRevenue = 0;
-  let partRevenue = 0;
-  let otherRevenue = 0;
-
-  let serviceTxCount = 0;
-  let partTxCount = 0;
-  let otherTxCount = 0;
-
-  filteredOrders.forEach((o) => {
-    let hasService = false;
-    let hasPart = false;
-
-    o.orderItems.forEach((item) => {
-      const val = item.totalPrice;
-      if (item.itemType === "service") {
-        serviceRevenue += val;
-        hasService = true;
-      } else if (item.itemType === "part") {
-        partRevenue += val;
-        hasPart = true;
-      } else {
-        otherRevenue += val;
+    // Populate revenues
+    filteredOrders.forEach((o) => {
+      const dateStr = toLocalDateString(o.createdAt);
+      if (dailyDataMap[dateStr]) {
+        dailyDataMap[dateStr].Pendapatan += o.totalPaid;
       }
     });
 
-    if (hasService && hasPart) {
-      serviceTxCount++;
-      partTxCount++;
-    } else if (hasPart) {
-      partTxCount++;
-    } else if (hasService) {
-      serviceTxCount++;
-    } else {
-      otherTxCount++;
-    }
-  });
+    // Populate expenses
+    filteredExpenses.forEach((e) => {
+      const dateStr = toLocalDateString(e.date);
+      if (dailyDataMap[dateStr]) {
+        dailyDataMap[dateStr].Pengeluaran += e.amount;
+      }
+    });
 
-  // Reconcile values to match actual cash receipts
-  const calcTotal = serviceRevenue + partRevenue + otherRevenue;
-  if (totalRevenue > calcTotal && calcTotal > 0) {
-    const diff = totalRevenue - calcTotal;
-    serviceRevenue += diff * 0.6;
-    partRevenue += diff * 0.3;
-    otherRevenue += diff * 0.1;
-  } else if (calcTotal === 0 && totalRevenue > 0) {
-    serviceRevenue = totalRevenue;
-    serviceTxCount = filteredOrders.length;
+    return Object.values(dailyDataMap);
+  }, [filteredOrders, filteredExpenses, startDate, endDate]);
+
+  // --- Chart 2: Donut Chart & Tables Data (memoized) ---
+  const { serviceRevenue, partRevenue, otherRevenue, serviceTxCount, partTxCount, otherTxCount, categoryTotal, donutChartData } = useMemo(() => {
+    let svcRev = 0;
+    let prtRev = 0;
+    let othRev = 0;
+    let svcTx = 0;
+    let prtTx = 0;
+    let othTx = 0;
+
+    filteredOrders.forEach((o) => {
+      let hasService = false;
+      let hasPart = false;
+
+      o.orderItems.forEach((item) => {
+        const val = item.totalPrice;
+        if (item.itemType === "service") {
+          svcRev += val;
+          hasService = true;
+        } else if (item.itemType === "part") {
+          prtRev += val;
+          hasPart = true;
+        } else {
+          othRev += val;
+        }
+      });
+
+      if (hasService && hasPart) {
+        svcTx++;
+        prtTx++;
+      } else if (hasPart) {
+        prtTx++;
+      } else if (hasService) {
+        svcTx++;
+      } else {
+        othTx++;
+      }
+    });
+
+    // Reconcile values to match actual cash receipts
+    const calcTotal = svcRev + prtRev + othRev;
+    if (totalRevenue > calcTotal && calcTotal > 0) {
+      const diff = totalRevenue - calcTotal;
+      svcRev += diff * 0.6;
+      prtRev += diff * 0.3;
+      othRev += diff * 0.1;
+    } else if (calcTotal === 0 && totalRevenue > 0) {
+      svcRev = totalRevenue;
+      svcTx = filteredOrders.length;
+    }
+
+    const catTotal = svcRev + prtRev + othRev;
+    const getPercentage = (val: number) => {
+      if (catTotal === 0) {
+        return 0;
+      }
+      return Math.round((val / catTotal) * 100);
+    };
+
+    const donut = [
+      { name: "Servis", value: svcRev, color: "#111827", percent: getPercentage(svcRev) },
+      { name: "Spare Part", value: prtRev, color: "#4b5563", percent: getPercentage(prtRev) },
+      { name: "Lain-lain", value: othRev, color: "#9ca3af", percent: getPercentage(othRev) },
+    ].filter((c) => c.value > 0);
+
+    return {
+      serviceRevenue: svcRev,
+      partRevenue: prtRev,
+      otherRevenue: othRev,
+      serviceTxCount: svcTx,
+      partTxCount: prtTx,
+      otherTxCount: othTx,
+      categoryTotal: catTotal,
+      donutChartData: donut,
+    };
+  }, [filteredOrders, totalRevenue]);
+
+  // --- Expenses breakdown (memoized) ---
+  const { purchasePartExpense, purchasePartCount, operationalExpense, operationalCount, salaryExpense, salaryCount, otherExpense, otherCount } = useMemo(() => {
+    let purchasePartExpense = 0;
+    let purchasePartCount = 0;
+    let operationalExpense = 0;
+    let operationalCount = 0;
+    let salaryExpense = 0;
+    let salaryCount = 0;
+    let otherExpense = 0;
+    let otherCount = 0;
+
+    filteredExpenses.forEach((e) => {
+      const desc = e.description.toLowerCase();
+      const cat = e.category.toLowerCase();
+      const amt = e.amount;
+
+      if (desc.includes("gaji") || desc.includes("payroll") || desc.includes("komisi") || cat.includes("gaji") || cat.includes("komisi")) {
+        salaryExpense += amt;
+        salaryCount++;
+      } else if (desc.includes("spare") || desc.includes("part") || desc.includes("suku cadang") || cat.includes("spare") || cat.includes("part")) {
+        purchasePartExpense += amt;
+        purchasePartCount++;
+      } else if (desc.includes("operasional") || desc.includes("listrik") || desc.includes("air") || cat.includes("operasional")) {
+        operationalExpense += amt;
+        operationalCount++;
+      } else {
+        otherExpense += amt;
+        otherCount++;
+      }
+    });
+
+    return {
+      purchasePartExpense,
+      purchasePartCount,
+      operationalExpense,
+      operationalCount,
+      salaryExpense,
+      salaryCount,
+      otherExpense,
+      otherCount,
+    };
+  }, [filteredExpenses]);
+
+  // --- Memoized Export Data ---
+  const combinedExportData = useMemo<CombinedFinancialExportData>(() => ({
+    period: `${formatIndonesianDate(startDate)} - ${formatIndonesianDate(endDate)}`,
+    totalRevenue,
+    totalExpense,
+    netIncome: netProfit,
+    totalOrders: filteredOrders.length,
+    orders: filteredOrders.map((o) => ({
+      id: o.id,
+      date: o.createdAt,
+      customerName: o.custName,
+      vehicle: o.vehicle,
+      plateNumber: o.plateNumber || "-",
+      serviceType: o.orderItems?.map((item) => item.itemName).join(", ") || "Lain-lain",
+      mechanic: o.mechanic?.name || "-",
+      status: o.status,
+      paymentMethod: o.paymentMethod,
+      paymentStatus: o.paymentStatus,
+      totalAmount: o.totalPrice,
+    })),
+    expenses: filteredExpenses.map((e) => ({
+      date: e.date,
+      description: e.description,
+      category: e.category,
+      source: e.source,
+      amount: e.amount,
+    })),
+    incomeStatementAccounts: reportData?.incomeStatement
+      ? {
+          revenues: reportData.incomeStatement.revenues.map((acc) => ({
+            code: acc.code,
+            name: acc.name,
+            balance: acc.balance,
+          })),
+          expenses: reportData.incomeStatement.expenses.map((acc) => ({
+            code: acc.code,
+            name: acc.name,
+            balance: acc.balance,
+          })),
+        }
+      : undefined,
+  }), [filteredOrders, filteredExpenses, totalRevenue, totalExpense, netProfit, startDate, endDate, reportData]);
+
+  const cashFlowExportData = useMemo<CashFlowData | null>(() => {
+    if (!reportData?.cashFlowStatement) {
+      return null;
+    }
+    return {
+      period: `${formatIndonesianDate(startDate)} - ${formatIndonesianDate(endDate)}`,
+      beginningCash: reportData.cashFlowStatement.beginningCash,
+      inflowRevenue: reportData.cashFlowStatement.inflowRevenue,
+      inflowOther: reportData.cashFlowStatement.inflowOther,
+      totalInflow: reportData.cashFlowStatement.totalInflow,
+      outflowParts: reportData.cashFlowStatement.outflowParts,
+      outflowOperating: reportData.cashFlowStatement.outflowOperating,
+      outflowOther: reportData.cashFlowStatement.outflowOther,
+      totalOutflow: reportData.cashFlowStatement.totalOutflow,
+      netChange: reportData.cashFlowStatement.netChange,
+      endingCash: reportData.cashFlowStatement.endingCash,
+      transactions: reportData.cashFlowStatement.transactions.map((t) => ({
+        date: t.date,
+        description: t.description,
+        reference: t.reference,
+        inflow: t.inflow,
+        outflow: t.outflow,
+        classification: t.classification,
+        balance: t.balance,
+      })),
+    };
+  }, [reportData, startDate, endDate]);
+
+  // --- Early returns (after all hooks) ---
+  if (loading || !isMounted) {
+    return (
+      <div className="flex items-center justify-center h-screen bg-background">
+        <RefreshCw className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
   }
 
-  const categoryTotal = serviceRevenue + partRevenue + otherRevenue;
-  const getPercentage = (val: number) => {
-    if (categoryTotal === 0) {
-      return 0;
-    }
-    return Math.round((val / categoryTotal) * 100);
-  };
-
-  const donutChartData = [
-    { name: "Servis", value: serviceRevenue, color: "#111827", percent: getPercentage(serviceRevenue) },
-    { name: "Spare Part", value: partRevenue, color: "#4b5563", percent: getPercentage(partRevenue) },
-    { name: "Lain-lain", value: otherRevenue, color: "#9ca3af", percent: getPercentage(otherRevenue) },
-  ].filter((c) => c.value > 0);
-
-  // --- Expenses breakdown ---
-  let purchasePartExpense = 0;
-  let purchasePartCount = 0;
-  let operationalExpense = 0;
-  let operationalCount = 0;
-  let salaryExpense = 0;
-  let salaryCount = 0;
-  let otherExpense = 0;
-  let otherCount = 0;
-
-  filteredExpenses.forEach((e) => {
-    const desc = e.description.toLowerCase();
-    const cat = e.category.toLowerCase();
-    const amt = e.amount;
-
-    if (desc.includes("gaji") || desc.includes("payroll") || desc.includes("komisi") || cat.includes("gaji") || cat.includes("komisi")) {
-      salaryExpense += amt;
-      salaryCount++;
-    } else if (desc.includes("spare") || desc.includes("part") || desc.includes("suku cadang") || cat.includes("spare") || cat.includes("part")) {
-      purchasePartExpense += amt;
-      purchasePartCount++;
-    } else if (desc.includes("operasional") || desc.includes("listrik") || desc.includes("air") || cat.includes("operasional")) {
-      operationalExpense += amt;
-      operationalCount++;
-    } else {
-      otherExpense += amt;
-      otherCount++;
-    }
-  });
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center h-screen bg-background gap-4">
+        <p className="text-destructive font-medium">{error}</p>
+        <Button
+          onClick={handleRetry}
+          variant="outline"
+          className="gap-2"
+        >
+          <RefreshCw className="h-4 w-4" /> Coba Lagi
+        </Button>
+      </div>
+    );
+  }
 
   return (
     <RoleGuard allowedRoles={["OWNER"]}>
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <div className="min-h-screen bg-background text-foreground">
-          <div className="p-6 md:p-8 space-y-6 max-w-[1600px] mx-auto">
-          
+      <div className="min-h-screen bg-background text-foreground">
+        <div className="p-6 md:p-8 space-y-8 max-w-[1600px] mx-auto">
+        
           {/* Header & Breadcrumb */}
-          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+          <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 bg-card/60 border border-border p-6 rounded-2xl shadow-sm backdrop-blur-sm">
             <div>
               <div className="text-xs text-muted-foreground flex items-center gap-1.5 mb-2 font-medium">
                 <span>Beranda</span>
                 <span>&gt;</span>
                 <span className="text-foreground">Laporan Keuangan</span>
               </div>
-              <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-                <h2 className="text-3xl font-extrabold tracking-tight text-foreground">
-                  Laporan Keuangan
-                </h2>
-                <TabsList className="bg-muted/70 p-1 border border-border/80 rounded-xl inline-flex h-10 items-center gap-1">
-                  <TabsTrigger value="ringkasan" className="rounded-lg px-3 py-1.5 text-xs font-semibold">Ikhtisar Laba Rugi</TabsTrigger>
-                  <TabsTrigger value="pemasukan" className="rounded-lg px-3 py-1.5 text-xs font-semibold">Laporan Pendapatan</TabsTrigger>
-                  <TabsTrigger value="pengeluaran" className="rounded-lg px-3 py-1.5 text-xs font-semibold">Laporan Pengeluaran</TabsTrigger>
-                  <TabsTrigger value="arus-kas" className="rounded-lg px-3 py-1.5 text-xs font-semibold">Laporan Kas Arus</TabsTrigger>
-                </TabsList>
-              </div>
+              <h2 className="text-3xl font-extrabold tracking-tight text-foreground">
+                Laporan Keuangan
+              </h2>
               <p className="text-sm text-muted-foreground mt-1">
-                Pantau semua pemasukan, pengeluaran, dan arus kas bengkel Anda.
+                Pantau seluruh ringkasan laba rugi, rincian pendapatan, pengeluaran operasional, dan arus kas dalam satu halaman.
               </p>
             </div>
 
-            {/* Download Report Action based on active tab */}
-            <div className="flex gap-2">
-              {activeTab === "ringkasan" && (
-                <ExportButton
-                  title={`Laporan_Laba_Rugi_${startDate}_to_${endDate}`}
-                  label="Unduh Laba Rugi"
-                  variant="default"
-                  onExport={async (format, orientation) => {
-                    if (!reportData) {
-                      return new Blob([]);
-                    }
-                    const incomeData: IncomeStatementData = {
-                      period: `${formatIndonesianDate(startDate)} - ${formatIndonesianDate(endDate)}`,
-                      revenues: reportData.incomeStatement.revenues.map((acc) => ({
-                        code: acc.code,
-                        name: acc.name,
-                        balance: acc.balance,
-                      })),
-                      totalRevenue: reportData.incomeStatement.totalRevenue,
-                      expenses: reportData.incomeStatement.expenses.map((acc) => ({
-                        code: acc.code,
-                        name: acc.name,
-                        balance: acc.balance,
-                      })),
-                      totalExpense: reportData.incomeStatement.totalExpense,
-                      netIncome: reportData.incomeStatement.netIncome,
-                    };
-                    return await exportIncomeStatement(incomeData, format, orientation);
-                  }}
-                />
-              )}
-              {activeTab === "pemasukan" && (
-                <ExportButton
-                  title={`Laporan_Pemasukan_${startDate}_to_${endDate}`}
-                  label="Unduh Pemasukan"
-                  variant="default"
-                  onExport={async (format, orientation) => {
-                    const exportData = filteredOrders.map(o => ({
-                      id: o.id,
-                      date: o.createdAt,
-                      customerName: o.custName,
-                      vehicle: o.vehicle,
-                      plateNumber: o.plateNumber || "-",
-                      serviceType: o.orderItems.map(item => item.itemName).join(", ") || "Lain-lain",
-                      mechanic: o.mechanic?.name || "-",
-                      status: o.status,
-                      paymentStatus: o.paymentStatus,
-                      totalAmount: o.totalPrice
-                    }));
-                    return await exportOrders(exportData, format, orientation);
-                  }}
-                />
-              )}
-              {activeTab === "pengeluaran" && (
-                <ExportButton
-                  title={`Laporan_Pengeluaran_${startDate}_to_${endDate}`}
-                  label="Unduh Pengeluaran"
-                  variant="default"
-                  onExport={async (format, orientation) => {
-                    const exportData: ExpenseExportData = {
-                      period: `${formatIndonesianDate(startDate)} - ${formatIndonesianDate(endDate)}`,
-                      expenses: filteredExpenses.map(e => ({
-                        date: e.date,
-                        description: e.description,
-                        category: e.category,
-                        source: e.source,
-                        amount: e.amount
-                      })),
-                      totalExpense: totalExpense
-                    };
-                    return await exportExpenses(exportData, format, orientation);
-                  }}
-                />
-              )}
-              {activeTab === "arus-kas" && (
+            {/* Download Report Actions */}
+            <div className="flex flex-wrap items-center gap-3 shrink-0">
+              {cashFlowExportData && (
                 <ExportButton
                   title={`Laporan_Arus_Kas_${startDate}_to_${endDate}`}
                   label="Unduh Arus Kas"
-                  variant="default"
+                  variant="outline"
+                  tooltip="Unduh Laporan Mutasi & Arus Kas"
+                  className="h-10 px-4 font-semibold text-xs shadow-sm"
                   onExport={async (format, orientation) => {
-                    if (!reportData?.cashFlowStatement) {
+                    if (!cashFlowExportData) {
                       return new Blob([]);
                     }
-                    const exportData: CashFlowData = {
-                      period: `${formatIndonesianDate(startDate)} - ${formatIndonesianDate(endDate)}`,
-                      beginningCash: reportData.cashFlowStatement.beginningCash,
-                      inflowRevenue: reportData.cashFlowStatement.inflowRevenue,
-                      inflowOther: reportData.cashFlowStatement.inflowOther,
-                      totalInflow: reportData.cashFlowStatement.totalInflow,
-                      outflowParts: reportData.cashFlowStatement.outflowParts,
-                      outflowOperating: reportData.cashFlowStatement.outflowOperating,
-                      outflowOther: reportData.cashFlowStatement.outflowOther,
-                      totalOutflow: reportData.cashFlowStatement.totalOutflow,
-                      netChange: reportData.cashFlowStatement.netChange,
-                      endingCash: reportData.cashFlowStatement.endingCash,
-                      transactions: reportData.cashFlowStatement.transactions.map(t => ({
-                        date: t.date,
-                        description: t.description,
-                        reference: t.reference,
-                        inflow: t.inflow,
-                        outflow: t.outflow,
-                        classification: t.classification,
-                        balance: t.balance
-                      }))
-                    };
-                    return await exportCashFlow(exportData, format, orientation);
+                    return await exportCashFlow(cashFlowExportData, format, orientation);
                   }}
                 />
               )}
+
+              <ExportButton
+                title={`Laporan_Keuangan_${startDate}_to_${endDate}`}
+                label="Unduh Laporan Keuangan"
+                variant="default"
+                tooltip="Unduh Rekap Laporan Pendapatan & Pengeluaran"
+                className="h-10 px-4 font-semibold text-xs shadow-sm"
+                onExport={async (format, orientation) => {
+                  return await exportCombinedFinancialReport(combinedExportData, format, orientation);
+                }}
+              />
             </div>
           </div>
 
@@ -593,9 +603,8 @@ export default function Page() {
                 <div>
                   <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Total Pendapatan</p>
                   <h3 className="text-2xl font-extrabold text-foreground mt-1">{formatIDR(totalRevenue)}</h3>
-                  <p className="text-xs text-muted-foreground mt-1.5 flex items-center gap-1">
-                    <TrendingUp className="h-3.5 w-3.5 text-emerald-500" />
-                    <span className="text-emerald-600 font-bold dark:text-emerald-400">{revenueTrend}</span> dari periode sebelumnya
+                  <p className="text-xs text-muted-foreground mt-1.5">
+                    {filteredOrders.length} transaksi masuk
                   </p>
                 </div>
                 <div className="h-12 w-12 rounded-xl bg-emerald-50 dark:bg-emerald-950/20 flex items-center justify-center">
@@ -610,9 +619,8 @@ export default function Page() {
                 <div>
                   <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Total Pengeluaran</p>
                   <h3 className="text-2xl font-extrabold text-foreground mt-1">{formatIDR(totalExpense)}</h3>
-                  <p className="text-xs text-muted-foreground mt-1.5 flex items-center gap-1">
-                    <TrendingDown className="h-3.5 w-3.5 text-rose-500" />
-                    <span className="text-rose-600 font-bold dark:text-rose-400">{expenseTrend}</span> dari periode sebelumnya
+                  <p className="text-xs text-muted-foreground mt-1.5">
+                    {filteredExpenses.length} transaksi keluar
                   </p>
                 </div>
                 <div className="h-12 w-12 rounded-xl bg-rose-50 dark:bg-rose-950/20 flex items-center justify-center">
@@ -629,9 +637,8 @@ export default function Page() {
                   <h3 className={`text-2xl font-extrabold mt-1 ${netProfit >= 0 ? "text-foreground" : "text-rose-600"}`}>
                     {formatIDR(netProfit)}
                   </h3>
-                  <p className="text-xs text-muted-foreground mt-1.5 flex items-center gap-1">
-                    <TrendingUp className="h-3.5 w-3.5 text-emerald-500" />
-                    <span className="text-emerald-600 font-bold dark:text-emerald-400">{profitTrend}</span> dari periode sebelumnya
+                  <p className="text-xs text-muted-foreground mt-1.5">
+                    {netProfit >= 0 ? "Surplus" : "Defisit"} periode ini
                   </p>
                 </div>
                 <div className="h-12 w-12 rounded-xl bg-blue-50 dark:bg-blue-950/20 flex items-center justify-center">
@@ -732,8 +739,14 @@ export default function Page() {
             </div>
           </div>
 
-          {/* TAB 0: Ikhtisar Laba Rugi */}
-          <TabsContent value="ringkasan" className="space-y-6 mt-0 animate-in fade-in duration-200">
+          {/* SECTION 1: Ikhtisar Laba Rugi */}
+          <div className="space-y-4 pt-2">
+            <SectionHeader
+              icon={<FileText className="h-5 w-5" />}
+              iconBg="bg-primary/10 text-primary"
+              title="1. Ikhtisar Laba Rugi (Income Statement)"
+              subtitle="Struktur akun pendapatan, beban operasional, dan kalkulasi laba bersih"
+            />
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {/* Revenue Accounts Table */}
               <Card className="border border-border bg-card shadow-sm rounded-xl overflow-hidden">
@@ -858,10 +871,21 @@ export default function Page() {
                 </div>
               </CardContent>
             </Card>
-          </TabsContent>
+          </div>
 
-          {/* TAB 1: Laporan Pendapatan (Pemasukan) */}
-          <TabsContent value="pemasukan" className="space-y-6 mt-0 animate-in fade-in duration-200">
+          {/* SECTION 2: Laporan Pendapatan (Pemasukan) */}
+          <div className="space-y-4 pt-4">
+            <SectionHeader
+              icon={<TrendingUp className="h-5 w-5" />}
+              iconBg="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
+              title="2. Laporan Pendapatan & Pemasukan"
+              subtitle="Komposisi kategori pendapatan dan riwayat transaksi order/servis masuk"
+              badge={
+                <Badge variant="outline" className="bg-emerald-50 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-400 border-emerald-200/60 font-bold w-fit">
+                  {filteredOrders.length} Transaksi Masuk ({formatIDR(totalRevenue)})
+                </Badge>
+              }
+            />
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
               {/* Chart Left: Revenue by Category */}
               <Card className="lg:col-span-5 border border-border bg-card shadow-sm rounded-xl overflow-hidden">
@@ -1053,10 +1077,21 @@ export default function Page() {
                 </div>
               </CardContent>
             </Card>
-          </TabsContent>
+          </div>
 
-          {/* TAB 2: Laporan Pengeluaran */}
-          <TabsContent value="pengeluaran" className="space-y-6 mt-0 animate-in fade-in duration-200">
+          {/* SECTION 3: Laporan Pengeluaran */}
+          <div className="space-y-4 pt-4">
+            <SectionHeader
+              icon={<TrendingDown className="h-5 w-5" />}
+              iconBg="bg-rose-500/10 text-rose-600 dark:text-rose-400"
+              title="3. Laporan Pengeluaran (Beban & Biaya)"
+              subtitle="Rincian breakdown kategori pengeluaran dan daftar transaksi biaya operasional"
+              badge={
+                <Badge variant="outline" className="bg-rose-50 text-rose-700 dark:bg-rose-950/30 dark:text-rose-400 border-rose-200/60 font-bold w-fit">
+                  {filteredExpenses.length} Transaksi Keluar ({formatIDR(totalExpense)})
+                </Badge>
+              }
+            />
             {/* Table Top: Expense Category Breakdown */}
             <Card className="border border-border bg-card shadow-sm rounded-xl overflow-hidden">
               <CardHeader className="p-5 border-b border-border/60 flex flex-row items-center justify-between">
@@ -1182,10 +1217,16 @@ export default function Page() {
                 </div>
               </CardContent>
             </Card>
-          </TabsContent>
+          </div>
 
-          {/* TAB 3: Laporan Kas Arus */}
-          <TabsContent value="arus-kas" className="mt-0 space-y-6 animate-in fade-in duration-200">
+          {/* SECTION 4: Laporan Arus Kas */}
+          <div className="space-y-4 pt-4">
+            <SectionHeader
+              icon={<Wallet className="h-5 w-5" />}
+              iconBg="bg-blue-500/10 text-blue-600 dark:text-blue-400"
+              title="4. Laporan Arus Kas (Cash Flow Statement)"
+              subtitle="Ringkasan arus kas, grafik pergerakan harian, dan mutasi saldo"
+            />
             {/* Cash Flow Summary Cards */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               <Card className="border border-border bg-card/60 shadow-sm rounded-xl">
@@ -1417,19 +1458,44 @@ export default function Page() {
                 </div>
               </CardContent>
             </Card>
-          </TabsContent>
+          </div>
 
           {/* BANK ACCOUNTS MANAGER */}
-          <div className="pt-2">
+          <div className="pt-4">
             <BankAccountsManager />
           </div>
 
           <Toaster />
         </div>
       </div>
-    </Tabs>
-  </RoleGuard>
+    </RoleGuard>
 );
+}
+
+// Reusable Section Header Component
+interface SectionHeaderProps {
+  icon: React.ReactNode;
+  iconBg: string;
+  title: string;
+  subtitle: string;
+  badge?: React.ReactNode;
+}
+
+function SectionHeader({ icon, iconBg, title, subtitle, badge }: SectionHeaderProps) {
+  return (
+    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-border pb-3">
+      <div className="flex items-center gap-2.5">
+        <div className={`p-2 rounded-lg ${iconBg}`}>
+          {icon}
+        </div>
+        <div>
+          <h3 className="text-lg font-bold text-foreground">{title}</h3>
+          <p className="text-xs text-muted-foreground">{subtitle}</p>
+        </div>
+      </div>
+      {badge}
+    </div>
+  );
 }
 
 // Helper function for Indonesian date formatting
@@ -1467,4 +1533,5 @@ function toLocalDateString(dateInput: string | Date | null | undefined): string 
   const day = String(d.getDate()).padStart(2, "0");
   return `${year}-${month}-${day}`;
 }
+
 

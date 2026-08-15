@@ -1,137 +1,8 @@
 // lib/export/reports/financialExport.ts
 import { PDFGenerator, formatCurrency, formatDate } from "../pdfGenerator";
 import { ExcelGenerator, formatExcelCurrency, formatExcelDate } from "../excelGenerator";
-import type { ExportFormat, PageOrientation, IncomeStatementData, CashFlowData, ExpenseExportData } from "../types";
+import type { ExportFormat, PageOrientation, CashFlowData, CombinedFinancialExportData } from "../types";
 
-/**
- * Exports Income Statement report to PDF or Excel format.
- * 
- * @param data Income statement data to export
- * @param format Export document format ("pdf" or "excel")
- * @param orientation PDF page orientation ("portrait" or "landscape")
- * @returns {Promise<Blob>} Document Blob result
- */
-export async function exportIncomeStatement(
-  data: IncomeStatementData,
-  format: ExportFormat,
-  orientation: PageOrientation = "portrait"
-): Promise<Blob> {
-  if (format === "pdf") {
-    return exportIncomeStatementToPDF(data, orientation);
-  }
-  return exportIncomeStatementToExcel(data);
-}
-
-function exportIncomeStatementToPDF(
-  data: IncomeStatementData,
-  orientation: PageOrientation
-): Blob {
-  const pdf = new PDFGenerator(orientation);
-
-  pdf.addLetterhead();
-  pdf.addTitle("LAPORAN LABA RUGI (INCOME STATEMENT)", `Periode: ${data.period}`);
-
-  // REVENUE SECTION
-  pdf.addText("PENDAPATAN (REVENUE)", { bold: true });
-  pdf.addSpacing(2);
-
-  const revenueHeaders = ["Kode", "Nama Akun", "Jumlah"];
-  const revenueRows = data.revenues.map((rev) => [
-    rev.code,
-    rev.name,
-    formatCurrency(rev.balance),
-  ]);
-
-  pdf.addTable(revenueHeaders, revenueRows, {
-    footerRows: [["", "TOTAL PENDAPATAN", formatCurrency(data.totalRevenue)]],
-    columnStyles: {
-      0: { cellWidth: 20, halign: "center" },
-      1: { cellWidth: "auto" },
-      2: { cellWidth: 40, halign: "right" },
-    },
-  });
-  pdf.addSpacing(5);
-
-  // EXPENSE SECTION
-  pdf.addText("BEBAN & BIAYA (EXPENSES)", { bold: true });
-  pdf.addSpacing(2);
-
-  const expenseHeaders = ["Kode", "Nama Akun", "Jumlah"];
-  const expenseRows = data.expenses.map((exp) => [
-    exp.code,
-    exp.name,
-    formatCurrency(exp.balance),
-  ]);
-
-  pdf.addTable(expenseHeaders, expenseRows, {
-    footerRows: [["", "TOTAL BEBAN", formatCurrency(data.totalExpense)]],
-    columnStyles: {
-      0: { cellWidth: 20, halign: "center" },
-      1: { cellWidth: "auto" },
-      2: { cellWidth: 40, halign: "right" },
-    },
-  });
-
-  // NET INCOME
-  pdf.addSpacing(10);
-  pdf.addHorizontalLine();
-  pdf.addSpacing(2);
-
-  const isProfit = data.netIncome >= 0;
-
-  pdf.addText(
-    `LABA RUGI (NET INCOME): ${formatCurrency(data.netIncome)}`,
-    { bold: true, align: "right" }
-  );
-  if (isProfit) {
-    pdf.addText("(PROFIT)", { bold: true, align: "right" });
-  } else {
-    pdf.addText("(LOSS)", { bold: true, align: "right" });
-  }
-
-  return pdf.getBlob();
-}
-
-async function exportIncomeStatementToExcel(
-  data: IncomeStatementData
-): Promise<Blob> {
-  const excel = new ExcelGenerator();
-  excel.createSheet("Laba Rugi");
-  excel.addLetterhead();
-  excel.addTitle("LAPORAN LABA RUGI (INCOME STATEMENT)", `Periode: ${data.period}`);
-
-  // REVENUE
-  excel.addRow(["PENDAPATAN (REVENUE)"]);
-  const revenueHeaders = ["Kode", "Nama Akun", "Jumlah"];
-  const revenueRows = data.revenues.map((rev) => [
-    rev.code,
-    rev.name,
-    formatExcelCurrency(rev.balance),
-  ]);
-  excel.addTable(revenueHeaders, revenueRows, {
-    totals: ["", "TOTAL PENDAPATAN", formatExcelCurrency(data.totalRevenue)],
-  });
-  excel.addSpacing(2);
-
-  // EXPENSES
-  excel.addRow(["BEBAN & BIAYA (EXPENSES)"]);
-  const expenseHeaders = ["Kode", "Nama Akun", "Jumlah"];
-  const expenseRows = data.expenses.map((exp) => [
-    exp.code,
-    exp.name,
-    formatExcelCurrency(exp.balance),
-  ]);
-  excel.addTable(expenseHeaders, expenseRows, {
-    totals: ["", "TOTAL BEBAN", formatExcelCurrency(data.totalExpense)],
-  });
-  excel.addSpacing(2);
-
-  // NET INCOME
-  excel.addRow(["", "LABA RUGI (NET INCOME)", formatExcelCurrency(data.netIncome)]);
-
-  excel.setColumnWidths([15, 50, 20]);
-  return await excel.getBlob();
-}
 
 /**
  * Exports Cash Flow report to PDF or Excel format.
@@ -262,31 +133,108 @@ async function exportCashFlowToExcel(data: CashFlowData): Promise<Blob> {
   return await excel.getBlob();
 }
 
+
 /**
- * Exports Detailed Expense report to PDF or Excel format.
+ * Exports Combined Financial Report (Pendapatan & Pengeluaran) to PDF or Excel format.
  */
-export async function exportExpenses(
-  data: ExpenseExportData,
+export async function exportCombinedFinancialReport(
+  data: CombinedFinancialExportData,
   format: ExportFormat,
-  orientation: PageOrientation = "portrait"
+  orientation: PageOrientation = "landscape"
 ): Promise<Blob> {
   if (format === "pdf") {
-    return exportExpensesToPDF(data, orientation);
+    return exportCombinedFinancialReportToPDF(data, orientation);
   }
-  return exportExpensesToExcel(data);
+  return exportCombinedFinancialReportToExcel(data);
 }
 
-function exportExpensesToPDF(
-  data: ExpenseExportData,
+function exportCombinedFinancialReportToPDF(
+  data: CombinedFinancialExportData,
   orientation: PageOrientation
 ): Blob {
   const pdf = new PDFGenerator(orientation);
 
   pdf.addLetterhead();
-  pdf.addTitle("LAPORAN RENCANA PENGELUARAN (EXPENSE LIST)", `Periode: ${data.period}`);
+  pdf.addTitle("LAPORAN KEUANGAN (PENDAPATAN & PENGELUARAN)", `Periode: ${data.period}`);
 
-  const headers = ["Tanggal", "Deskripsi", "Kategori", "Sumber Dana", "Jumlah"];
-  const rows = data.expenses.map((e) => [
+  // Summary Metrics Table
+  pdf.addText("IKHTISAR KEUANGAN", { bold: true });
+  pdf.addSpacing(2);
+
+  const summaryHeaders = ["Total Pendapatan", "Total Pengeluaran", "Laba / Rugi Bersih", "Total Transaksi"];
+  const summaryRows = [
+    [
+      formatCurrency(data.totalRevenue),
+      formatCurrency(data.totalExpense),
+      `${formatCurrency(data.netIncome)} (${data.netIncome >= 0 ? "PROFIT" : "LOSS"})`,
+      `${data.totalOrders} Transaksi`,
+    ],
+  ];
+
+  pdf.addTable(summaryHeaders, summaryRows, {
+    columnStyles: {
+      0: { halign: "center", fontStyle: "bold" },
+      1: { halign: "center", fontStyle: "bold" },
+      2: { halign: "center", fontStyle: "bold" },
+      3: { halign: "center" },
+    },
+  });
+
+  pdf.addSpacing(6);
+
+  // Section 1: Revenue Transactions Table
+  pdf.addText("1. RINCIAN PENDAPATAN & PEMASUKAN", { bold: true });
+  pdf.addSpacing(2);
+
+  const revenueHeaders = [
+    "No",
+    "Tanggal",
+    "ID Order",
+    "Pelanggan",
+    "Kendaraan",
+    "Metode Bayar",
+    "Status",
+    "Total",
+  ];
+
+  const revenueRows = data.orders.map((o, idx) => [
+    idx + 1,
+    formatDate(o.date),
+    o.id.slice(-8).toUpperCase(),
+    o.customerName,
+    `${o.vehicle} ${o.plateNumber ? `(${o.plateNumber})` : ""}`,
+    o.paymentMethod,
+    o.paymentStatus === "PAID" ? "Lunas" : "Sebagian/Belum",
+    formatCurrency(o.totalAmount),
+  ]);
+
+  if (revenueRows.length > 0) {
+    pdf.addTable(revenueHeaders, revenueRows, {
+      footerRows: [["", "", "", "", "", "", "TOTAL PENDAPATAN", formatCurrency(data.totalRevenue)]],
+      columnStyles: {
+        0: { cellWidth: 12, halign: "center" },
+        1: { cellWidth: 26, halign: "center" },
+        2: { cellWidth: 22, halign: "center" },
+        3: { cellWidth: "auto" },
+        4: { cellWidth: 45 },
+        5: { cellWidth: 28, halign: "center" },
+        6: { cellWidth: 28, halign: "center" },
+        7: { cellWidth: 32, halign: "right" },
+      },
+    });
+  } else {
+    pdf.addText("Tidak ada transaksi pemasukan pada periode ini.");
+  }
+
+  pdf.addSpacing(6);
+
+  // Section 2: Expense Transactions Table
+  pdf.addText("2. RINCIAN PENGELUARAN OPERASIONAL & BIAYA", { bold: true });
+  pdf.addSpacing(2);
+
+  const expenseHeaders = ["No", "Tanggal", "Deskripsi / Pengeluaran", "Kategori", "Sumber Dana", "Jumlah"];
+  const expenseRows = data.expenses.map((e, idx) => [
+    idx + 1,
     formatDate(e.date),
     e.description,
     e.category,
@@ -294,28 +242,139 @@ function exportExpensesToPDF(
     formatCurrency(e.amount),
   ]);
 
-  pdf.addTable(headers, rows, {
-    footerRows: [["", "", "", "TOTAL PENGELUARAN", formatCurrency(data.totalExpense)]],
-    columnStyles: {
-      0: { cellWidth: 28, halign: "center" },
-      1: { cellWidth: "auto" },
-      2: { cellWidth: 40 },
-      3: { cellWidth: 35 },
-      4: { cellWidth: 35, halign: "right" },
-    },
-  });
+  if (expenseRows.length > 0) {
+    pdf.addTable(expenseHeaders, expenseRows, {
+      footerRows: [["", "", "", "", "TOTAL PENGELUARAN", formatCurrency(data.totalExpense)]],
+      columnStyles: {
+        0: { cellWidth: 12, halign: "center" },
+        1: { cellWidth: 28, halign: "center" },
+        2: { cellWidth: "auto" },
+        3: { cellWidth: 38 },
+        4: { cellWidth: 32 },
+        5: { cellWidth: 35, halign: "right" },
+      },
+    });
+  } else {
+    pdf.addText("Tidak ada transaksi pengeluaran pada periode ini.");
+  }
+
+  pdf.addSpacing(6);
+
+  // Net Summary Footer
+  pdf.addHorizontalLine();
+  pdf.addSpacing(3);
+  pdf.addText(
+    `TOTAL LABA RUGI BERSIH: ${formatCurrency(data.netIncome)} (${data.netIncome >= 0 ? "LABA / PROFIT" : "RUGI / LOSS"})`,
+    { bold: true, align: "right" }
+  );
 
   return pdf.getBlob();
 }
 
-async function exportExpensesToExcel(data: ExpenseExportData): Promise<Blob> {
+async function exportCombinedFinancialReportToExcel(
+  data: CombinedFinancialExportData
+): Promise<Blob> {
   const excel = new ExcelGenerator();
-  excel.createSheet("Pengeluaran");
-  excel.addLetterhead();
-  excel.addTitle("LAPORAN PENGELUARAN BENGKEL", `Periode: ${data.period}`);
 
-  const headers = ["Tanggal", "Deskripsi", "Kategori", "Sumber Dana", "Jumlah"];
-  const rows = data.expenses.map((e) => [
+  // Sheet 1: Ringkasan Laba Rugi
+  excel.createSheet("Ringkasan Keuangan");
+  excel.addLetterhead();
+  excel.addTitle("IKHTISAR KEUANGAN BENGKEL", `Periode: ${data.period}`);
+
+  excel.addRow(["RINGKASAN EKSEKUTIF"]);
+  const summaryHeaders = ["Komponen Keuangan", "Nilai (Rp)"];
+  const summaryRows = [
+    ["Total Pendapatan (Revenues)", formatExcelCurrency(data.totalRevenue)],
+    ["Total Pengeluaran (Expenses)", formatExcelCurrency(data.totalExpense)],
+    ["Laba / (Rugi) Bersih (Net Income)", formatExcelCurrency(data.netIncome)],
+    ["Status Keuangan", data.netIncome >= 0 ? "SURPLUS / PROFIT" : "DEFISIT / LOSS"],
+    ["Jumlah Transaksi Order", `${data.totalOrders} Transaksi`],
+    ["Jumlah Transaksi Pengeluaran", `${data.expenses.length} Transaksi`],
+  ];
+  excel.addTable(summaryHeaders, summaryRows);
+
+  if (data.incomeStatementAccounts) {
+    excel.addSpacing(2);
+    excel.addRow(["AKUN PENDAPATAN"]);
+    const revHeaders = ["Kode Akun", "Nama Akun", "Saldo (Rp)"];
+    const revRows = data.incomeStatementAccounts.revenues.map((r) => [
+      r.code,
+      r.name,
+      formatExcelCurrency(r.balance),
+    ]);
+    excel.addTable(revHeaders, revRows, {
+      totals: ["", "TOTAL PENDAPATAN", formatExcelCurrency(data.totalRevenue)],
+    });
+
+    excel.addSpacing(2);
+    excel.addRow(["AKUN BEBAN & BIAYA"]);
+    const expHeaders = ["Kode Akun", "Nama Akun", "Saldo (Rp)"];
+    const expRows = data.incomeStatementAccounts.expenses.map((e) => [
+      e.code,
+      e.name,
+      formatExcelCurrency(e.balance),
+    ]);
+    excel.addTable(expHeaders, expRows, {
+      totals: ["", "TOTAL BEBAN", formatExcelCurrency(data.totalExpense)],
+    });
+  }
+
+  excel.setColumnWidths([30, 45, 25]);
+
+  // Sheet 2: Pendapatan
+  excel.createSheet("Data Pendapatan");
+  excel.addLetterhead();
+  excel.addTitle("DAFTAR TRANSAKSI PENDAPATAN & PEMASUKAN", `Periode: ${data.period}`);
+
+  const orderHeaders = [
+    "No",
+    "ID Order",
+    "Tanggal",
+    "Nama Pelanggan",
+    "Kendaraan",
+    "Plat Nomor",
+    "Tipe Layanan / Item",
+    "Mekanik",
+    "Metode Bayar",
+    "Status Bayar",
+    "Total Transaksi (Rp)",
+  ];
+
+  const orderRows = data.orders.map((o, idx) => [
+    idx + 1,
+    o.id,
+    formatExcelDate(o.date),
+    o.customerName,
+    o.vehicle,
+    o.plateNumber || "-",
+    o.serviceType,
+    o.mechanic,
+    o.paymentMethod,
+    o.paymentStatus,
+    formatExcelCurrency(o.totalAmount),
+  ]);
+
+  excel.addTable(orderHeaders, orderRows, {
+    totals: ["", "", "", "", "", "", "", "", "", "TOTAL PENDAPATAN", formatExcelCurrency(data.totalRevenue)],
+  });
+  excel.setColumnWidths([8, 25, 18, 25, 20, 15, 30, 20, 15, 15, 22]);
+
+  // Sheet 3: Pengeluaran
+  excel.createSheet("Data Pengeluaran");
+  excel.addLetterhead();
+  excel.addTitle("DAFTAR TRANSAKSI PENGELUARAN BENGKEL", `Periode: ${data.period}`);
+
+  const expHeaders = [
+    "No",
+    "Tanggal",
+    "Deskripsi Pengeluaran",
+    "Kategori Pengeluaran",
+    "Sumber Dana",
+    "Jumlah Pengeluaran (Rp)",
+  ];
+
+  const expRows = data.expenses.map((e, idx) => [
+    idx + 1,
     formatExcelDate(e.date),
     e.description,
     e.category,
@@ -323,10 +382,10 @@ async function exportExpensesToExcel(data: ExpenseExportData): Promise<Blob> {
     formatExcelCurrency(e.amount),
   ]);
 
-  excel.addTable(headers, rows, {
-    totals: ["", "", "", "TOTAL PENGELUARAN", formatExcelCurrency(data.totalExpense)],
+  excel.addTable(expHeaders, expRows, {
+    totals: ["", "", "", "", "TOTAL PENGELUARAN", formatExcelCurrency(data.totalExpense)],
   });
+  excel.setColumnWidths([8, 18, 40, 25, 20, 25]);
 
-  excel.setColumnWidths([15, 45, 20, 20, 20]);
   return await excel.getBlob();
 }

@@ -77,12 +77,16 @@ Setiap expense yang dicatat akan otomatis menghasilkan JournalEntry dengan posti
 
 Modul Laporan Keuangan menyajikan insight keuangan komprehensif berbasis periode (rentang tanggal) untuk mendukung pengawasan dan pengambilan keputusan bisnis pemilik (Owner).
 
-Halaman ini didesain dengan navigasi tab terpisah di bagian header di samping judul:
-- **Laporan Pendapatan**: Menyajikan grafik donat persentase pendapatan per kategori (jasa servis dan penjualan sparepart), tabel rincian per kategori, serta daftar transaksi pesanan/pemasukan terperinci.
-- **Laporan Pengeluaran**: Menyajikan tabel rincian klasifikasi pengeluaran (pembelian sparepart, operasional, gaji karyawan/payroll) serta daftar transaksi pengeluaran rinci.
-- **Laporan Kas Arus**: Menyajikan kartu metrik saldo (saldo awal, kas masuk, kas keluar, saldo akhir), grafik garis arus kas harian, Laporan Arus Kas Metode Langsung (Direct Method), serta Buku Pembantu Mutasi Kas (jurnal mutasi kas & bank kronologis).
+Halaman ini didesain dalam format **1 halaman utuh (Single-Page Report)** yang menyajikan 4 bagian analisis secara berurutan:
+1. **Ikhtisar Laba Rugi (Income Statement)**: Menyajikan tabel saldo seluruh akun pendapatan, akun beban operasional & HPP, serta kartu kalkulasi laba bersih (*profit/loss*).
+2. **Laporan Pendapatan (Pemasukan)**: Menyajikan grafik donat persentase pendapatan per kategori (jasa servis dan sparepart) serta tabel riwayat seluruh transaksi pesanan/pemasukan pelanggan terperinci.
+3. **Laporan Pengeluaran (Beban & Biaya)**: Menyajikan tabel rincian klasifikasi pengeluaran (pembelian sparepart, operasional, gaji karyawan/payroll) serta daftar transaksi pengeluaran kas rinci.
+4. **Laporan Arus Kas (Cash Flow Statement) & Rekening**: Menyajikan kartu metrik saldo (saldo awal, kas masuk, kas keluar, saldo akhir), grafik garis arus kas harian, tabel mutasi kas kronologis, serta manajemen rekening kas/bank (`BankAccountsManager`).
 
-Setiap jenis laporan dilengkapi dengan tombol ekspor dinamis ke format PDF dan Excel, serta fitur **Cetak PDF** langsung (direct printing via hidden iframe) tanpa menyertakan elemen layout navigasi web.
+Halaman ini dilengkapi fitur ekspor terpadu:
+- **Unduh Laporan Keuangan**: Mengunduh seluruh rincian transaksi pendapatan dan pengeluaran beserta ringkasan laba rugi ke dalam **1 file sekaligus** (tersedia format PDF resmi ber-kop surat dan Excel multi-sheet).
+- **Unduh Arus Kas**: Mengunduh dokumen laporan arus kas dan mutasi saldo kas/bank ke format PDF dan Excel.
+- **Cetak PDF**: Fitur cetak langsung (*direct print*) via hidden iframe tanpa menyertakan elemen layout navigasi web.
 
 ### 10. Settings & Konfigurasi (`/admin/settings`)
 

@@ -3,6 +3,9 @@
 export type ExportFormat = "pdf" | "excel";
 export type PageOrientation = "portrait" | "landscape";
 
+/**
+ * Options for configuring document exports (PDF / Excel).
+ */
 export interface ExportOptions {
   format: ExportFormat;
   orientation: PageOrientation;
@@ -11,6 +14,18 @@ export interface ExportOptions {
   includeLetterhead?: boolean;
 }
 
+/**
+ * Social media handles for business letterhead.
+ */
+export interface SocialMediaConfig {
+  instagram?: string;
+  facebook?: string;
+  twitter?: string;
+}
+
+/**
+ * Company letterhead configuration for official document header.
+ */
 export interface LetterheadConfig {
   companyName: string;
   address: string;
@@ -20,26 +35,30 @@ export interface LetterheadConfig {
   email: string;
   website?: string;
   logoUrl?: string;
-  socialMedia?: {
-    instagram?: string;
-    facebook?: string;
-    twitter?: string;
-  };
+  socialMedia?: SocialMediaConfig;
 }
 
-// Balance Sheet Types
+/**
+ * Balance sheet account line item.
+ */
 export interface BalanceSheetAccount {
   code: string;
   name: string;
   balance: number;
 }
 
+/**
+ * Balance sheet category section (Assets, Liabilities, Equity).
+ */
 export interface BalanceSheetSection {
   title: string;
   accounts: BalanceSheetAccount[];
   total: number;
 }
 
+/**
+ * Complete balance sheet report data structure.
+ */
 export interface BalanceSheetData {
   date: Date | string;
   assets: BalanceSheetSection[];
@@ -47,24 +66,30 @@ export interface BalanceSheetData {
   equity: BalanceSheetSection[];
 }
 
+/**
+ * Income statement account line item.
+ */
+export interface IncomeStatementAccountItem {
+  code: string;
+  name: string;
+  balance: number;
+}
+
+/**
+ * Income statement report data structure.
+ */
 export interface IncomeStatementData {
   period: string;
-  revenues: {
-    code: string;
-    name: string;
-    balance: number;
-  }[];
+  revenues: IncomeStatementAccountItem[];
   totalRevenue: number;
-  expenses: {
-    code: string;
-    name: string;
-    balance: number;
-  }[];
+  expenses: IncomeStatementAccountItem[];
   totalExpense: number;
   netIncome: number;
 }
 
-// Payroll Types
+/**
+ * Employee payroll line item entry.
+ */
 export interface PayrollEntry {
   employeeId: string;
   employeeName: string;
@@ -75,6 +100,9 @@ export interface PayrollEntry {
   netSalary: number;
 }
 
+/**
+ * Summary data structure for payroll exports.
+ */
 export interface PayrollSummary {
   period: string;
   startDate: Date | string;
@@ -83,7 +111,9 @@ export interface PayrollSummary {
   totalSalary: number;
 }
 
-// Employee Types
+/**
+ * Employee master data structure for export.
+ */
 export interface EmployeeExport {
   id: string;
   name: string;
@@ -95,7 +125,9 @@ export interface EmployeeExport {
   joinDate: Date | string;
 }
 
-// Inventory Types
+/**
+ * Inventory spare part item structure for export.
+ */
 export interface InventoryItemExport {
   id: string;
   sku?: string;
@@ -109,7 +141,9 @@ export interface InventoryItemExport {
   lowStockThreshold?: number;
 }
 
-// Order List Export Types
+/**
+ * Order list export item structure.
+ */
 export interface OrderListExport {
   id: string;
   date: Date | string;
@@ -123,7 +157,9 @@ export interface OrderListExport {
   totalAmount: number;
 }
 
-// Order/Invoice Types
+/**
+ * Invoice line item entry.
+ */
 export interface InvoiceLineItem {
   description: string;
   quantity: number;
@@ -131,6 +167,9 @@ export interface InvoiceLineItem {
   total: number;
 }
 
+/**
+ * Invoice document export data structure.
+ */
 export interface InvoiceExport {
   invoiceNumber: string;
   invoiceDate: Date | string;
@@ -145,7 +184,9 @@ export interface InvoiceExport {
   notes?: string;
 }
 
-// Cash Flow Types
+/**
+ * Individual cash flow transaction ledger entry.
+ */
 export interface CashFlowTransaction {
   date: string;
   description: string;
@@ -156,6 +197,9 @@ export interface CashFlowTransaction {
   balance: number;
 }
 
+/**
+ * Complete cash flow statement report data structure.
+ */
 export interface CashFlowData {
   period: string;
   beginningCash: number;
@@ -171,7 +215,9 @@ export interface CashFlowData {
   transactions: CashFlowTransaction[];
 }
 
-// Detailed Expense Export Types
+/**
+ * Individual expense line item for export.
+ */
 export interface ExpenseExportItem {
   date: string;
   description: string;
@@ -180,9 +226,50 @@ export interface ExpenseExportItem {
   amount: number;
 }
 
+/**
+ * Expense report export data structure.
+ */
 export interface ExpenseExportData {
   period: string;
   expenses: ExpenseExportItem[];
   totalExpense: number;
 }
 
+/**
+ * Revenue transaction line item for combined report.
+ */
+export interface RevenueExportItem {
+  id: string;
+  date: string;
+  customerName: string;
+  vehicle: string;
+  plateNumber: string;
+  serviceType: string;
+  mechanic: string;
+  status: string;
+  paymentMethod: string;
+  paymentStatus: string;
+  totalAmount: number;
+}
+
+/**
+ * Accounts summary section for income statement in combined report.
+ */
+export interface CombinedIncomeStatementAccounts {
+  revenues: IncomeStatementAccountItem[];
+  expenses: IncomeStatementAccountItem[];
+}
+
+/**
+ * Combined financial report (Pendapatan & Pengeluaran) export data structure.
+ */
+export interface CombinedFinancialExportData {
+  period: string;
+  totalRevenue: number;
+  totalExpense: number;
+  netIncome: number;
+  totalOrders: number;
+  orders: RevenueExportItem[];
+  expenses: ExpenseExportItem[];
+  incomeStatementAccounts?: CombinedIncomeStatementAccounts;
+}
