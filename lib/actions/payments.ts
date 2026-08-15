@@ -19,6 +19,10 @@ export interface CreatePaymentInput {
   payCommissionNow?: boolean;
 }
 
+interface DecimalLike {
+  toNumber(): number;
+}
+
 function toNumber(val: unknown): number {
   if (!val) {
     return 0;
@@ -30,9 +34,9 @@ function toNumber(val: unknown): number {
     typeof val === "object" &&
     val !== null &&
     "toNumber" in val &&
-    typeof (val as any).toNumber === "function"
+    typeof (val as DecimalLike).toNumber === "function"
   ) {
-    return (val as any).toNumber();
+    return (val as DecimalLike).toNumber();
   }
   return Number(val);
 }
@@ -123,9 +127,10 @@ export async function createPayment(data: CreatePaymentInput) {
     });
 
     return { success: true, payment: serializePayment(result) };
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Create payment error:", error);
-    return { success: false, error: error.message || "Failed to process payment" };
+    const message = error instanceof Error ? error.message : "Failed to process payment";
+    return { success: false, error: message };
   }
 }
 
@@ -227,9 +232,10 @@ export async function createPayrollPayment(data: CreatePayrollPaymentInput) {
     });
 
     return { success: true, payment: serializePayment(payment) };
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Create payroll payment error:", error);
-    return { success: false, error: error.message || "Failed to process payroll payment" };
+    const message = error instanceof Error ? error.message : "Failed to process payroll payment";
+    return { success: false, error: message };
   }
 }
 
@@ -288,65 +294,3 @@ export async function getPaymentHistory(filters?: {
     return { success: false, error: "Failed to load payment history" };
   }
 }
-
-/**
- * Fetches journal entries constructed from payment transactions.
- * 
- * @param filters - Optional filters by date range and account code.
- * @returns List of accounting journal entries.
- */
-export async function getJournalEntries(filters?: {
-  dateFrom?: Date;
-  dateTo?: Date;
-  accountCode?: string;
-}) {
-  try {
-    const session = await auth();
-    if (!session || session.user?.role !== "OWNER") {
-      return { success: false, error: "Access denied: Only Owner can view accounting journals." };
-    }
-    const payments = await prisma.payment.findMany({
-      where: {
-        ...(filters?.dateFrom && {
-          date: { gte: filters.dateFrom },
-        }),
-        ...(filters?.dateTo && {
-          date: { lte: filters.dateTo },
-        }),
-      },
-      include: {
-        bankAccount: true,
-        order: true,
-        employee: true,
-      },
-      orderBy: {
-        date: "desc",
-      },
-    });
-
-    const entries = payments.map((p) => ({
-      id: p.id,
-      date: p.createdAt.toISOString(),
-      description: p.note || `Transaksi ${p.type}`,
-      reference: p.orderId || p.employeeId || p.id,
-      items: (p.journalItems as any) || [
-        {
-          id: `${p.id}-1`,
-          debit: p.type === "ORDER_PAYMENT" || p.type === "INCOME" ? Number(p.amount) : 0,
-          credit: p.type === "EXPENSE" || p.type === "PAYROLL" ? Number(p.amount) : 0,
-          account: {
-            code: p.bankAccount?.code || "101",
-            name: p.bankAccount?.name || "Kas Utama",
-          },
-        },
-      ],
-      createdAt: p.createdAt.toISOString(),
-    }));
-
-    return { success: true, entries };
-  } catch (error) {
-    console.error("Get journal entries error:", error);
-    return { success: false, error: "Failed to load journal entries" };
-  }
-}
-

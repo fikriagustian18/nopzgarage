@@ -14,6 +14,10 @@ Format dokumen ini mengacu pada [Keep a Changelog](https://keepachangelog.com/en
   - Memungkinkan pengunduhan seluruh rincian transaksi pendapatan dan pengeluaran bengkel dalam **1 file sekaligus** (tersedia format PDF resmi ber-kop surat dan Excel multi-sheet).
 - **Penataan Tombol Ekspor Header**:
   - Menyusun tombol `Unduh Arus Kas` dan `Unduh Laporan Keuangan` dengan ukuran presisi sejajar dan label ringkas.
+- **Pembersihan Kolom Unused `journalItems` & Optimasi Kueri**:
+  - Menghapus kolom `journalItems` (JSON) dari tabel `Payment` di [`schema.prisma`](file:///d:/hdd/project/mayang/NOPZGARAGE/prisma/schema.prisma) dan membersihkan fungsi `getJournalEntries` serta parameter `journalItems` di seluruh server actions.
+  - Mengeliminasi kueri `prisma.account.upsert` yang redundan pada mutasi stok barang (`createSparePart`, `updateSparePart`, `addStock`) di `lib/actions/inventory.ts`.
+  - Mempertahankan penulisan & parsing referensi nota/invoice pada pencatatan pengeluaran (`lib/actions/expenses.ts`).
 
 ---
 

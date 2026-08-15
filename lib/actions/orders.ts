@@ -2,12 +2,12 @@
 
 import { revalidatePath } from "next/cache";
 import { format, startOfDay, endOfDay } from "date-fns";
-import type { OrderStatus, ServiceType, PaymentStatus } from "@prisma/client";
 
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { serializeData } from "@/lib/utils";
 import { createLog } from "./logs";
+import type { OrderStatus, ServiceType, PaymentStatus } from "@prisma/client";
 
 // ==================== Interfaces ====================
 export interface OrderItem {
@@ -61,7 +61,7 @@ function serializeOrder(order: any) {
  * This function performs:
  * 1. Updates agreed service/part items.
  * 2. Decrements spare part stock in real-time (if parts are included).
- * 3. Creates Cost of Goods Sold (COGS) vs Inventory journal entries.
+ * 3. Records Cost of Goods Sold (COGS) expense payments.
  * 4. Records mechanic commission/fee (Accrual Basis - Fee Payable).
  * 5. Updates order status to 'IN_PROGRESS'.
  * 
@@ -81,7 +81,7 @@ export async function processOrder(data: ProcessOrderInput): Promise<
 
     // 1. Calculate total price (Only service & part for customer)
     const totalPrice = items
-      .filter((i: any) => i.type === 'service' || i.type === 'part')
+      .filter((i) => i.type === 'service' || i.type === 'part')
       .reduce((sum, item) => sum + item.qty * item.price, 0);
 
     const customerItems = items.filter(i => i.type !== 'internal_fee');
@@ -125,19 +125,14 @@ export async function processOrder(data: ProcessOrderInput): Promise<
               data: { stock: { decrement: item.qty } }
             });
 
-            // === COGS (Cost of Goods Sold) JOURNAL ===
+            // === COGS (Cost of Goods Sold) RECORD ===
             const hpp = Number(part.buyPrice) * item.qty;
-            // Record COGS via Payment with journalItems
             await tx.payment.create({
               data: {
                 type: 'EXPENSE',
                 amount: hpp,
                 note: `HPP - ${item.name} (${item.qty} ${part.unit}) - Order #${order.id.slice(-6)}`,
                 orderId: order.id,
-                journalItems: [
-                  { accountCode: '511', name: 'Harga Pokok Penjualan', debit: hpp, credit: 0 },
-                  { accountCode: '111', name: 'Persediaan Sparepart', debit: 0, credit: hpp },
-                ],
               }
             });
           }
@@ -195,9 +190,10 @@ export async function processOrder(data: ProcessOrderInput): Promise<
       timeout: 15000, // Maximum time for the transaction to complete (15s - Accelerate limit)
     });
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Process order error:', error);
-    return { success: false, error: error.message || 'Gagal memproses order' };
+    const message = error instanceof Error ? error.message : 'Gagal memproses order';
+    return { success: false, error: message };
   }
 }
 
@@ -382,6 +378,7 @@ export async function confirmOrder(orderId: string) {
     
     return { success: true, order: serializeOrder(order) };
   } catch (error) {
+    console.error('Confirm order error:', error);
     return { success: false, error: 'Gagal konfirmasi order' };
   }
 }

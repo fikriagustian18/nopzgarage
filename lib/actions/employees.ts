@@ -1,12 +1,12 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import type { SalaryType } from "@prisma/client";
 
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { serializeData } from "@/lib/utils";
 import { createLog } from "./logs";
+import type { SalaryType } from "@prisma/client";
 
 // ==================== Types ====================
 export interface CreateEmployeeInput {
@@ -39,9 +39,7 @@ type TransactionClient = Parameters<Parameters<typeof prisma.$transaction>[0]>[0
  * Process:
  * 1. Calculate total unpaid commissions.
  * 2. Mark all related fees as 'PAID'.
- * 3. Create Payment record (Money Out).
- * 4. Create Payroll summary record.
- * 5. Create Accounting Journal entry (Debit Salary Payable, Credit Cash/Bank).
+ * 3. Create Payment record (PAYROLL / Money Out).
  * 
  * @param {string} employeeId - Employee ID.
  * @param {'CASH' | 'TRANSFER'} paymentMethod - Payment method.
@@ -75,14 +73,14 @@ export async function payAllCommissions(employeeId: string, paymentMethod: "CASH
         return { success: false, error: "Tidak ada komisi yang perlu dibayar." };
       }
 
-      const totalAmount = unpaidFees.reduce((sum: number, fee: any) => sum + Number(fee.totalPrice), 0);
+      const totalAmount = unpaidFees.reduce((sum: number, fee) => sum + Number(fee.totalPrice), 0);
 
       console.log(`[PAY_COMMISSION] Total commission to pay: ${totalAmount}`);
 
       // 3. Mark Fees as Paid
       await tx.orderItem.updateMany({
         where: { 
-          id: { in: unpaidFees.map((f: any) => f.id) }
+          id: { in: unpaidFees.map((f) => f.id) }
         },
         data: {
           isPaid: true
@@ -97,10 +95,6 @@ export async function payAllCommissions(employeeId: string, paymentMethod: "CASH
           employeeId: employeeId,
           paymentMethod: paymentMethod,
           note: note || `Pencairan Komisi ${employee.name} (${unpaidFees.length} order)`,
-          journalItems: [
-            { accountCode: '202', name: 'Utang Gaji & Komisi', debit: totalAmount, credit: 0 },
-            { accountCode: paymentMethod === 'TRANSFER' ? '102' : '101', name: paymentMethod === 'TRANSFER' ? 'Bank' : 'Kas Tunai', debit: 0, credit: totalAmount },
-          ],
         }
       });
 
@@ -115,9 +109,10 @@ export async function payAllCommissions(employeeId: string, paymentMethod: "CASH
     
     return result;
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("[PAY_COMMISSION] Error:", error);
-    return { success: false, error: error.message };
+    const message = error instanceof Error ? error.message : "Gagal memproses komisi";
+    return { success: false, error: message };
   }
 }
 
@@ -170,10 +165,6 @@ export async function payCommission(feeId: string, paymentMethod: "CASH" | "TRAN
           employeeId: fee.employeeId,
           paymentMethod: paymentMethod,
           note: note || `Pencairan Komisi Order #${fee.order?.vehicle || feeId}`,
-          journalItems: [
-            { accountCode: '202', name: 'Utang Gaji & Komisi', debit: amount, credit: 0 },
-            { accountCode: paymentMethod === 'TRANSFER' ? '102' : '101', name: paymentMethod === 'TRANSFER' ? 'Bank' : 'Kas Tunai', debit: 0, credit: amount },
-          ],
         }
       });
 
@@ -188,9 +179,10 @@ export async function payCommission(feeId: string, paymentMethod: "CASH" | "TRAN
     
     return result;
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("[PAY_ONE_COMMISSION] Error:", error);
-    return { success: false, error: error.message };
+    const message = error instanceof Error ? error.message : "Gagal memproses komisi";
+    return { success: false, error: message };
   }
 }
 
@@ -233,8 +225,8 @@ export async function getEmployees(activeOnly: boolean = false) {
       },
     });
 
-    const employeesWithUnpaid = employees.map((emp: any) => {
-        const unpaidAmount = emp.orderItems.reduce((sum: number, fee: any) => sum + Number(fee.totalPrice), 0);
+    const employeesWithUnpaid = employees.map((emp) => {
+        const unpaidAmount = emp.orderItems.reduce((sum: number, fee) => sum + Number(fee.totalPrice), 0);
         const { orderItems, ...rest } = emp;
         return {
             ...rest,
@@ -277,7 +269,7 @@ export async function getMechanics() {
       orderBy: { name: 'asc' },
     });
 
-    const mechanicsWithNumber = mechanics.map((m: any) => serializeData(m));
+    const mechanicsWithNumber = mechanics.map((m) => serializeData(m));
 
     return { success: true, mechanics: mechanicsWithNumber };
   } catch (error) {
@@ -318,7 +310,7 @@ export async function getEmployeeStats() {
       })
     ]);
 
-    const workingCount = activeOrders.filter((o: any) => o.mechanicId).length;
+    const workingCount = activeOrders.filter((o) => o.mechanicId).length;
     const standbyCount = Math.max(0, totalMechanics - workingCount);
     
     return {

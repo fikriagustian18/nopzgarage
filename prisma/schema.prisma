@@ -138,7 +138,6 @@ model Payment {
   employeeId    String?
   bankAccountId String?
   paymentMethod String    @default("CASH")
-  journalItems  Json?
   createdAt     DateTime  @default(now())
   order         Order?    @relation(fields: [orderId], references: [id], onDelete: Cascade)
   employee      Employee? @relation(fields: [employeeId], references: [id], onDelete: Cascade)

@@ -88,17 +88,17 @@ export async function createExpense(
     }
 
     const categoryName = category || "Pengeluaran Umum";
+    const noteText = reference
+      ? `[${categoryName}] [Ref: ${reference}] ${description}`
+      : `[${categoryName}] ${description}`;
 
     const payment = await prisma.payment.create({
       data: {
         type: "EXPENSE",
         amount: amount,
-        note: `[${categoryName}] ${description}`,
+        note: noteText,
         createdAt: date ?? new Date(),
         paymentMethod: "CASH",
-        journalItems: [
-          { category: categoryName, reference: reference ?? null, amount }
-        ]
       },
     });
 
@@ -142,17 +142,26 @@ export async function getExpenses(): Promise<ExpenseActionResult> {
     const expenses: ExpenseItem[] = payments.map((p) => {
       let category = "Pengeluaran Umum";
       let description = p.note || "";
+      let reference: string | null = p.orderId || null;
+
       if (p.note && p.note.startsWith("[")) {
         const parts = p.note.split("] ");
         category = parts[0].replace("[", "");
-        description = parts.slice(1).join("] ");
+        const remaining = parts.slice(1).join("] ");
+        if (remaining.startsWith("[Ref: ")) {
+          const refParts = remaining.split("] ");
+          reference = refParts[0].replace("[Ref: ", "");
+          description = refParts.slice(1).join("] ");
+        } else {
+          description = remaining;
+        }
       }
 
       return {
         id: p.id,
         date: p.createdAt.toISOString(),
         description,
-        reference: p.orderId || null,
+        reference,
         amount: Number(p.amount),
         category,
         categoryCode: "EXP",
@@ -168,10 +177,10 @@ export async function getExpenses(): Promise<ExpenseActionResult> {
 }
 
 export async function deleteExpense(
-  journalId: string
+  id: string
 ): Promise<ExpenseActionResult> {
   try {
-    if (!journalId) {
+    if (!id) {
       return { success: false, error: "ID transaksi tidak valid." };
     }
 
@@ -184,7 +193,7 @@ export async function deleteExpense(
     }
 
     const payment = await prisma.payment.findUnique({
-      where: { id: journalId },
+      where: { id },
     });
 
     if (!payment) {
@@ -194,14 +203,14 @@ export async function deleteExpense(
     const amount = Number(payment.amount);
 
     await prisma.payment.delete({
-      where: { id: journalId },
+      where: { id },
     });
 
     await createLog({
       action: "DELETE_EXPENSE",
       title: "Pengeluaran Dihapus",
       details: `Hapus pengeluaran Rp ${amount.toLocaleString("id-ID")} (${payment.note})`,
-      metadata: { paymentId: journalId },
+      metadata: { paymentId: id },
       userName: "Admin",
       role: "ADMIN",
     });

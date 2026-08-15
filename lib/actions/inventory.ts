@@ -71,7 +71,7 @@ export async function generateNextSparePartCode() {
  * Adds a new Sparepart to the system.
  * 
  * If the product is added with initial stock > 0:
- * - Automatically creates an Adjustment Journal: Debit Inventory, Credit Capital.
+ * - Automatically records an EXPENSE payment for initial inventory.
  * 
  * @param {CreateSparePartInput} data - Spare part data.
  * @returns {Promise<Object>} New spare part object or error message.
@@ -110,31 +110,15 @@ export async function createSparePart(data: CreateSparePartInput) {
       },
     });
 
-    // If initial stock exists, create inventory journal entry
+    // If initial stock exists, create inventory expense payment record
     if (data.stock > 0) {
       const initialValue = data.stock * data.buyPrice;
-      
-      const inventoryAccount = await prisma.account.upsert({
-        where: { code: '111' },
-        create: { code: '111', name: 'Persediaan Sparepart', type: 'ASSET', category: 'CURRENT_ASSET' },
-        update: {}
-      });
-      
-      const capitalAccount = await prisma.account.upsert({
-        where: { code: '301' },
-        create: { code: '301', name: 'Modal Pemilik', type: 'EQUITY', category: 'CAPITAL' },
-        update: {}
-      });
 
       await prisma.payment.create({
         data: {
           type: 'EXPENSE',
           amount: initialValue,
           note: `Persediaan Awal - ${sparePart.name} (${data.stock} ${data.unit})`,
-          journalItems: [
-            { accountId: inventoryAccount.id, debit: initialValue, credit: 0 },
-            { accountId: capitalAccount.id, debit: 0, credit: initialValue }
-          ]
         }
       });
     }
@@ -171,7 +155,7 @@ export async function createSparePart(data: CreateSparePartInput) {
  * 
  * If manual stock is added:
  * - Treated as PURCHASE.
- * - Automatically creates journal: Debit Inventory, Credit Cash.
+ * - Automatically records an EXPENSE payment for inventory purchase.
  * 
  * @param {string} id - Spare part ID.
  * @param {Partial<CreateSparePartInput>} data - Update data payload.
@@ -194,31 +178,15 @@ export async function updateSparePart(id: string, data: Partial<CreateSparePartI
       },
     });
 
-    // If stock increased, create purchase journal entry
+    // If stock increased, create purchase expense payment record
     if (stockChange > 0) {
       const purchaseValue = stockChange * buyPrice;
-      
-      const inventoryAccount = await prisma.account.upsert({
-        where: { code: '111' },
-        create: { code: '111', name: 'Persediaan Sparepart', type: 'ASSET', category: 'CURRENT_ASSET' },
-        update: {}
-      });
-      
-      const cashAccount = await prisma.account.upsert({
-        where: { code: '101' },
-        create: { code: '101', name: 'Kas Tunai', type: 'ASSET', category: 'CURRENT_ASSET' },
-        update: {}
-      });
 
       await prisma.payment.create({
         data: {
           type: 'EXPENSE',
           amount: purchaseValue,
           note: `Pembelian Persediaan - ${sparePart.name} (+${stockChange} ${sparePart.unit})`,
-          journalItems: [
-            { accountId: inventoryAccount.id, debit: purchaseValue, credit: 0 },
-            { accountId: cashAccount.id, debit: 0, credit: purchaseValue }
-          ]
         }
       });
     }
@@ -441,27 +409,12 @@ export async function addStock(
     });
 
     const purchaseValue = quantity * buyPrice;
-    const inventoryAccount = await prisma.account.upsert({
-      where: { code: '111' },
-      create: { code: '111', name: 'Persediaan Sparepart', type: 'ASSET', category: 'CURRENT_ASSET' },
-      update: {}
-    });
-    
-    const cashAccount = await prisma.account.upsert({
-      where: { code: '101' },
-      create: { code: '101', name: 'Kas Tunai', type: 'ASSET', category: 'CURRENT_ASSET' },
-      update: {}
-    });
 
     await prisma.payment.create({
       data: {
         type: 'EXPENSE',
         amount: purchaseValue,
         note: `Stok Masuk - ${sparePart.name} (+${quantity} ${sparePart.unit}) dari ${supplier}`,
-        journalItems: [
-          { accountId: inventoryAccount.id, debit: purchaseValue, credit: 0 },
-          { accountId: cashAccount.id, debit: 0, credit: purchaseValue }
-        ]
       }
     });
 
