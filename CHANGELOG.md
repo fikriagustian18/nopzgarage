@@ -4,6 +4,33 @@ Semua perubahan penting pada proyek **NopzGarage Management System** akan dicata
 
 Format dokumen ini mengacu pada [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [2.3.1] - 2026-08-15
+
+### 🧹 Code Standards Audit & Rule Compliance Refactoring
+- **Sinkronisasi & Pemenuhan 12 Aturan Pengodean Proyek (14 File)**:
+  - Memastikan pengikatan blok kurung kurawal `{}` secara eksplisit pada seluruh percabangan `if` di [`lib/authCheck.ts`](file:///d:/hdd/project/mayang/NOPZGARAGE/lib/authCheck.ts) dan [`components/shared/RoleGuard.tsx`](file:///d:/hdd/project/mayang/NOPZGARAGE/components/shared/RoleGuard.tsx).
+  - Merestrukturisasi pola guard / early return tanpa klausa `else` / `else if` setelah ekspresi `return` atau `redirect()`.
+  - Mengeliminasi tipe longgar `any` pada Server Actions ([`lib/actions/employees.ts`](file:///d:/hdd/project/mayang/NOPZGARAGE/lib/actions/employees.ts) dan [`lib/actions/orders.ts`](file:///d:/hdd/project/mayang/NOPZGARAGE/lib/actions/orders.ts)) dan menggantinya dengan pengetikan ketat TypeScript (`unknown`, Prisma types).
+  - Merapikan variabel penangkap error `catch (error)` pada [`components/shared/StatusPageClient.tsx`](file:///d:/hdd/project/mayang/NOPZGARAGE/components/shared/StatusPageClient.tsx).
+  - Memformat seluruh atribut JSX multi-baris (lebih dari 2 atribut) pada elemen `<Image ... />` di seluruh komponen UI ([`app/page.tsx`](file:///d:/hdd/project/mayang/NOPZGARAGE/app/page.tsx), [`app/login/page.tsx`](file:///d:/hdd/project/mayang/NOPZGARAGE/app/login/page.tsx), [`components/booking/BookingWizard.tsx`](file:///d:/hdd/project/mayang/NOPZGARAGE/components/booking/BookingWizard.tsx), [`AdminSidebar.tsx`](file:///d:/hdd/project/mayang/NOPZGARAGE/components/layout/AdminSidebar.tsx), [`MobileSidebar.tsx`](file:///d:/hdd/project/mayang/NOPZGARAGE/components/layout/MobileSidebar.tsx)).
+  - Membersihkan import tak terpakai (`useState` di `AdminSidebar.tsx`) serta menyelaraskan indentasi 2-space pada [`app/employee/page.tsx`](file:///d:/hdd/project/mayang/NOPZGARAGE/app/employee/page.tsx).
+
+---
+
+## [2.3.0] - 2026-08-15
+
+### 🐛 Fixed & Role Authorization Normalization (RBAC Optimization)
+- **Perbaikan Infinite Loop Redirect Login Mekanik & Otorisasi RBAC Terpusat**:
+  - Mengatasi kendala perulangan redirect tak terhingga (*infinite loop*) saat pengguna dengan peran mekanik (`role: "Mekanik"`) melakukan autentikasi login.
+  - Mengoptimalkan [`lib/authCheck.ts`](file:///d:/hdd/project/mayang/NOPZGARAGE/lib/authCheck.ts) dengan tipe `AppRole`, algoritma pencocokan peran performan tanpa alokasi array ganda, serta fungsi `normalizeRole()` dan `isRoleAllowed()`.
+  - Menyelaraskan seluruh sinonim dan variasi penulisan nama peran (`"Mekanik"`, `"MECHANIC"`, `"EMPLOYEE"`, `"Teknisi"`, `"Admin"`, `"Administrator"`, `"Owner"`) sehingga evaluasi hak akses berjalan konsisten.
+  - Mengoptimalkan [`RoleGuard.tsx`](file:///d:/hdd/project/mayang/NOPZGARAGE/components/shared/RoleGuard.tsx) dengan memoized access evaluation (`useMemo`) untuk menghindari re-render/re-effect berlebih.
+  - Memperbarui proteksi server-side pada [`app/employee/page.tsx`](file:///d:/hdd/project/mayang/NOPZGARAGE/app/employee/page.tsx) dan [`app/employee/layout.tsx`](file:///d:/hdd/project/mayang/NOPZGARAGE/app/employee/layout.tsx) menggunakan `requireRole(["EMPLOYEE"])`.
+  - Menyelaraskan tautan dashboard navbar publik ([`app/page.tsx`](file:///d:/hdd/project/mayang/NOPZGARAGE/app/page.tsx), [`components/shared/StatusPageClient.tsx`](file:///d:/hdd/project/mayang/NOPZGARAGE/components/shared/StatusPageClient.tsx), [`components/booking/BookingWizard.tsx`](file:///d:/hdd/project/mayang/NOPZGARAGE/components/booking/BookingWizard.tsx)) dan filter menu admin sidebar ([`AdminSidebar.tsx`](file:///d:/hdd/project/mayang/NOPZGARAGE/components/layout/AdminSidebar.tsx), [`MobileSidebar.tsx`](file:///d:/hdd/project/mayang/NOPZGARAGE/components/layout/MobileSidebar.tsx), [`AdminHeader.tsx`](file:///d:/hdd/project/mayang/NOPZGARAGE/components/layout/AdminHeader.tsx)) menggunakan `normalizeRole()`.
+  - Menyelaraskan pemeriksaan hak akses Server Actions pada [`lib/actions/orders.ts`](file:///d:/hdd/project/mayang/NOPZGARAGE/lib/actions/orders.ts) dan [`lib/actions/employees.ts`](file:///d:/hdd/project/mayang/NOPZGARAGE/lib/actions/employees.ts) menggunakan `isRoleAllowed()`.
+
+---
+
 ## [2.2.0] - 2026-08-15
 
 ### 📚 Documentation & Technical Specs Synchronization

@@ -2,8 +2,9 @@
 
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import { Loader2 } from "lucide-react";
+import { isRoleAllowed, normalizeRole } from "@/lib/authCheck";
 
 interface RoleGuardProps {
   allowedRoles: string[];
@@ -14,30 +15,40 @@ export function RoleGuard({ allowedRoles, children }: RoleGuardProps) {
   const { data: session, status } = useSession();
   const router = useRouter();
 
+  const userRole = session?.user?.role;
+  const hasAccess = useMemo(() => {
+    return isRoleAllowed(userRole, allowedRoles);
+  }, [userRole, allowedRoles]);
+
   useEffect(() => {
-    if (status === "loading") return;
+    if (status === "loading") {
+      return;
+    }
 
     if (!session) {
       router.push("/login");
       return;
     }
 
-    const role = session.user?.role;
-    if (!role || !allowedRoles.includes(role)) {
-      // Redirect based on role to their appropriate page
-      if (role === "EMPLOYEE") {
+    if (!hasAccess) {
+      const normalized = normalizeRole(userRole);
+      if (normalized === "EMPLOYEE") {
         router.push("/employee");
-      } else if (role === "ADMIN") {
-        router.push("/admin/pelayanan");
-      } else if (role === "OWNER") {
-        router.push("/admin");
-      } else {
-        router.push("/login");
+        return;
       }
+      if (normalized === "ADMIN") {
+        router.push("/admin/pelayanan");
+        return;
+      }
+      if (normalized === "OWNER") {
+        router.push("/admin");
+        return;
+      }
+      router.push("/login");
     }
-  }, [session, status, allowedRoles, router]);
+  }, [session, status, hasAccess, userRole, router]);
 
-  if (status === "loading" || !session || !session.user?.role || !allowedRoles.includes(session.user.role)) {
+  if (status === "loading" || !session || !hasAccess) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-background">
         <div className="flex flex-col items-center gap-2">
@@ -50,3 +61,4 @@ export function RoleGuard({ allowedRoles, children }: RoleGuardProps) {
 
   return <>{children}</>;
 }
+

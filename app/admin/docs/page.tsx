@@ -113,6 +113,7 @@ export default function Page() {
     { name: "LiveQueueList", type: "Component", used: "Real-time Queue Status Display" },
     { name: "NotificationPanel", type: "Component", used: "System Alerts & Notifications" },
     { name: "RoleGuard", type: "Security", used: "RBAC Authorization Access Control" },
+    { name: "authCheck", type: "Security Helper", used: "Role Normalization (normalizeRole & isRoleAllowed)" },
   ];
 
   const features = [
@@ -1678,7 +1679,7 @@ export default function Page() {
                      <li className="p-2 border rounded bg-muted/20"><span className="font-mono font-bold">lib/actions/</span>: Server Actions (core backend logic)</li>
                      <li className="p-2 border rounded bg-muted/20"><span className="font-mono font-bold">components/</span>: Reusable UI & dialog components</li>
                      <li className="p-2 border rounded bg-muted/20"><span className="font-mono font-bold">prisma/</span>: Database schema & seeds</li>
-                     <li className="p-2 border rounded bg-muted/20"><span className="font-mono font-bold">lib/</span>: Utilities, auth & export helpers</li>
+                     <li className="p-2 border rounded bg-muted/20"><span className="font-mono font-bold">lib/</span>: Utilities, RBAC auth helpers (authCheck.ts) & export helpers</li>
                      <li className="p-2 border rounded bg-muted/20"><span className="font-mono font-bold">public/</span>: Static assets & uploaded images</li>
                    </ul>
                  </div>

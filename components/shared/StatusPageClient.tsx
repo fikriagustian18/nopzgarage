@@ -28,6 +28,7 @@ import { ThemeToggle } from "./ThemeToggle";
 
 import { searchOrderByPlate } from "@/lib/actions/orderStatus";
 import { formatDetailDate, formatOrderNo } from "@/lib/utils";
+import { normalizeRole } from "@/lib/authCheck";
 
 interface GeneralSettings {
   phone?: string;
@@ -154,7 +155,7 @@ export function StatusPageClient({ generalSettings = {}, session }: StatusPageCl
 
               {session ? (
                 <Link 
-                  href={session.user.role === "EMPLOYEE" ? "/employee" : "/admin"} 
+                  href={normalizeRole(session.user?.role) === "EMPLOYEE" ? "/employee" : "/admin"} 
                   className="group px-5 md:px-6 py-2.5 md:py-3 bg-primary hover:bg-primary/90 text-primary-foreground font-bold rounded-xl transition-all duration-300 hover:shadow-lg hover:shadow-primary/30 hover:-translate-y-0.5 flex items-center gap-2 text-sm"
                 >
                   <span>Dashboard</span>
@@ -481,7 +482,7 @@ function formatScheduledDate(dateStr: string | Date | null | undefined): string 
   }
   try {
     return format(new Date(dateStr), "dd MMMM yyyy, HH:mm", { locale: id });
-  } catch (e) {
+  } catch (error) {
     return "-";
   }
 }

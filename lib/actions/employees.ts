@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 
 import { auth } from "@/lib/auth";
+import { isRoleAllowed } from "@/lib/authCheck";
 import { prisma } from "@/lib/prisma";
 import { serializeData } from "@/lib/utils";
 import { createLog } from "./logs";
@@ -187,7 +188,7 @@ export async function payCommission(feeId: string, paymentMethod: "CASH" | "TRAN
 }
 
 // ==================== Helper: Serialize Employee ====================
-function serializeEmployee(employee: any) {
+function serializeEmployee(employee: unknown): any {
   if (!employee) {
     return null;
   }
@@ -205,7 +206,7 @@ function serializeEmployee(employee: any) {
 export async function getEmployees(activeOnly: boolean = false) {
   try {
     const session = await auth();
-    if (!session || !['OWNER', 'ADMIN'].includes(session.user?.role || '')) {
+    if (!session || !isRoleAllowed(session.user?.role, ['OWNER', 'ADMIN'])) {
       return { success: false, error: 'Access denied: Only Owner and Admin have access.' };
     }
     const employees = await prisma.employee.findMany({
@@ -219,19 +220,19 @@ export async function getEmployees(activeOnly: boolean = false) {
           },
         },
         orderItems: {
-            where: { isPaid: false, itemType: 'FEE' },
-            select: { totalPrice: true }
+          where: { isPaid: false, itemType: 'FEE' },
+          select: { totalPrice: true }
         }
       },
     });
 
     const employeesWithUnpaid = employees.map((emp) => {
-        const unpaidAmount = emp.orderItems.reduce((sum: number, fee) => sum + Number(fee.totalPrice), 0);
-        const { orderItems, ...rest } = emp;
-        return {
-            ...rest,
-            unpaidAmount
-        };
+      const unpaidAmount = emp.orderItems.reduce((sum: number, fee) => sum + Number(fee.totalPrice), 0);
+      const { orderItems, ...rest } = emp;
+      return {
+        ...rest,
+        unpaidAmount
+      };
     });
 
     const employeesWithNumber = employeesWithUnpaid.map(serializeEmployee);
@@ -253,7 +254,7 @@ export async function getEmployees(activeOnly: boolean = false) {
 export async function getMechanics() {
   try {
     const session = await auth();
-    if (!session || !['OWNER', 'ADMIN'].includes(session.user?.role || '')) {
+    if (!session || !isRoleAllowed(session.user?.role, ['OWNER', 'ADMIN'])) {
       return { success: false, error: 'Access denied: Only Owner and Admin have access.' };
     }
     const mechanics = await prisma.employee.findMany({
@@ -335,50 +336,49 @@ export async function getEmployeeDetail(id: string) {
     if (!session) {
       return { success: false, error: 'Invalid session.' };
     }
-    const isOwner = session.user?.role === 'OWNER';
-    const isAdmin = session.user?.role === 'ADMIN';
+    const hasAdminAccess = isRoleAllowed(session.user?.role, ['OWNER', 'ADMIN']);
     const isSelf = session.user?.employeeId === id;
-    if (!isOwner && !isAdmin && !isSelf) {
+    if (!hasAdminAccess && !isSelf) {
       return { success: false, error: 'Access denied: You do not have authorization to view this employee data.' };
     }
     const [employee, stats, unpaidStats] = await Promise.all([
-        prisma.employee.findUnique({
-            where: { id },
+      prisma.employee.findUnique({
+        where: { id },
+        include: {
+          orderItems: {
+            where: { itemType: 'FEE' },
             include: {
-                orderItems: {
-                    where: { itemType: 'FEE' },
-                    include: {
-                        order: {
-                            select: {
-                                id: true,
-                                custName: true,
-                                vehicle: true,
-                                plateNumber: true,
-                                status: true,
-                                createdAt: true,
-                                items: true,
-                            }
-                        }
-                    },
-                    orderBy: { createdAt: 'desc' },
-                    take: 20
-                },
-                payments: {
-                    orderBy: { createdAt: 'desc' },
-                    take: 20
+              order: {
+                select: {
+                  id: true,
+                  custName: true,
+                  vehicle: true,
+                  plateNumber: true,
+                  status: true,
+                  createdAt: true,
+                  items: true,
                 }
+              }
             },
-        }),
-        prisma.orderItem.aggregate({
-            where: { employeeId: id, itemType: 'FEE' },
-            _sum: { totalPrice: true },
-            _count: { id: true }
-        }),
-        prisma.orderItem.aggregate({
-            where: { employeeId: id, itemType: 'FEE', isPaid: false },
-            _sum: { totalPrice: true },
-            _count: { id: true }
-        })
+            orderBy: { createdAt: 'desc' },
+            take: 20
+          },
+          payments: {
+            orderBy: { createdAt: 'desc' },
+            take: 20
+          }
+        },
+      }),
+      prisma.orderItem.aggregate({
+        where: { employeeId: id, itemType: 'FEE' },
+        _sum: { totalPrice: true },
+        _count: { id: true }
+      }),
+      prisma.orderItem.aggregate({
+        where: { employeeId: id, itemType: 'FEE', isPaid: false },
+        _sum: { totalPrice: true },
+        _count: { id: true }
+      })
     ]);
 
     if (!employee) {
@@ -386,40 +386,40 @@ export async function getEmployeeDetail(id: string) {
     }
 
     const [activeOrder, queueOrders] = await Promise.all([
-        prisma.order.findFirst({
-            where: {
-                OR: [
-                    { mechanicId: id },
-                    { orderItems: { some: { employeeId: id } } }
-                ],
-                status: { in: ['IN_PROGRESS', 'READY'] } 
-            },
-            select: {
-                id: true,
-                custName: true,
-                vehicle: true,
-                plateNumber: true,
-                items: true,
-                createdAt: true,
-                status: true
-            }
-        }),
-        prisma.order.findMany({
-            where: {
-                mechanicId: id,
-                status: { in: ['PENDING', 'QUEUE', 'CONFIRMED', 'ESTIMATED'] } // Catch all pre-work statuses
-            },
-            orderBy: { createdAt: 'asc' }, // FIFO queue
-            select: {
-                id: true,
-                custName: true,
-                vehicle: true,
-                plateNumber: true,
-                items: true,
-                createdAt: true,
-                status: true
-            }
-        })
+      prisma.order.findFirst({
+        where: {
+          OR: [
+            { mechanicId: id },
+            { orderItems: { some: { employeeId: id } } }
+          ],
+          status: { in: ['IN_PROGRESS', 'READY'] } 
+        },
+        select: {
+          id: true,
+          custName: true,
+          vehicle: true,
+          plateNumber: true,
+          items: true,
+          createdAt: true,
+          status: true
+        }
+      }),
+      prisma.order.findMany({
+        where: {
+          mechanicId: id,
+          status: { in: ['PENDING', 'QUEUE', 'CONFIRMED', 'ESTIMATED'] } // Catch all pre-work statuses
+        },
+        orderBy: { createdAt: 'asc' }, // FIFO queue
+        select: {
+          id: true,
+          custName: true,
+          vehicle: true,
+          plateNumber: true,
+          items: true,
+          createdAt: true,
+          status: true
+        }
+      })
     ]);
 
     console.log(`[DEBUG] Employee ${id}: Found active=${activeOrder?.id} (${activeOrder?.status}), queue=${queueOrders.length}`);

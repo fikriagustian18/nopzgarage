@@ -7,6 +7,7 @@ import { LogOut, User, Globe, ChevronDown } from "lucide-react";
 import { ThemeToggle } from "@/components/shared/ThemeToggle";
 import { NotificationPanel } from "@/components/shared/NotificationPanel";
 import { MobileSidebar } from "./MobileSidebar";
+import { normalizeRole } from "@/lib/authCheck";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -103,11 +104,15 @@ export function AdminHeader() {
   }
 
   function getRoleLabel(role?: string) {
-    if (role === "OWNER") {
+    const normalized = normalizeRole(role);
+    if (normalized === "OWNER") {
       return "Owner";
     }
-    if (role === "ADMIN") {
+    if (normalized === "ADMIN") {
       return "Administrator";
+    }
+    if (normalized === "EMPLOYEE") {
+      return "Karyawan / Mekanik";
     }
     return role || "Administrator";
   }

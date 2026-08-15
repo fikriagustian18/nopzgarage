@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
@@ -25,6 +24,7 @@ import {
 } from "lucide-react";
 
 import { Button } from "@/components/ui/Button";
+import { normalizeRole } from "@/lib/authCheck";
 
 interface MenuItem {
   href: string;
@@ -41,6 +41,7 @@ export function AdminSidebar() {
   const router = useRouter();
   const { data: session } = useSession();
   const userRole = session?.user?.role;
+  const normalizedRole = normalizeRole(userRole);
 
   const menuItems: MenuItem[] = [
     {
@@ -128,7 +129,7 @@ export function AdminSidebar() {
 
   // Map and filter menu items based on role
   const filteredMenuItems = menuItems.filter((item) => {
-    if (userRole === "ADMIN") {
+    if (normalizedRole === "ADMIN") {
       return [
         "/admin",
         "/admin/orders/kanban",
@@ -140,7 +141,7 @@ export function AdminSidebar() {
         "/admin/profile",
       ].includes(item.href);
     }
-    if (userRole === "OWNER") {
+    if (normalizedRole === "OWNER") {
       return ![
         "/admin/orders",
         "/admin/pelayanan",

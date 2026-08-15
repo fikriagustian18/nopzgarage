@@ -32,6 +32,7 @@ import {
   SheetTrigger,
   SheetTitle,
 } from "@/components/ui/Sheet";
+import { normalizeRole } from "@/lib/authCheck";
 
 interface MenuItem {
   href: string;
@@ -49,6 +50,7 @@ export function MobileSidebar() {
   const [open, setOpen] = useState(false);
   const { data: session } = useSession();
   const userRole = session?.user?.role;
+  const normalizedRole = normalizeRole(userRole);
 
   const menuItems: MenuItem[] = [
     {
@@ -136,7 +138,7 @@ export function MobileSidebar() {
 
   // Map and filter menu items based on role
   const filteredMenuItems = menuItems.filter((item) => {
-    if (userRole === "ADMIN") {
+    if (normalizedRole === "ADMIN") {
       return [
         "/admin",
         "/admin/orders/kanban",
@@ -148,7 +150,7 @@ export function MobileSidebar() {
         "/admin/profile",
       ].includes(item.href);
     }
-    if (userRole === "OWNER") {
+    if (normalizedRole === "OWNER") {
       return ![
         "/admin/orders",
         "/admin/pelayanan",
@@ -231,7 +233,7 @@ export function MobileSidebar() {
                     }`}
                   />
                   <span className="font-medium">
-                    {item.href === "/admin/payroll" && userRole === "ADMIN" ? "Slip Gaji" : item.label}
+                    {item.href === "/admin/payroll" && normalizedRole === "ADMIN" ? "Slip Gaji" : item.label}
                   </span>
                 </Link>
               );

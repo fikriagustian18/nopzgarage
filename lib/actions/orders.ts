@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { format, startOfDay, endOfDay } from "date-fns";
 
 import { auth } from "@/lib/auth";
+import { isRoleAllowed } from "@/lib/authCheck";
 import { prisma } from "@/lib/prisma";
 import { serializeData } from "@/lib/utils";
 import { createLog } from "./logs";
@@ -47,7 +48,7 @@ export interface ProcessOrderInput {
 }
 
 // ==================== Helper: Serialize Decimal ====================
-function serializeOrder(order: any) {
+function serializeOrder(order: unknown): any {
   if (!order) {
     return null;
   }
@@ -69,12 +70,12 @@ function serializeOrder(order: any) {
  * @returns {Object} Result of the processed order.
  */
 export async function processOrder(data: ProcessOrderInput): Promise<
-  | { success: true; order: any }
+  | { success: true; order: unknown }
   | { success: false; error: string }
 > {
   try {
     const session = await auth();
-    if (!session || !['OWNER', 'ADMIN'].includes(session.user?.role || '')) {
+    if (!session || !isRoleAllowed(session.user?.role, ['OWNER', 'ADMIN'])) {
       return { success: false, error: 'Access denied: Only Owner and Admin can process orders.' };
     }
     const { orderId, items, mechanicId, fees } = data;
@@ -92,7 +93,7 @@ export async function processOrder(data: ProcessOrderInput): Promise<
       const order = await tx.order.update({
         where: { id: orderId },
         data: {
-          items: customerItems as any, // Legacy JSON, kept for convenience
+          items: customerItems as unknown as Parameters<typeof tx.order.update>[0]['data']['items'],
           totalPrice,
           mechanicId,
           status: 'IN_PROGRESS',
@@ -208,7 +209,7 @@ export async function processOrder(data: ProcessOrderInput): Promise<
 export async function finishOrder(orderId: string) {
   try {
     const session = await auth();
-    if (!session || !['OWNER', 'ADMIN'].includes(session.user?.role || '')) {
+    if (!session || !isRoleAllowed(session.user?.role, ['OWNER', 'ADMIN'])) {
       return { success: false, error: 'Access denied: Only Owner and Admin can mark order finished.' };
     }
     const order = await prisma.order.update({
@@ -252,7 +253,7 @@ export async function finishOrder(orderId: string) {
 export async function closeOrder(orderId: string) {
   try {
     const session = await auth();
-    if (!session || !['OWNER', 'ADMIN'].includes(session.user?.role || '')) {
+    if (!session || !isRoleAllowed(session.user?.role, ['OWNER', 'ADMIN'])) {
       return { success: false, error: 'Access denied: Only Owner and Admin can close order.' };
     }
     const order = await prisma.order.update({
@@ -356,7 +357,7 @@ export async function createBooking(data: CreateOrderInput) {
 export async function confirmOrder(orderId: string) {
   try {
     const session = await auth();
-    if (!session || !['OWNER', 'ADMIN'].includes(session.user?.role || '')) {
+    if (!session || !isRoleAllowed(session.user?.role, ['OWNER', 'ADMIN'])) {
       return { success: false, error: 'Access denied: Only Owner and Admin can confirm order.' };
     }
     const order = await prisma.order.update({
@@ -400,7 +401,7 @@ export async function updateOrderStatus(
 ) {
   try {
     const session = await auth();
-    if (!session || !['OWNER', 'ADMIN', 'EMPLOYEE'].includes(session.user?.role || '')) {
+    if (!session || !isRoleAllowed(session.user?.role, ['OWNER', 'ADMIN', 'EMPLOYEE'])) {
       return { success: false, error: 'Access denied: You do not have authorization to update order status.' };
     }
     const order = await prisma.order.update({
@@ -454,15 +455,15 @@ export async function getAdminOrders(filters?: {
 }) {
   try {
     const session = await auth();
-    if (!session || !['OWNER', 'ADMIN'].includes(session.user?.role || '')) {
+    if (!session || !isRoleAllowed(session.user?.role, ['OWNER', 'ADMIN'])) {
       return { success: false, error: 'Access denied: Only Owner and Admin can access order list.' };
     }
-    const whereClause: any = {
-        ...(filters?.status && { status: filters.status }),
-        ...(filters?.serviceType && { serviceType: filters.serviceType }),
-        ...(filters?.dateFrom && { createdAt: { gte: filters.dateFrom } }),
-        ...(filters?.dateTo && { createdAt: { lte: filters.dateTo } }),
-        ...(filters?.mechanicId && { mechanicId: filters.mechanicId }),
+    const whereClause: Record<string, unknown> = {
+      ...(filters?.status && { status: filters.status }),
+      ...(filters?.serviceType && { serviceType: filters.serviceType }),
+      ...(filters?.dateFrom && { createdAt: { gte: filters.dateFrom } }),
+      ...(filters?.dateTo && { createdAt: { lte: filters.dateTo } }),
+      ...(filters?.mechanicId && { mechanicId: filters.mechanicId }),
     };
 
     if (filters?.search) {
@@ -507,7 +508,7 @@ export async function getAdminOrders(filters?: {
 export async function getOrderDetail(orderId: string) {
   try {
     const session = await auth();
-    if (!session || !['OWNER', 'ADMIN'].includes(session.user?.role || '')) {
+    if (!session || !isRoleAllowed(session.user?.role, ['OWNER', 'ADMIN'])) {
       return { success: false, error: 'Access denied: Only Owner and Admin can view order details.' };
     }
     const order = await prisma.order.findUnique({
@@ -582,7 +583,7 @@ export async function getPublicKanbanOrders() {
 export async function createOrder(data: CreateOrderInput) {
   try {
     const session = await auth();
-    if (!session || !['OWNER', 'ADMIN'].includes(session.user?.role || '')) {
+    if (!session || !isRoleAllowed(session.user?.role, ['OWNER', 'ADMIN'])) {
       return { success: false, error: 'Access denied: Only Owner and Admin can create orders.' };
     }
     const order = await prisma.order.create({
@@ -629,7 +630,7 @@ export async function createOrder(data: CreateOrderInput) {
 export async function updateOrder(orderId: string, data: Partial<CreateOrderInput>) {
   try {
     const session = await auth();
-    if (!session || !['OWNER', 'ADMIN'].includes(session.user?.role || '')) {
+    if (!session || !isRoleAllowed(session.user?.role, ['OWNER', 'ADMIN'])) {
       return { success: false, error: 'Access denied: Only Owner and Admin can update orders.' };
     }
     const order = await prisma.order.update({
@@ -675,7 +676,7 @@ export async function updateOrder(orderId: string, data: Partial<CreateOrderInpu
 export async function cancelOrder(orderId: string) {
   try {
     const session = await auth();
-    if (!session || !['OWNER', 'ADMIN'].includes(session.user?.role || '')) {
+    if (!session || !isRoleAllowed(session.user?.role, ['OWNER', 'ADMIN'])) {
       return { success: false, error: 'Access denied: Only Owner and Admin can cancel bookings.' };
     }
     const order = await prisma.order.update({
@@ -716,7 +717,7 @@ export async function cancelOrder(orderId: string) {
 export async function getOrderHistory(orderId: string) {
   try {
     const session = await auth();
-    if (!session || !['OWNER', 'ADMIN'].includes(session.user?.role || '')) {
+    if (!session || !isRoleAllowed(session.user?.role, ['OWNER', 'ADMIN'])) {
       return { success: false, error: 'Access denied' };
     }
 
@@ -765,7 +766,7 @@ export async function getOrderHistory(orderId: string) {
 }
 
 // Helper function to dynamically add queue numbers to a list of orders based on their creation index on each date
-async function addQueueNumbersToOrders(orders: any[]) {
+async function addQueueNumbersToOrders<T extends { id: string; createdAt: string | Date }>(orders: T[]) {
   if (orders.length === 0) {
     return [];
   }

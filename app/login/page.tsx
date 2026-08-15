@@ -39,6 +39,7 @@ import {
 import { ThemeToggle } from "@/components/shared/ThemeToggle";
 
 import { createForgotPasswordRequest } from "@/lib/actions/auth";
+import { normalizeRole } from "@/lib/authCheck";
 
 /** Username-to-email mapping for common role shortcuts. */
 const USERNAME_MAP: Record<string, string> = {
@@ -126,17 +127,14 @@ export default function Page() {
 
       toast.success(`Selamat datang kembali, ${session.user.employeeName || session.user.email}!`);
 
-      if (
-        session.user.role === "EMPLOYEE" ||
-        session.user.role === "MECHANIC" ||
-        session.user.role === "Mekanik"
-      ) {
+      if (normalizeRole(session.user.role) === "EMPLOYEE") {
         router.push("/employee");
       } else {
         router.push("/admin");
       }
 
       router.refresh();
+
     } catch (err: unknown) {
       setLoading(false);
       console.error("[LOGIN_ERROR]", err);
