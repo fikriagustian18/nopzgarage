@@ -1,16 +1,19 @@
 // app/actions/database.ts
 "use server";
 
-import { auth } from "@/lib/auth";
-import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
+import { auth } from "@/lib/auth";
+import { isRoleAllowed } from "@/lib/authCheck";
+import { prisma } from "@/lib/prisma";
 
 /**
  * Utility to serialize complex database types (Date, Decimal, BigInt)
  * so they can be safely passed from Server Actions to Client Components.
  */
-function serializeResult(obj: any): any {
-  if (obj === null || obj === undefined) return obj;
+function serializeResult(obj: unknown): unknown {
+  if (obj === null || obj === undefined) {
+    return obj;
+  }
   
   if (typeof obj === "bigint") {
     return obj.toString();
@@ -18,8 +21,12 @@ function serializeResult(obj: any): any {
   
   if (typeof obj === "object") {
     // Check for Decimal (Prisma uses decimal.js)
-    if (obj.constructor && (obj.constructor.name === "Decimal" || typeof obj.toFixed === "function")) {
-      return obj.toString();
+    const objWithConstructor = obj as { constructor?: { name?: string }; toFixed?: () => string };
+    if (
+      objWithConstructor.constructor?.name === "Decimal" ||
+      typeof objWithConstructor.toFixed === "function"
+    ) {
+      return (obj as { toString(): string }).toString();
     }
     
     if (obj instanceof Date) {
@@ -30,9 +37,10 @@ function serializeResult(obj: any): any {
       return obj.map(serializeResult);
     }
     
-    const serialized: any = {};
-    for (const key of Object.keys(obj)) {
-      serialized[key] = serializeResult(obj[key]);
+    const record = obj as Record<string, unknown>;
+    const serialized: Record<string, unknown> = {};
+    for (const key of Object.keys(record)) {
+      serialized[key] = serializeResult(record[key]);
     }
     return serialized;
   }
@@ -45,7 +53,7 @@ function serializeResult(obj: any): any {
  */
 async function assertOwner() {
   const session = await auth();
-  if (!session || session.user?.role !== "OWNER") {
+  if (!session || !isRoleAllowed(session.user?.role, ["OWNER"])) {
     throw new Error("Unauthorized: Akses ditolak. Hanya Owner yang diizinkan mengakses konsol database.");
   }
   return session;
@@ -58,7 +66,7 @@ export async function executePrismaQuery(modelName: string, operation: string, a
   try {
     await assertOwner();
 
-    const model = (prisma as any)[modelName];
+    const model = (prisma as unknown as Record<string, Record<string, (args?: unknown) => Promise<unknown>>>)[modelName];
     if (!model) {
       return { success: false, error: `Model '${modelName}' tidak ditemukan.` };
     }
@@ -72,8 +80,9 @@ export async function executePrismaQuery(modelName: string, operation: string, a
     if (argsString.trim()) {
       try {
         parsedArgs = JSON.parse(argsString);
-      } catch (err: any) {
-        return { success: false, error: `Format JSON tidak valid: ${err.message}` };
+      } catch (err: unknown) {
+        const message = err instanceof Error ? err.message : "Format JSON tidak valid";
+        return { success: false, error: `Format JSON tidak valid: ${message}` };
       }
     }
 
@@ -90,9 +99,10 @@ export async function executePrismaQuery(modelName: string, operation: string, a
       duration,
       count,
     };
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("executePrismaQuery Error:", error);
-    return { success: false, error: error.message || "Gagal mengeksekusi kueri Prisma." };
+    const message = error instanceof Error ? error.message : "Gagal mengeksekusi kueri Prisma.";
+    return { success: false, error: message };
   }
 }
 
@@ -120,9 +130,10 @@ export async function executeRawSql(sql: string) {
       duration,
       count,
     };
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("executeRawSql Error:", error);
-    return { success: false, error: error.message || "Gagal mengeksekusi raw SQL." };
+    const message = error instanceof Error ? error.message : "Gagal mengeksekusi raw SQL.";
+    return { success: false, error: message };
   }
 }
 
@@ -159,8 +170,9 @@ export async function executePrismaCode(code: string) {
       duration,
       count,
     };
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("executePrismaCode Error:", error);
-    return { success: false, error: error.message || "Gagal mengeksekusi kode Javascript." };
+    const message = error instanceof Error ? error.message : "Gagal mengeksekusi kode Javascript.";
+    return { success: false, error: message };
   }
 }

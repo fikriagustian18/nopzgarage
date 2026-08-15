@@ -58,8 +58,6 @@ model Order {
   totalPaid     Decimal       @default(0) @db.Decimal(12, 2)
   paymentStatus PaymentStatus @default(UNPAID)
   mechanicId    String?
-  feedback      String?
-  rating        Int?
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
   mechanic      Employee?     @relation(fields: [mechanicId], references: [id])

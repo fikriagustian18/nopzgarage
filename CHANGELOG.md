@@ -4,16 +4,29 @@ Semua perubahan penting pada proyek **NopzGarage Management System** akan dicata
 
 Format dokumen ini mengacu pada [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [2.3.2] - 2026-08-15
+
+### 🗄️ Database Schema Cleanup & Documentation Sync
+- **Pembersihan Kolom Database Tidak Terpakai pada Model `Order`**:
+  - Menghapus kolom `rating` (`Int?`) dan `feedback` (`String?`) pada [`prisma/schema.prisma`](prisma/schema.prisma) yang tidak diproses oleh logika backend maupun ditampilkan pada antarmuka pengguna.
+  - Memperbarui data seeding pada [`prisma/seed.ts`](prisma/seed.ts).
+  - Menyinkronkan perubahan skema ke PostgreSQL database (`prisma db push`) serta membuat ulang Prisma Client (`prisma generate`).
+  - Memperbarui dokumentasi internal sistem pada [`app/admin/docs/page.tsx`](app/admin/docs/page.tsx) serta dokumentasi proyek pada [`README.md`](README.md).
+  - Menyelaraskan label versi dokumentasi teknis sistem menjadi `v2.3.2` pada [`app/admin/docs/page.tsx`](app/admin/docs/page.tsx).
+  - Mengoptimalkan otorisasi RBAC menggunakan `isRoleAllowed()` serta pengetikan tipe aman (*type-safe error handling*) pada [`lib/actions/database.ts`](lib/actions/database.ts).
+
+---
+
 ## [2.3.1] - 2026-08-15
 
 ### 🧹 Code Standards Audit & Rule Compliance Refactoring
 - **Sinkronisasi & Pemenuhan 12 Aturan Pengodean Proyek (14 File)**:
-  - Memastikan pengikatan blok kurung kurawal `{}` secara eksplisit pada seluruh percabangan `if` di [`lib/authCheck.ts`](file:///d:/hdd/project/mayang/NOPZGARAGE/lib/authCheck.ts) dan [`components/shared/RoleGuard.tsx`](file:///d:/hdd/project/mayang/NOPZGARAGE/components/shared/RoleGuard.tsx).
+  - Memastikan pengikatan blok kurung kurawal `{}` secara eksplisit pada seluruh percabangan `if` di [`lib/authCheck.ts`](lib/authCheck.ts) dan [`components/shared/RoleGuard.tsx`](components/shared/RoleGuard.tsx).
   - Merestrukturisasi pola guard / early return tanpa klausa `else` / `else if` setelah ekspresi `return` atau `redirect()`.
-  - Mengeliminasi tipe longgar `any` pada Server Actions ([`lib/actions/employees.ts`](file:///d:/hdd/project/mayang/NOPZGARAGE/lib/actions/employees.ts) dan [`lib/actions/orders.ts`](file:///d:/hdd/project/mayang/NOPZGARAGE/lib/actions/orders.ts)) dan menggantinya dengan pengetikan ketat TypeScript (`unknown`, Prisma types).
-  - Merapikan variabel penangkap error `catch (error)` pada [`components/shared/StatusPageClient.tsx`](file:///d:/hdd/project/mayang/NOPZGARAGE/components/shared/StatusPageClient.tsx).
-  - Memformat seluruh atribut JSX multi-baris (lebih dari 2 atribut) pada elemen `<Image ... />` di seluruh komponen UI ([`app/page.tsx`](file:///d:/hdd/project/mayang/NOPZGARAGE/app/page.tsx), [`app/login/page.tsx`](file:///d:/hdd/project/mayang/NOPZGARAGE/app/login/page.tsx), [`components/booking/BookingWizard.tsx`](file:///d:/hdd/project/mayang/NOPZGARAGE/components/booking/BookingWizard.tsx), [`AdminSidebar.tsx`](file:///d:/hdd/project/mayang/NOPZGARAGE/components/layout/AdminSidebar.tsx), [`MobileSidebar.tsx`](file:///d:/hdd/project/mayang/NOPZGARAGE/components/layout/MobileSidebar.tsx)).
-  - Membersihkan import tak terpakai (`useState` di `AdminSidebar.tsx`) serta menyelaraskan indentasi 2-space pada [`app/employee/page.tsx`](file:///d:/hdd/project/mayang/NOPZGARAGE/app/employee/page.tsx).
+  - Mengeliminasi tipe longgar `any` pada Server Actions ([`lib/actions/employees.ts`](lib/actions/employees.ts) dan [`lib/actions/orders.ts`](lib/actions/orders.ts)) dan menggantinya dengan pengetikan ketat TypeScript (`unknown`, Prisma types).
+  - Merapikan variabel penangkap error `catch (error)` pada [`components/shared/StatusPageClient.tsx`](components/shared/StatusPageClient.tsx).
+  - Memformat seluruh atribut JSX multi-baris (lebih dari 2 atribut) pada elemen `<Image ... />` di seluruh komponen UI ([`app/page.tsx`](app/page.tsx), [`app/login/page.tsx`](app/login/page.tsx), [`components/booking/BookingWizard.tsx`](components/booking/BookingWizard.tsx), [`AdminSidebar.tsx`](components/layout/AdminSidebar.tsx), [`MobileSidebar.tsx`](components/layout/MobileSidebar.tsx)).
+  - Membersihkan import tak terpakai (`useState` di `AdminSidebar.tsx`) serta menyelaraskan indentasi 2-space pada [`app/employee/page.tsx`](app/employee/page.tsx).
 
 ---
 
@@ -22,12 +35,12 @@ Format dokumen ini mengacu pada [Keep a Changelog](https://keepachangelog.com/en
 ### 🐛 Fixed & Role Authorization Normalization (RBAC Optimization)
 - **Perbaikan Infinite Loop Redirect Login Mekanik & Otorisasi RBAC Terpusat**:
   - Mengatasi kendala perulangan redirect tak terhingga (*infinite loop*) saat pengguna dengan peran mekanik (`role: "Mekanik"`) melakukan autentikasi login.
-  - Mengoptimalkan [`lib/authCheck.ts`](file:///d:/hdd/project/mayang/NOPZGARAGE/lib/authCheck.ts) dengan tipe `AppRole`, algoritma pencocokan peran performan tanpa alokasi array ganda, serta fungsi `normalizeRole()` dan `isRoleAllowed()`.
+  - Mengoptimalkan [`lib/authCheck.ts`](lib/authCheck.ts) dengan tipe `AppRole`, algoritma pencocokan peran performan tanpa alokasi array ganda, serta fungsi `normalizeRole()` dan `isRoleAllowed()`.
   - Menyelaraskan seluruh sinonim dan variasi penulisan nama peran (`"Mekanik"`, `"MECHANIC"`, `"EMPLOYEE"`, `"Teknisi"`, `"Admin"`, `"Administrator"`, `"Owner"`) sehingga evaluasi hak akses berjalan konsisten.
-  - Mengoptimalkan [`RoleGuard.tsx`](file:///d:/hdd/project/mayang/NOPZGARAGE/components/shared/RoleGuard.tsx) dengan memoized access evaluation (`useMemo`) untuk menghindari re-render/re-effect berlebih.
-  - Memperbarui proteksi server-side pada [`app/employee/page.tsx`](file:///d:/hdd/project/mayang/NOPZGARAGE/app/employee/page.tsx) dan [`app/employee/layout.tsx`](file:///d:/hdd/project/mayang/NOPZGARAGE/app/employee/layout.tsx) menggunakan `requireRole(["EMPLOYEE"])`.
-  - Menyelaraskan tautan dashboard navbar publik ([`app/page.tsx`](file:///d:/hdd/project/mayang/NOPZGARAGE/app/page.tsx), [`components/shared/StatusPageClient.tsx`](file:///d:/hdd/project/mayang/NOPZGARAGE/components/shared/StatusPageClient.tsx), [`components/booking/BookingWizard.tsx`](file:///d:/hdd/project/mayang/NOPZGARAGE/components/booking/BookingWizard.tsx)) dan filter menu admin sidebar ([`AdminSidebar.tsx`](file:///d:/hdd/project/mayang/NOPZGARAGE/components/layout/AdminSidebar.tsx), [`MobileSidebar.tsx`](file:///d:/hdd/project/mayang/NOPZGARAGE/components/layout/MobileSidebar.tsx), [`AdminHeader.tsx`](file:///d:/hdd/project/mayang/NOPZGARAGE/components/layout/AdminHeader.tsx)) menggunakan `normalizeRole()`.
-  - Menyelaraskan pemeriksaan hak akses Server Actions pada [`lib/actions/orders.ts`](file:///d:/hdd/project/mayang/NOPZGARAGE/lib/actions/orders.ts) dan [`lib/actions/employees.ts`](file:///d:/hdd/project/mayang/NOPZGARAGE/lib/actions/employees.ts) menggunakan `isRoleAllowed()`.
+  - Mengoptimalkan [`RoleGuard.tsx`](components/shared/RoleGuard.tsx) dengan memoized access evaluation (`useMemo`) untuk menghindari re-render/re-effect berlebih.
+  - Memperbarui proteksi server-side pada [`app/employee/page.tsx`](app/employee/page.tsx) dan [`app/employee/layout.tsx`](app/employee/layout.tsx) menggunakan `requireRole(["EMPLOYEE"])`.
+  - Menyelaraskan tautan dashboard navbar publik ([`app/page.tsx`](app/page.tsx), [`components/shared/StatusPageClient.tsx`](components/shared/StatusPageClient.tsx), [`components/booking/BookingWizard.tsx`](components/booking/BookingWizard.tsx)) dan filter menu admin sidebar ([`AdminSidebar.tsx`](components/layout/AdminSidebar.tsx), [`MobileSidebar.tsx`](components/layout/MobileSidebar.tsx), [`AdminHeader.tsx`](components/layout/AdminHeader.tsx)) menggunakan `normalizeRole()`.
+  - Menyelaraskan pemeriksaan hak akses Server Actions pada [`lib/actions/orders.ts`](lib/actions/orders.ts) dan [`lib/actions/employees.ts`](lib/actions/employees.ts) menggunakan `isRoleAllowed()`.
 
 ---
 
@@ -60,7 +73,7 @@ Format dokumen ini mengacu pada [Keep a Changelog](https://keepachangelog.com/en
 - **Penataan Tombol Ekspor Header**:
   - Menyusun tombol `Unduh Arus Kas` dan `Unduh Laporan Keuangan` dengan ukuran presisi sejajar dan label ringkas.
 - **Pembersihan Kolom Unused `journalItems` & Optimasi Kueri**:
-  - Menghapus kolom `journalItems` (JSON) dari tabel `Payment` di [`schema.prisma`](file:///d:/hdd/project/mayang/NOPZGARAGE/prisma/schema.prisma) dan membersihkan fungsi `getJournalEntries` serta parameter `journalItems` di seluruh server actions.
+  - Menghapus kolom `journalItems` (JSON) dari tabel `Payment` di [`schema.prisma`](prisma/schema.prisma) dan membersihkan fungsi `getJournalEntries` serta parameter `journalItems` di seluruh server actions.
   - Mengeliminasi kueri `prisma.account.upsert` yang redundan pada mutasi stok barang (`createSparePart`, `updateSparePart`, `addStock`) di `lib/actions/inventory.ts`.
   - Mempertahankan penulisan & parsing referensi nota/invoice pada pencatatan pengeluaran (`lib/actions/expenses.ts`).
 

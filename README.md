@@ -338,8 +338,6 @@ CUSTOMER                    ADMIN/KASIR                 MEKANIK                 
                                    │                │    totalPaid    │
                                    │                │    payStatus    │
                                    │                │ FK mechanicId   │
-                                   │                │    feedback     │
-                                   │                │    rating       │
                                    │                └────────┬────────┘
                                    │                         │
          ┌─────────────────────────┼─────────────────────────┤
@@ -613,14 +611,12 @@ CUSTOMER                    ADMIN/KASIR                 MEKANIK                 
 │ - totalPaid: Decimal        │          │ + getUnpaidItems(): Item[]  │
 │ - paymentStatus: PaymentSt  │          │ + calculateSalary(): Dec    │
 │ - mechanicId: string?       │          └─────────────────────────────┘
-│ - feedback: string?         │                        ▲
-│ - rating: int?              │                        │
-├─────────────────────────────┤                        │
-│ + calculateTotal(): Decimal │          ┌─────────────────────────────┐
-│ + updateStatus(): void      │          │          <<Entity>>         │
-│ + addPayment(): Payment     │          │           User              │
-│ + getRemaining(): Decimal   │          ├─────────────────────────────┤
-└──────────────┬──────────────┘          │ - id: string                │
+├─────────────────────────────┤                        ▲
+│ + calculateTotal(): Decimal │                        │
+│ + updateStatus(): void      │                        │
+│ + addPayment(): Payment     │          ┌─────────────────────────────┐
+│ + getRemaining(): Decimal   │          │          <<Entity>>         │
+└──────────────┬──────────────┘          │           User              │
                │                         │ - email: string             │
      ┌─────────┴─────────┐               │ - password: string          │
      │                   │               │ - role: string              │

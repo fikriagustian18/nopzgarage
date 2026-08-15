@@ -169,8 +169,6 @@ async function main() {
       totalPaid: 150000,
       paymentStatus: 'PAID',
       mechanicId: mechanicEmp.id,
-      feedback: 'Servis sangat cepat dan memuaskan',
-      rating: 5,
     },
   });
 

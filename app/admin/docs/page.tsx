@@ -3,17 +3,6 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Button } from "@/components/ui/Button";
-import { RoleGuard } from "@/components/shared/RoleGuard";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
-import { Badge } from "@/components/ui/Badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/Tabs";
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from "@/components/ui/Accordion";
 import { 
   ArrowLeft, 
   Book, 
@@ -49,6 +38,17 @@ import {
   WalletCards,
   KeyRound
 } from "lucide-react";
+import { Button } from "@/components/ui/Button";
+import { RoleGuard } from "@/components/shared/RoleGuard";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
+import { Badge } from "@/components/ui/Badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/Tabs";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/Accordion";
 import { MermaidDiagram } from "@/components/shared/MermaidDiagram";
 
 export default function Page() {
@@ -67,7 +67,7 @@ export default function Page() {
   const tables = [
     { name: "User", columns: 11, purpose: "Akun login pengguna sistem (Owner/Admin/Employee) & token reset password" },
     { name: "Employee", columns: 11, purpose: "Profil data karyawan (mekanik/owner), jabatan & skema gaji (harian/komisi)" },
-    { name: "Order", columns: 18, purpose: "Transaksi servis motor, booking, status antrian, total bayar & rating" },
+    { name: "Order", columns: 16, purpose: "Transaksi servis motor, booking, status antrian & total bayar" },
     { name: "OrderItem", columns: 11, purpose: "Detail rincian item (jasa & sparepart) yang dipasang per order" },
     { name: "SparePart", columns: 12, purpose: "Master data suku cadang (stok, min stock, harga beli & harga jual)" },
     { name: "Account", columns: 11, purpose: "Bagan Akun (Chart of Accounts) & Rekening Bank bengkel (Kas/Bank/Piutang/Hutang)" },
@@ -170,8 +170,6 @@ export default function Page() {
         decimal totalPaid
         enum paymentStatus
         string mechanicId FK
-        string feedback
-        int rating
         datetime createdAt
         datetime updatedAt
     }
@@ -1130,7 +1128,7 @@ export default function Page() {
           <h1 className="text-3xl md:text-4xl font-black text-foreground">
              Technical Documentation
           </h1>
-          <p className="text-muted-foreground">NopzGarage Management System v2.2.0</p>
+          <p className="text-muted-foreground">NopzGarage Management System v2.3.2</p>
         </div>
       </div>
 
@@ -1321,7 +1319,7 @@ export default function Page() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <GitBranch className="h-5 w-5" />
-                System Diagrams (Updated v2.2.0)
+                System Diagrams (Updated v2.3.2)
               </CardTitle>
             </CardHeader>
             <CardContent>
