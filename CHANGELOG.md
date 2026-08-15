@@ -4,6 +4,24 @@ Semua perubahan penting pada proyek **NopzGarage Management System** akan dicata
 
 Format dokumen ini mengacu pada [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [2.2.0] - 2026-08-15
+
+### 📚 Documentation & Technical Specs Synchronization
+- **Sinkronisasi Technical Documentation (`/admin/docs`)**:
+  - Menyelaraskan seluruh metrik statistik (`8` Tables, `8` Relations, `4` Enums, `56` Components, `26` Pages, `90` Server Actions).
+  - Memperbarui daftar 8 model database konsolidasi (`User`, `Employee`, `Order`, `OrderItem`, `SparePart`, `Account`, `Payment`, `SystemConfig`) beserta jumlah kolom dan deskripsi fungsinya.
+  - Menyelaraskan Chart of Accounts (COA) dengan data seed aktif dan memperbarui daftar komponen UI/Dialog utama.
+  - Merestrukturisasi diagram Mermaid ERD, DFD Context/Level 1/Level 2, seluruh Flowchart proses order, kasir, penggajian, reset password JSON, dan CMS.
+  - Menyelaraskan modul arsitektur sistem (Operational, Finance & Cashflow, Inventory, HR & Payroll) dan struktur direktori `lib/actions/`.
+  - Menambahkan tab **Guidelines** interaktif yang mendokumentasikan 12 standar pengodean proyek (Prinsip Umum, Naming Rules, Identifier Standards, App Router structure, Component order, Functions & Control flow, Next.js special files, Formatting/JSX, Comments, CSS & JSON).
+- **Pembaruan Menyeluruh `README.md`**:
+  - Menyelaraskan seluruh diagram ASCII (8-Table ERD, DFD Level 0, DFD Level 1, Class Diagram, Use Case Diagram, dan Sequence Diagrams).
+  - Mengupdate seluruh alur proses bisnis (Siklus Order Servis, Alur Pembayaran Kasir, dan Penggajian Karyawan) agar sepenuhnya berbasis pada 8 tabel konsolidasi.
+  - Memperbarui dokumentasi struktur direktori proyek ke struktur Next.js App Router dan `lib/actions/` yang akurat.
+  - Menambahkan seksi resmi **Standar & Panduan Pengodean (Coding Guidelines)**.
+
+---
+
 ## [2.1.0] - 2026-08-15
 
 ### ✨ New Features & UI Redesign

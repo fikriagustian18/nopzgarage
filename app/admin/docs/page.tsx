@@ -56,71 +56,63 @@ export default function Page() {
   const [activeTab, setActiveTab] = useState("overview");
 
   const stats = {
-    totalTables: 18,
-    totalRelationships: 14,
-    totalEnums: 6,
-    totalComponents: 50,
-    totalPages: 16,
-    totalServerActions: 20,
+    totalTables: 8,
+    totalRelationships: 8,
+    totalEnums: 4,
+    totalComponents: 56,
+    totalPages: 26,
+    totalServerActions: 90,
   };
 
   const tables = [
-    { name: "User", columns: 10, purpose: "Akun login pengguna sistem (Owner/Admin/Employee)" },
-    { name: "ForgotPasswordRequest", columns: 6, purpose: "Pencatatan permintaan reset password karyawan" },
-    { name: "Employee", columns: 11, purpose: "Profil data karyawan (mekanik/owner) & skema gaji" },
-    { name: "Order", columns: 18, purpose: "Transaksi servis motor (status, total, feedback)" },
-    { name: "OrderItem", columns: 9, purpose: "Detail item (jasa & sparepart) yang dipasang per order" },
-    { name: "OrderFee", columns: 8, purpose: "Pencatatan komisi mekanik per order servis" },
-    { name: "SparePart", columns: 12, purpose: "Master data persediaan suku cadang (stok & harga)" },
-    { name: "Payroll", columns: 12, purpose: "Rekap gaji & komisi karyawan per periode" },
-    { name: "BankAccount", columns: 9, purpose: "Master data rekening bank bengkel & saldo real-time" },
-    { name: "Payment", columns: 10, purpose: "Pencatatan transaksi pembayaran (DP, pelunasan, gaji)" },
-    { name: "ContentSection", columns: 8, purpose: "Manajemen teks dan media statis landing page" },
-    { name: "Account", columns: 7, purpose: "Bagan Akun (Chart of Accounts) untuk pembukuan" },
-    { name: "JournalEntry", columns: 6, purpose: "Header jurnal transaksi akuntansi double-entry" },
-    { name: "JournalItem", columns: 5, purpose: "Baris detail debit/kredit per jurnal entry" },
-    { name: "SystemSetting", columns: 4, purpose: "Konfigurasi parameter sistem (jam kerja, max booking)" },
-    { name: "ActivityLog", columns: 9, purpose: "Audit trail / log aktivitas pengguna sistem" },
-    { name: "MediaGallery", columns: 10, purpose: "Galeri foto & media promosi di landing page" },
-    { name: "SocialEmbed", columns: 11, purpose: "Embed media sosial (Instagram/TikTok) di landing page" }
+    { name: "User", columns: 11, purpose: "Akun login pengguna sistem (Owner/Admin/Employee) & token reset password" },
+    { name: "Employee", columns: 11, purpose: "Profil data karyawan (mekanik/owner), jabatan & skema gaji (harian/komisi)" },
+    { name: "Order", columns: 18, purpose: "Transaksi servis motor, booking, status antrian, total bayar & rating" },
+    { name: "OrderItem", columns: 11, purpose: "Detail rincian item (jasa & sparepart) yang dipasang per order" },
+    { name: "SparePart", columns: 12, purpose: "Master data suku cadang (stok, min stock, harga beli & harga jual)" },
+    { name: "Account", columns: 11, purpose: "Bagan Akun (Chart of Accounts) & Rekening Bank bengkel (Kas/Bank/Piutang/Hutang)" },
+    { name: "Payment", columns: 10, purpose: "Transaksi pembayaran kasir (DP, pelunasan order, gaji karyawan, operasional)" },
+    { name: "SystemConfig", columns: 15, purpose: "Konsolidasi konfigurasi sistem, CMS landing page, media gallery, embed & setting" },
   ];
 
   const accounts = [
     // ASSETS
-    { code: "101", name: "Kas Tunai", type: "ASSET" },
-    { code: "102", name: "Bank", type: "ASSET" },
-    { code: "103", name: "Piutang Usaha", type: "ASSET" },
+    { code: "101", name: "Kas Utama", type: "ASSET" },
+    { code: "102", name: "Bank BCA", type: "ASSET" },
+    { code: "103", name: "Bank Mandiri", type: "ASSET" },
+    { code: "104", name: "Piutang Usaha", type: "ASSET" },
     { code: "111", name: "Persediaan Sparepart", type: "ASSET" },
     { code: "121", name: "Peralatan Bengkel", type: "ASSET" },
-    { code: "122", name: "Akumulasi Penyusutan Peralatan", type: "ASSET" },
     // LIABILITIES
     { code: "201", name: "Hutang Usaha", type: "LIABILITY" },
-    { code: "202", name: "Utang Gaji & Komisi", type: "LIABILITY" },
+    { code: "202", name: "Hutang Gaji", type: "LIABILITY" },
     // EQUITY
     { code: "301", name: "Modal Pemilik", type: "EQUITY" },
     { code: "302", name: "Prive", type: "EQUITY" },
-    { code: "303", name: "Laba Ditahan", type: "EQUITY" },
     // REVENUE
     { code: "401", name: "Pendapatan Jasa Servis", type: "REVENUE" },
     { code: "402", name: "Pendapatan Penjualan Sparepart", type: "REVENUE" },
-    { code: "403", name: "Pendapatan Modifikasi", type: "REVENUE" },
     // EXPENSES
-    { code: "501", name: "Beban Gaji & Komisi", type: "EXPENSE" },
-    { code: "502", name: "Beban Listrik", type: "EXPENSE" },
-    { code: "503", name: "Beban Air", type: "EXPENSE" },
-    { code: "504", name: "Beban Sewa Tempat", type: "EXPENSE" },
-    { code: "505", name: "Beban Supplies", type: "EXPENSE" },
+    { code: "501", name: "Beban Gaji Karyawan", type: "EXPENSE" },
+    { code: "502", name: "Beban Operasional", type: "EXPENSE" },
     { code: "511", name: "Harga Pokok Penjualan (HPP)", type: "EXPENSE" },
   ];
 
   const components = [
-    { name: "PaymentDialog", type: "Dialog", used: "Order Payment" },
-    { name: "ProcessOrderDialog", type: "Dialog", used: "Order Processing" },
-    { name: "EmployeeDetailDialog", type: "Dialog", used: "Employee Details" },
-    { name: "DashboardOverview", type: "Component", used: "Admin Dashboard" },
-    { name: "KanbanBoard", type: "Component", used: "Order Tracking" },
-    { name: "BankAccountsManager", type: "Component", used: "Bank Settings" },
-    { name: "WebsiteContentTab", type: "Component", used: "CMS Settings" },
+    { name: "BookingWizard", type: "Wizard", used: "Public Booking System" },
+    { name: "ProcessOrderDialog", type: "Dialog", used: "Admin Order Processing & Estimation" },
+    { name: "PaymentDialog", type: "Dialog", used: "Cashier Payment & Settlement" },
+    { name: "EmployeeDetailDialog", type: "Dialog", used: "Employee Management" },
+    { name: "SparepartDialog", type: "Dialog", used: "Inventory Management" },
+    { name: "ExportPreviewDialog", type: "Dialog", used: "Financial & Operational Reports Export" },
+    { name: "DashboardOverview", type: "Component", used: "Admin Executive Dashboard" },
+    { name: "KanbanBoard", type: "Component", used: "Interactive Service Order Tracking" },
+    { name: "BankAccountsManager", type: "Component", used: "Bank & Cash Accounts Management" },
+    { name: "WebsiteContentTab", type: "Component", used: "CMS Landing Page Settings" },
+    { name: "PublicKanban", type: "Component", used: "Public Customer Queue Board" },
+    { name: "LiveQueueList", type: "Component", used: "Real-time Queue Status Display" },
+    { name: "NotificationPanel", type: "Component", used: "System Alerts & Notifications" },
+    { name: "RoleGuard", type: "Security", used: "RBAC Authorization Access Control" },
   ];
 
   const features = [
@@ -133,7 +125,7 @@ export default function Page() {
     { title: "Website CMS", status: "Complete", icon: Code },
   ];
 
-  // Mermaid Definitions based on actual active system
+  // Mermaid Definitions based on actual active system (8 Consolidated Tables)
   const diagrams = {
     erd: `erDiagram
     User {
@@ -144,24 +136,18 @@ export default function Page() {
         string employeeId FK
         string resetToken UK
         datetime resetTokenExpiry
+        json forgotRequests
         boolean isActive
         datetime createdAt
         datetime updatedAt
-    }
-    ForgotPasswordRequest {
-        string id PK
-        string userId FK
-        string status
-        string resolvedBy
-        datetime resolvedAt
-        datetime createdAt
     }
     Employee {
         string id PK
         string name
         string role
         string phone
-        string salaryType
+        string jabatan
+        enum salaryType
         decimal dailyRate
         decimal commissionRate
         boolean isActive
@@ -175,18 +161,18 @@ export default function Page() {
         string vehicle
         string plateNumber
         string complaint
-        string serviceType
-        string status
+        enum serviceType
+        enum status
         datetime scheduledAt
         json items
         decimal totalPrice
         decimal totalPaid
-        string paymentStatus
+        enum paymentStatus
         string mechanicId FK
-        datetime createdAt
-        datetime updatedAt
         string feedback
         int rating
+        datetime createdAt
+        datetime updatedAt
     }
     OrderItem {
         string id PK
@@ -197,16 +183,8 @@ export default function Page() {
         decimal unitPrice
         decimal totalPrice
         string sparePartId FK
-        datetime createdAt
-    }
-    OrderFee {
-        string id PK
-        string orderId FK
         string employeeId FK
-        decimal amount
-        string description
         boolean isPaid
-        datetime paidAt
         datetime createdAt
     }
     SparePart {
@@ -223,133 +201,57 @@ export default function Page() {
         datetime createdAt
         datetime updatedAt
     }
-    Payroll {
-        string id PK
-        datetime startDate
-        datetime endDate
-        string employeeId FK
-        decimal baseSalary
-        decimal bonus
-        decimal totalEarned
-        string details
-        decimal totalPaid
-        string status
-        datetime createdAt
-        datetime updatedAt
-    }
-    BankAccount {
-        string id PK
-        string bankCode
-        string bankName
-        string accountNumber
-        string accountName
-        decimal currentBalance
-        boolean isActive
-        datetime createdAt
-        datetime updatedAt
-    }
-    Payment {
-        string id PK
-        datetime date
-        decimal amount
-        string note
-        string orderId FK
-        string payrollId FK
-        string bankAccountId FK
-        string paymentMethod
-        datetime createdAt
-    }
-    ContentSection {
-        string id PK
-        string sectionKey UK
-        string title
-        string subtitle
-        json content
-        string imageUrl
-        boolean isVisible
-        datetime updatedAt
-    }
     Account {
         string id PK
         string code UK
         string name
         string type
         string category
+        string bankCode
+        string accountNumber
+        string accountName
+        decimal currentBalance
         boolean isActive
         datetime createdAt
     }
-    JournalEntry {
+    Payment {
         string id PK
         datetime date
-        string description
-        string reference
-        string paymentId FK
+        decimal amount
+        string type
+        string note
+        string orderId FK
+        string employeeId FK
+        string bankAccountId FK
+        string paymentMethod
         datetime createdAt
     }
-    JournalItem {
+    SystemConfig {
         string id PK
-        string journalEntryId FK
-        string accountId FK
-        decimal debit
-        decimal credit
-    }
-    SystemSetting {
-        string id PK
+        string category
         string key UK
-        string value
-        datetime updatedAt
-    }
-    ActivityLog {
-        string id PK
-        string action
         string title
-        string details
-        json metadata
+        string subtitle
+        json content
+        string imageUrl
+        string embedUrl
+        string platform
         string userId
         string userName
-        string role
-        datetime createdAt
-    }
-    MediaGallery {
-        string id PK
-        string title
-        string description
-        string imageUrl
-        string type
-        string category
-        boolean isActive
-        int displayOrder
-        datetime createdAt
-        datetime updatedAt
-    }
-    SocialEmbed {
-        string id PK
-        string platform
-        string embedUrl
-        string embedCode
-        string title
-        string description
-        string thumbnail
-        boolean isActive
+        boolean isVisible
         int displayOrder
         datetime createdAt
         datetime updatedAt
     }
 
-    User ||--o{ ForgotPasswordRequest : "requests"
-    Employee ||--o{ User : "has_account"
-    Employee ||--o{ Order : "services"
-    Employee ||--o{ OrderFee : "earns"
-    Employee ||--o{ Payroll : "receives"
-    Order ||--o{ OrderItem : "contains"
-    Order ||--o{ OrderFee : "has_fees"
-    Order ||--o{ Payment : "has_payments"
-    SparePart ||--o{ OrderItem : "used_in"
-    Payroll ||--o{ Payment : "paid_by"
-    BankAccount ||--o{ Payment : "transacts"
-    Payment ||--o| JournalEntry : "generates"
-    JournalEntry ||--|{ JournalItem : "contains"
-    Account ||--o{ JournalItem : "records_in"`,
+    Employee ||--o| User : "account"
+    Employee ||--o{ Order : "mechanic_orders"
+    Employee ||--o{ OrderItem : "order_items"
+    Employee ||--o{ Payment : "employee_payments"
+    Order ||--o{ OrderItem : "items"
+    Order ||--o{ Payment : "payments"
+    SparePart ||--o{ OrderItem : "order_items"
+    Account ||--o{ Payment : "bank_payments"`,
 
     dfd0: `flowchart LR
     Customer["CUSTOMER<br />Pelanggan / Pemilik Motor"]
@@ -357,7 +259,7 @@ export default function Page() {
     Admin["ADMIN<br />Staff Admin"]
     Mechanic["MECHANIC<br />Mekanik"]
     
-    System(["0<br />SISTEM MANAJEMEN<br />NOPZGARAGE"])
+    System(["0<br />SISTEM MANAJEMEN<br />NOPZGARAGE (8 Consolidated Tables)"])
     
     Customer -->|"Registrasi Booking & Keluhan"| System
     System -->|"Informasi Antrian & Status"| Customer
@@ -384,14 +286,14 @@ export default function Page() {
     P1(["1.0<br />Manajemen Pengguna & Karyawan"])
     P2(["2.0<br />Manajemen Pelayanan<br />(Booking & Servis)"])
     P3(["3.0<br />Manajemen Inventory (Sparepart)"])
-    P4(["4.0<br />Transaksi & Gaji (Payment/Payroll)"])
-    P5(["5.0<br />Laporan & Akuntansi Jurnal"])
+    P4(["4.0<br />Transaksi & Keuangan (Payment & Kas/Bank)"])
+    P5(["5.0<br />Laporan & Konfigurasi CMS/Sistem"])
 
     DS1[("DS1 User & Employee")]
-    DS2[("DS2 Order & Fees")]
+    DS2[("DS2 Order & OrderItem")]
     DS3[("DS3 SparePart")]
-    DS4[("DS4 Payment & Payroll")]
-    DS5[("DS5 Accounting")]
+    DS4[("DS4 Account & Payment")]
+    DS5[("DS5 SystemConfig")]
 
     P1 <-->|"Data Pengguna & Karyawan"| DS1
     P1 --> P2
@@ -408,12 +310,12 @@ export default function Page() {
     P3 --> P4
 
     Admin -->|"Pencatatan Pembayaran"| P4
-    Owner -->|"Approval & Proses Payroll"| P4
-    P4 <-->|"Data Pembayaran & Gaji"| DS4
+    Owner -->|"Approval & Proses Pembayaran Gaji"| P4
+    P4 <-->|"Data Account & Payment"| DS4
     P4 --> P5
 
-    Owner -->|"Lihat Laporan & Jurnal"| P5
-    P5 <-->|"Data Jurnal & Akun"| DS5`,
+    Owner -->|"Lihat Laporan & Web Settings"| P5
+    P5 <-->|"Data SystemConfig & Dynamic Reports"| DS5`,
 
     dfd2user: `flowchart TB
     Admin["ADMIN (Staff Admin)"]
@@ -427,7 +329,6 @@ export default function Page() {
 
     DS1_User[("DS1 User")]
     DS1_Employee[("DS1 Employee")]
-    DS1_Forgot[("DS1 ForgotPasswordRequest")]
 
     Admin -->|"Kredensial Login"| P11
     Mekanik -->|"Kredensial Login"| P11
@@ -442,8 +343,8 @@ export default function Page() {
     P13 <-->|"Data Employee"| DS1_Employee
 
     Mekanik -->|"Ajukan Reset Password"| P14
-    P14 <-->|"Data Request"| DS1_Forgot
-    Owner -->|"Approve / Reject Reset"| P14`,
+    P14 <-->|"Update forgotRequests (JSON)"| DS1_User
+    Owner -->|"Approve / Reset Password"| P14`,
 
     dfd2service: `flowchart TB
     Pelanggan["PELANGGAN"]
@@ -458,7 +359,6 @@ export default function Page() {
 
     DS2_Order[("DS2 Order")]
     DS2_OrderItem[("DS2 OrderItem")]
-    DS2_OrderFee[("DS2 OrderFee")]
     DS3_SparePart[("DS3 SparePart")]
     DS1_Employee[("DS1 Employee")]
 
@@ -479,7 +379,7 @@ export default function Page() {
 
     Mekanik -->|"Set Selesai"| P25
     P25 -->|"Update Status (READY)"| DS2_Order
-    P25 -->|"Hitung & Simpan Komisi"| DS2_OrderFee`,
+    P25 -->|"Record OrderItem Komisi"| DS2_OrderItem`,
 
     dfd2inventory: `flowchart TB
     Admin["ADMIN / OWNER"]
@@ -490,18 +390,15 @@ export default function Page() {
     P34(["3.4<br />Input Stok Keluar"])
 
     DS3_SparePart[("DS3 SparePart")]
-    DS5_Accounting[("DS5 Accounting")]
 
     Admin -->|"Input Data Sparepart Baru"| P31
     P31 -->|"Simpan Sparepart"| DS3_SparePart
-    P31 -->|"Jurnal Persediaan Awal (jika ada stok)"| DS5_Accounting
 
     Admin -->|"Edit Info Sparepart"| P32
     P32 <-->|"Update Data Sparepart"| DS3_SparePart
 
-    Admin -->|"Input Stok Masuk & Supplier"| P33
+    Admin -->|"Input Stok Masuk"| P33
     P33 -->|"Increment Stock"| DS3_SparePart
-    P33 -->|"Jurnal Pembelian Persediaan"| DS5_Accounting
 
     Admin -->|"Input Stok Keluar & Keperluan"| P34
     P34 -->|"Decrement Stock"| DS3_SparePart`,
@@ -512,43 +409,43 @@ export default function Page() {
     Owner["OWNER"]
 
     P41(["4.1<br />Pencatatan Pembayaran Order<br />(Kasir)"])
-    P42(["4.2<br />Auto-Journal Pendapatan<br />(Akuntansi Jurnal)"])
-    P43(["4.3<br />Proses Gaji & Komisi<br />(Payroll & Payment)"])
+    P42(["4.2<br />Update Saldo Kas/Bank<br />(Account Balance)"])
+    P43(["4.3<br />Proses & Pembayaran Gaji<br />(Payment Gaji Karyawan)"])
 
     DS2_Order[("DS2 Order")]
-    DS4_Payment_Payroll[("DS4 Payment & Payroll")]
-    DS5_Accounting[("DS5 Accounting")]
+    DS4_Payment[("DS4 Payment")]
+    DS4_Account[("DS4 Account")]
 
     Pelanggan -->|"Bayar DP / Pelunasan"| P41
     Admin -->|"Input Pembayaran Kasir"| P41
-    P41 -->|"Simpan Pembayaran & Sisa Bayar"| DS4_Payment_Payroll
+    P41 -->|"Simpan Payment (type: ORDER_PAYMENT)"| DS4_Payment
     P41 -->|"Update totalPaid & paymentStatus"| DS2_Order
 
-    P41 -->|"Trigger Auto-Journal"| P42
-    P42 -->|"Buat Jurnal Debit Kas/Bank, Kredit Pendapatan/Piutang"| DS5_Accounting
+    P41 -->|"Trigger Saldo Rekening"| P42
+    P42 -->|"Tambah currentBalance pada Account"| DS4_Account
 
-    Owner -->|"Approval & Bayar Gaji"| P43
-    P43 <-->|"Update Status Payroll & Buat Payment Gaji"| DS4_Payment_Payroll
-    P43 -->|"Jurnal Debit Utang Gaji, Kredit Kas/Bank"| DS5_Accounting`,
+    Owner -->|"Bayar Gaji Karyawan"| P43
+    P43 <-->|"Simpan Payment (type: SALARY) & Potong Account Balance"| DS4_Payment
+    P43 -->|"Kurangi currentBalance Kas/Bank"| DS4_Account`,
 
     dfd2report: `flowchart TB
     Owner["OWNER (Pemilik Bengkel)"]
     Admin["ADMIN (Staff Admin)"]
 
-    P51(["5.1<br />Laporan Akuntansi & Jurnal<br />(Laba Rugi, Buku Besar)"])
+    P51(["5.1<br />Laporan Keuangan Real-Time<br />(Laba Rugi, Cashflow, Neraca)"])
     P52(["5.2<br />Laporan Stok & Persediaan<br />(Mutasi & Nilai Sparepart)"])
     P53(["5.3<br />Laporan Analisis Operasional<br />(Kinerja Mekanik & Servis)"])
     P54(["5.4<br />Laporan Penggajian Karyawan"])
-    P55(["5.5<br />Dashboard Overview & Grafik"])
+    P55(["5.5<br />Dashboard Overview & CMS Config"])
 
-    DS5_Accounting[("DS5 Accounting")]
+    DS4_Account_Payment[("DS4 Account & Payment")]
     DS3_SparePart[("DS3 SparePart")]
     DS2_Order[("DS2 Order")]
-    DS4_Payment_Payroll[("DS4 Payment & Payroll")]
+    DS5_SystemConfig[("DS5 SystemConfig")]
 
     Owner -->|"Request Laporan Keuangan"| P51
-    P51 <-->|"Ambil Jurnal & Akun"| DS5_Accounting
-    P51 -->|"Laporan Laba Rugi & Neraca"| Owner
+    P51 <-->|"Kalkulasi Real-Time Payment & Account"| DS4_Account_Payment
+    P51 -->|"Laporan Laba Rugi & Cashflow"| Owner
 
     Admin -->|"Monitor Stok & Reorder Point"| P52
     P52 <-->|"Ambil Data Sparepart"| DS3_SparePart
@@ -558,57 +455,48 @@ export default function Page() {
     P53 <-->|"Ambil Data Order & Items"| DS2_Order
     P53 -->|"Laporan Kinerja Mekanik"| Admin
 
-    Owner -->|"Review Payroll History"| P54
-    P54 <-->|"Ambil Data Payroll"| DS4_Payment_Payroll
+    Owner -->|"Review Histori Gaji Karyawan"| P54
+    P54 <-->|"Ambil Payment (type: SALARY)"| DS4_Account_Payment
     P54 -->|"Laporan Gaji"| Owner
 
-    Owner -->|"View Dashboard Summary"| P55
-    Admin -->|"View Dashboard Summary"| P55
-    P55 <--|"Summary Stats"| DS2_Order
-    P55 <--|"Summary Cash/Bank"| DS4_Payment_Payroll
-    P55 <--|"Summary Inventory Value"| DS3_SparePart`,
+    Owner -->|"View Dashboard Summary & CMS"| P55
+    Admin -->|"View Dashboard Summary & CMS"| P55
+    P55 <--|"Summary Stats Order"| DS2_Order
+    P55 <--|"Summary Kas/Bank"| DS4_Account_Payment
+    P55 <--|"Dynamic Content & CMS"| DS5_SystemConfig`,
 
-     flowOrder: `flowchart TD
+    flowOrder: `flowchart TD
     Start([Mulai: Pelanggan Booking])
     
-    %% Input Order
     Input[Admin/Pelanggan Buat Order<br />Status: PENDING]
     SaveOrder[(Simpan Order)]
     
-    %% Estimasi
     InputEstimate[Input Estimasi:<br />- Jasa & Sparepart<br />- Total Estimasi Biaya]
     UpdateEstimated[(Set Status: ESTIMATED)]
     
-    %% Konfirmasi
     CustomerApprove{Pelanggan<br />Setuju?}
     Cancelled[(Set Status: CANCELLED)]
     EndCancelled([Selesai:<br />Order Dibatalkan])
     
-    %% Scheduling / Antrian
     UpdateConfirmed[(Set Status: CONFIRMED / QUEUE)]
     
-    %% Penugasan
     AssignMechanic[Tugaskan Mekanik<br />Set mechanicId]
     
-    %% Pengerjaan
     StartWork[Mulai Kerja]
     UpdateInProgress[(Set Status: IN_PROGRESS)]
     ReduceStock[Kurangi Stok Sparepart]
-    CreateHPPEntry[(Jurnal HPP:<br />Dr. HPP 511<br />Cr. Persediaan 111)]
     
     Work[Proses Servis / Modifikasi]
     Complete[Pekerjaan Selesai]
     UpdateReady[(Set Status: READY)]
     NotifyCustomer[Notif Pelanggan:<br />Unit Siap Diambil]
     
-    %% Pembayaran & Penutupan
     Payment[Pembayaran & Kasir]
     CloseOrder[(Set Status: COMPLETED)]
     GenerateInvoice[Cetak Invoice]
     
     End([Selesai:<br />Motor Diambil])
     
-    %% Flow
     Start --> Input
     Input --> SaveOrder
     SaveOrder --> InputEstimate
@@ -623,8 +511,7 @@ export default function Page() {
     AssignMechanic --> StartWork
     StartWork --> UpdateInProgress
     UpdateInProgress --> ReduceStock
-    ReduceStock --> CreateHPPEntry
-    CreateHPPEntry --> Work
+    ReduceStock --> Work
     Work --> Complete
     Complete --> UpdateReady
     UpdateReady --> NotifyCustomer
@@ -633,7 +520,6 @@ export default function Page() {
     CloseOrder --> GenerateInvoice
     GenerateInvoice --> End
     
-    %% Styling
     classDef processStyle fill:#c8e6c9,stroke:#2e7d32,stroke-width:2px
     classDef decisionStyle fill:#fff9c4,stroke:#f57f17,stroke-width:2px
     classDef dataStyle fill:#e1f5ff,stroke:#01579b,stroke-width:2px
@@ -641,16 +527,14 @@ export default function Page() {
     
     class Input,InputEstimate,AssignMechanic,StartWork,Work,Complete,Payment,GenerateInvoice,NotifyCustomer processStyle
     class CustomerApprove decisionStyle
-    class SaveOrder,UpdateEstimated,Cancelled,UpdateConfirmed,UpdateInProgress,ReduceStock,CreateHPPEntry,UpdateReady,CloseOrder dataStyle
+    class SaveOrder,UpdateEstimated,Cancelled,UpdateConfirmed,UpdateInProgress,ReduceStock,UpdateReady,CloseOrder dataStyle
     class Start,End,EndCancelled startEndStyle`,
 
     flowPayment: `flowchart TD
     Start([Mulai:<br />Pencatatan Pembayaran])
     
-    %% Determine Payment Type
     PaymentType{Jenis<br />Pembayaran?}
     
-    %% ORDER PAYMENT BRANCH
     OrderPayment[Pembayaran Order]
     GetOrder[(Ambil Data Order)]
     
@@ -660,33 +544,21 @@ export default function Page() {
     SetOrderPaid[(Set Order:<br />paymentStatus = PAID)]
     SetOrderPartial[(Set Order:<br />paymentStatus = PARTIAL)]
     
-    CheckOrderFirst{Apakah ini<br />Pembayaran Pertama?}
+    CreateOrderPayment[(Buat Payment:<br />type = ORDER_PAYMENT)]
+    UpdateAccountBalance[(Update Account:<br />currentBalance += Amount)]
     
-    %% Jurnal Order
-    JournalDP[(Jurnal DP:<br />Dr. Kas/Bank 101/102<br />Cr. Piutang Usaha 103)]
+    SalaryPayment[Pembayaran Gaji Karyawan]
+    GetEmployee[(Ambil Data Karyawan)]
     
-    JournalLunasLangsung[(Jurnal Lunas:<br />Dr. Kas/Bank 101/102<br />Cr. Pendapatan Jasa 401<br />& Pendapatan Part 402)]
+    InputSalaryAmount[Input Gaji & Komisi]
+    CreateSalaryPayment[(Buat Payment:<br />type = SALARY)]
+    DeductAccountBalance[(Update Account:<br />currentBalance -= Amount)]
     
-    JournalPelunasan1[(Jurnal Pelunasan Kas:<br />Dr. Kas/Bank 101/102<br />Cr. Piutang Usaha 103)]
-    JournalPelunasan2[(Jurnal Pengakuan Pendapatan:<br />Dr. Piutang Usaha 103<br />Cr. Pendapatan Jasa 401<br />& Pendapatan Part 402)]
-    
-    %% PAYROLL PAYMENT BRANCH
-    PayrollPayment[Pembayaran Gaji Karyawan]
-    GetPayroll[(Ambil Data Payroll)]
-    
-    InputPayrollAmount[Input Jumlah Gaji]
-    SetPayrollPaid[(Set Payroll:<br />status = PAID)]
-    
-    JournalPayroll[(Jurnal Gaji:<br />Dr. Utang Gaji & Komisi 202<br />Cr. Kas/Bank 101/102)]
-    
-    %% Common End
-    LogActivity[(Catat Aktivitas)]
+    LogActivity[(Catat Log Aktivitas)]
     Success([Sukses])
     
-    %% Main Flow
     Start --> PaymentType
     
-    %% ORDER PATH
     PaymentType -->|Order| OrderPayment
     OrderPayment --> GetOrder
     GetOrder --> InputOrderAmount
@@ -695,66 +567,54 @@ export default function Page() {
     CheckOrderFull -->|Ya: Lunas| SetOrderPaid
     CheckOrderFull -->|Tidak: Parsial| SetOrderPartial
     
-    SetOrderPaid --> CheckOrderFirst
-    SetOrderPartial --> CheckOrderFirst
+    SetOrderPaid --> CreateOrderPayment
+    SetOrderPartial --> CreateOrderPayment
     
-    CheckOrderFirst -->|Ya, Tapi Parsial DP| JournalDP
-    CheckOrderFirst -->|Ya & Lunas| JournalLunasLangsung
-    CheckOrderFirst -->|Tidak: Pelunasan| JournalPelunasan1
-    JournalPelunasan1 --> JournalPelunasan2
+    CreateOrderPayment --> UpdateAccountBalance
+    UpdateAccountBalance --> LogActivity
     
-    JournalDP --> LogActivity
-    JournalLunasLangsung --> LogActivity
-    JournalPelunasan2 --> LogActivity
-    
-    %% PAYROLL PATH
-    PaymentType -->|Gaji| PayrollPayment
-    PayrollPayment --> GetPayroll
-    GetPayroll --> InputPayrollAmount
-    InputPayrollAmount --> SetPayrollPaid
-    SetPayrollPaid --> JournalPayroll
-    JournalPayroll --> LogActivity
+    PaymentType -->|Gaji| SalaryPayment
+    SalaryPayment --> GetEmployee
+    GetEmployee --> InputSalaryAmount
+    InputSalaryAmount --> CreateSalaryPayment
+    CreateSalaryPayment --> DeductAccountBalance
+    DeductAccountBalance --> LogActivity
     
     LogActivity --> Success
     
-    %% Styling
     classDef processStyle fill:#c8e6c9,stroke:#2e7d32,stroke-width:2px
     classDef decisionStyle fill:#fff9c4,stroke:#f57f17,stroke-width:2px
     classDef dataStyle fill:#e1f5ff,stroke:#01579b,stroke-width:2px
     classDef startEndStyle fill:#ffccbc,stroke:#bf360c,stroke-width:3px
     
-    class OrderPayment,InputOrderAmount,PayrollPayment,InputPayrollAmount processStyle
-    class PaymentType,CheckOrderFull,CheckOrderFirst decisionStyle
-    class GetOrder,SetOrderPaid,SetOrderPartial,JournalDP,JournalLunasLangsung,JournalPelunasan1,JournalPelunasan2,GetPayroll,SetPayrollPaid,JournalPayroll,LogActivity dataStyle
+    class OrderPayment,InputOrderAmount,SalaryPayment,InputSalaryAmount processStyle
+    class PaymentType,CheckOrderFull decisionStyle
+    class GetOrder,SetOrderPaid,SetOrderPartial,CreateOrderPayment,UpdateAccountBalance,GetEmployee,CreateSalaryPayment,DeductAccountBalance,LogActivity dataStyle
     class Start,Success startEndStyle`,
     
     flowPayroll: `flowchart TD
-    Start([Mulai: Hitung Payroll])
+    Start([Mulai: Hitung Gaji & Komisi Karyawan])
     
     InputPeriod[Input Periode:<br />Tanggal Mulai & Akhir]
     GetEmployees[(Ambil Data Karyawan)]
     
-    CheckSalaryType{Tipe Gaji?}
+    CheckSalaryType{Skema Gaji<br />(salaryType)?}
     
-    %% DAILY
     DailyCalc[Gaji Pokok Harian]
-    CountDays[Hitung Hari Kerja<br />- Skip Hari Minggu]
-    CalcDailyBase[Gaji Pokok =<br />Hari Kerja x Rate Harian]
+    CountDays[Hitung Hari Kerja]
+    CalcDailyBase[Gaji Pokok =<br />Hari Kerja x dailyRate]
     
-    %% COMMISSION
-    CommissionCalc[Gaji Pokok Komisi]
-    CountMotors[Hitung Jumlah Motor Selesai<br />dalam Periode]
-    CalcCommissionBase[Gaji Pokok =<br />Motor x Rate Komisi]
+    CommissionCalc[Hitung Komisi Servis]
+    CountMotors[Hitung Motor Selesai Ditangani<br />dalam Periode]
+    CalcCommissionBase[Komisi =<br />Motor x commissionRate]
     
-    %% Common
-    InputBonus[Input Bonus & Catatan]
-    CalcTotal[Total Gaji =<br />Gaji Pokok + Bonus]
+    InputBonus[Input Bonus / Potongan]
+    CalcTotal[Total Diterima =<br />Gaji Pokok + Komisi + Bonus]
     
-    CreatePayroll[(Simpan Payroll:<br />status = UNPAID)]
+    RecordPayment[(Buat Record Payment:<br />type = SALARY)]
     
     End([Selesai])
     
-    %% Flow
     Start --> InputPeriod
     InputPeriod --> GetEmployees
     GetEmployees --> CheckSalaryType
@@ -769,11 +629,12 @@ export default function Page() {
     CountMotors --> CalcCommissionBase
     CalcCommissionBase --> InputBonus
     
-    InputBonus --> CalcTotal
-    CalcTotal --> CreatePayroll
-    CreatePayroll --> End
+    CheckSalaryType -->|MONTHLY| CalcDailyBase
     
-    %% Styling
+    InputBonus --> CalcTotal
+    CalcTotal --> RecordPayment
+    RecordPayment --> End
+    
     classDef processStyle fill:#c8e6c9,stroke:#2e7d32,stroke-width:2px
     classDef decisionStyle fill:#fff9c4,stroke:#f57f17,stroke-width:2px
     classDef dataStyle fill:#e1f5ff,stroke:#01579b,stroke-width:2px
@@ -781,7 +642,7 @@ export default function Page() {
     
     class InputPeriod,DailyCalc,CommissionCalc,InputBonus processStyle
     class CheckSalaryType decisionStyle
-    class GetEmployees,CountDays,CalcDailyBase,CountMotors,CalcCommissionBase,CalcTotal,CreatePayroll dataStyle
+    class GetEmployees,CountDays,CalcDailyBase,CountMotors,CalcCommissionBase,CalcTotal,RecordPayment dataStyle
     class Start,End startEndStyle`,
     
     flowAuthLogin: `flowchart TD
@@ -806,7 +667,6 @@ export default function Page() {
     Success([Sukses: Masuk Dashboard])
     Failed([Gagal])
     
-    %% Login Flow
     Start --> InputCredentials
     InputCredentials --> FindUser
     FindUser --> UserExists
@@ -828,7 +688,6 @@ export default function Page() {
     CreateSession --> LogActivity
     LogActivity --> Success
     
-    %% Styling
     classDef processStyle fill:#c8e6c9,stroke:#2e7d32,stroke-width:2px
     classDef decisionStyle fill:#fff9c4,stroke:#f57f17,stroke-width:2px
     classDef dataStyle fill:#e1f5ff,stroke:#01579b,stroke-width:2px
@@ -850,12 +709,11 @@ export default function Page() {
     UserExists{User Ada?}
     ShowMessage[Tampilkan Pesan:<br />Permintaan dikirim ke admin]
     
-    CreateRequest[(Buat ForgotPasswordRequest<br />status = PENDING)]
-    LogActivity[(Log: FORGOT_PASSWORD_REQUEST)]
+    CreateRequest[(Update User.forgotRequests JSON<br />status = PENDING)]
+    LogActivity[(Catat Log Aktivitas)]
     
     End([Selesai])
     
-    %% Flow
     Start --> InputEmail
     InputEmail --> FindUser
     FindUser --> UserExists
@@ -866,7 +724,6 @@ export default function Page() {
     LogActivity --> ShowMessage
     ShowMessage --> End
     
-    %% Styling
     classDef processStyle fill:#c8e6c9,stroke:#2e7d32,stroke-width:2px
     classDef decisionStyle fill:#fff9c4,stroke:#f57f17,stroke-width:2px
     classDef dataStyle fill:#e1f5ff,stroke:#01579b,stroke-width:2px
@@ -880,18 +737,17 @@ export default function Page() {
     flowAuthResolve: `flowchart TD
     Start([Mulai: Resolusi Lupa Password])
     
-    GetRequests[(Ambil Daftar Request PENDING)]
+    GetRequests[(Ambil Request PENDING dari User)]
     OwnerInput[Owner Input Password Baru]
     
-    HashPassword[Hash Password Baru]
+    HashPassword[Hash Password Baru dengan bcrypt]
     
-    UpdateUserAndPassword[(Transaction:<br />- Update User Password<br />- Set Request status = RESOLVED)]
+    UpdateUserAndPassword[(Update User:<br />- password = Hash Baru<br />- resetToken & forgotRequests updated)]
     
-    LogActivity[(Log: RESOLVE_FORGOT_PASSWORD)]
+    LogActivity[(Catat Log Aktivitas)]
     
     Success([Sukses: Password Berhasil Direset])
     
-    %% Flow
     Start --> GetRequests
     GetRequests --> OwnerInput
     OwnerInput --> HashPassword
@@ -899,7 +755,6 @@ export default function Page() {
     UpdateUserAndPassword --> LogActivity
     LogActivity --> Success
     
-    %% Styling
     classDef processStyle fill:#c8e6c9,stroke:#2e7d32,stroke-width:2px
     classDef dataStyle fill:#e1f5ff,stroke:#01579b,stroke-width:2px
     classDef startEndStyle fill:#ffccbc,stroke:#bf360c,stroke-width:3px
@@ -932,32 +787,27 @@ export default function Page() {
     end
 
     subgraph OwnerFeatures["📊 FITUR OWNER"]
-        UC9["Laporan Keuangan & Akuntansi"]
-        UC10["Proses & Bayar Payroll Gaji"]
+        UC9["Laporan Keuangan & Kas/Bank"]
+        UC10["Proses & Bayar Gaji Karyawan"]
         UC11["Kelola Akun Pengguna & Profil"]
     end
 
-    %% Customer Connections
     Customer -.-> UC1
     Customer -.-> UC2
 
-    %% Admin Connections
     Admin -.-> UC4
     Admin -.-> UC5
     Admin -.-> UC6
     Admin -.-> UC2
 
-    %% Mechanic Connections
     Mechanic -.-> UC7
     Mechanic -.-> UC2
 
-    %% Owner Connections
     Owner -.-> UC9
     Owner -.-> UC10
     Owner -.-> UC11
     Owner -.-> UC5
 
-    %% Styling
     classDef actorStyle fill:#e3f2fd,stroke:#1976d2,stroke-width:2px,color:#000
     classDef publicStyle fill:#e8f5e9,stroke:#388e3c,stroke-width:2px
     classDef adminStyle fill:#fff3e0,stroke:#f57c00,stroke-width:2px
@@ -1016,7 +866,7 @@ export default function Page() {
     Sys-->>Admin: Simpan Order & Generate ID
     
     Admin->>Sys: Input Estimasi Biaya (Jasa & Parts)
-    Sys-->>Admin: Simpan Items (Status: ESTIMATED)
+    Sys-->>Admin: Simpan OrderItem (Status: ESTIMATED)
     
     Cust->>Admin: Setujui Estimasi
     Admin->>Sys: Konfirmasi Order (Status: CONFIRMED/QUEUE)
@@ -1026,7 +876,6 @@ export default function Page() {
     
     Mech->>Sys: Mulai Kerja (Status: IN_PROGRESS)
     Sys->>Sys: Kurangi Stok Sparepart
-    Sys->>Sys: Buat Jurnal HPP (Dr. HPP, Cr. Persediaan)
     
     Mech->>Sys: Selesai Pengerjaan (Status: READY)
     Sys-->>Cust: Notifikasi Unit Siap Diambil
@@ -1034,89 +883,71 @@ export default function Page() {
     Cust->>Admin: Melakukan Pembayaran (Kasir)
     Admin->>Sys: Input Pembayaran (CASH/TRANSFER)
     Sys->>Sys: Update totalPaid & paymentStatus (PAID)
-    Sys->>Sys: Buat Jurnal Pendapatan (Kas vs Pendapatan)
+    Sys->>Sys: Update Saldo Account Kas/Bank
     
     Admin->>Sys: Tutup Order (Status: COMPLETED)
     Sys-->>Admin: Cetak Kwitansi/Invoice`,
 
     dfdHighLevel: `graph TD
-    %% Entities
     Customer((Customer/Pengunjung))
     Admin((Admin Terotorisasi))
     Mechanic((Mekanik))
     SystemDB[(Sistem Database)]
 
-    %% Flow 1: Booking
     Customer -- "1. Melakukan Booking (Form Web)" --> S1[Aksi: Buat Booking]
     S1 -->|"Simpan (PENDING)"| SystemDB
     SystemDB -->|"Notifikasi Order Baru"| Admin
 
-    %% Flow 2: Estimation
     Admin -- "2. Review & Estimasi (Input Servis/Part)" --> S2[Aksi: Update Estimasi]
     S2 -->|"Update Status (ESTIMATED)"| SystemDB
     
-    %% Flow 3: Confirmation
     Customer -- "3. Setuju Estimasi" --> S3[Aksi: Konfirmasi Order]
     S3 -->|"Update Status (CONFIRMED)"| SystemDB
     S3 -->|"Masuk Antrian (QUEUE)"| Mechanic
 
-    %% Flow 4: Processing
     Mechanic -- "4. Mengerjakan Servis" --> S4[Aksi: Proses Order]
     S4 -->|"Update Status (IN_PROGRESS)"| SystemDB
     S4 -->|"Kurangi Stok Sparepart"| SystemDB
-    S4 -->|"Buat Jurnal HPP & Accrual Komisi"| SystemDB
 
-    %% Flow 5: Completion
     Mechanic -- "5. Selesai Pengerjaan" --> S5[Aksi: Selesai Order]
     S5 -->|"Update Status (READY)"| SystemDB
     SystemDB -->|"Notifikasi Unit Siap"| Customer
 
-    %% Flow 6: Payment & Closing
     Customer -- "6. Pembayaran" --> Admin
     Admin -- "7. Input Pembayaran" --> S6[Aksi: Proses Pembayaran]
     S6 -->|"Update Status (COMPLETED) & Simpan Payment"| SystemDB
-    S6 -->|"Catat Jurnal Keuangan (Kas/Pendapatan)"| SystemDB`,
+    S6 -->|"Update Saldo Account Kas/Bank"| SystemDB`,
 
     seqFinance: `sequenceDiagram
     participant Admin as Admin/Kasir
     participant BO as Sistem Order
     participant INV as Sistem Inventory
-    participant ACC as Akuntansi Jurnal
-    participant BNK as BankAccount / Kas
+    participant ACC as Kas & Bank (Account)
+    participant PAY as Sistem Payment
 
-    Note over Admin, BNK: Skenario 1: Penggunaan Sparepart saat Servis (HPP)
+    Note over Admin, PAY: Skenario 1: Penggunaan Sparepart saat Servis
     Admin->>BO: Mulai Kerja (Status: IN_PROGRESS)
-    BO->>INV: Kurangi Stok Sparepart
-    BO->>ACC: Trigger Penjurnal HPP
-    ACC->>ACC: Debit: HPP (511)<br />Kredit: Persediaan Sparepart (111)
+    BO->>INV: Kurangi Stok Sparepart (stock -= quantity)
 
-    Note over Admin, BNK: Skenario 2: Komisi Mekanik Terakru (Accrual)
-    Admin->>BO: Tugaskan Mekanik & Input Komisi
-    BO->>ACC: Trigger Jurnal Accrual Komisi
-    ACC->>ACC: Debit: Beban Gaji & Komisi (501)<br />Kredit: Utang Gaji & Komisi (202)
-
-    Note over Admin, BNK: Skenario 3: Pembayaran Order oleh Pelanggan
+    Note over Admin, PAY: Skenario 2: Pembayaran Order oleh Pelanggan
     Admin->>BO: Catat Pembayaran Order (DP / Lunas)
-    BO->>ACC: Trigger Jurnal Pendapatan & Kas
-    alt Pembayaran Lunas Langsung
-        ACC->>ACC: Debit: Kas Tunai/Bank (101/102)<br />Kredit: Pendapatan Jasa (401) & Pendapatan Part (402)
-    else Pembayaran DP (Parsial)
-        ACC->>ACC: Debit: Kas Tunai/Bank (101/102)<br />Kredit: Piutang Usaha (103)
-    end
-    BO->>BNK: Update Saldo Rekening (jika transfer)`,
+    BO->>PAY: Buat Record Payment (type: ORDER_PAYMENT)
+    PAY->>ACC: Tambah currentBalance pada Account Kas/Bank
+    BO->>BO: Update totalPaid & paymentStatus (PAID/PARTIAL)
+
+    Note over Admin, PAY: Skenario 3: Pembayaran Gaji Karyawan oleh Owner
+    Admin->>PAY: Catat Payout Gaji (type: SALARY)
+    PAY->>ACC: Potong currentBalance pada Account Kas/Bank`,
 
     flowLanding: `flowchart TD
     Start([Mulai: Kunjungan User])
     
-    %% Main Sections
     Hero[Lihat Hero Section]
     Services[Lihat Layanan]
     Socials[Lihat Media Sosial]
     
-    %% Actions
     ActionCheck{Aksi User?}
     
-    %% Booking Path
     PathBooking[Booking Servis]
     FormBooking[Isi Form Booking:<br />- Nama, HP, Motor, Keluhan<br />- Pilih Tipe Servis & Tanggal]
     Validation{Valid?}
@@ -1125,7 +956,6 @@ export default function Page() {
     SaveDB[(Buat Order PENDING)]
     SuccessBooking[Tampilkan Sukses &<br />Nomor Antrian]
     
-    %% Tracking Path
     PathTrack[Lacak Order]
     InputTrack[Input No HP atau Plat No]
     SearchDB[(Cari Order)]
@@ -1133,12 +963,10 @@ export default function Page() {
     ShowStatus["Tampilkan Status Order<br />(Antrian/Proses/Selesai)"]
     ShowNotFound["Tampilkan 'Tidak Ditemukan'"]
     
-    %% Kanban Path
     PathKanban[Kanban Publik]
     LoadKanban[(Ambil Order Publik)]
     DisplayBoard[Tampilkan Papan Antrian]
     
-    %% Flow
     Start --> Hero
     Hero --> Services
     Services --> Socials
@@ -1167,7 +995,6 @@ export default function Page() {
     PathKanban --> LoadKanban
     LoadKanban --> DisplayBoard
     
-    %% Styling
     classDef action fill:#e1f5fe,stroke:#0277bd,stroke-width:2px;
     classDef success fill:#c8e6c9,stroke:#2e7d32,stroke-width:2px;
     classDef error fill:#ffcdd2,stroke:#c62828,stroke-width:2px;
@@ -1179,48 +1006,40 @@ export default function Page() {
     flowCMS: `flowchart TD
     Start([Mulai: Admin CMS])
     
-    %% Navigation
     Dashboard[Dashboard Admin]
     TabContent[Tab Konten & Media]
     
-    %% Selection
     SelectFeature{Kelola Apa?}
     
-    %% 1. Media Gallery
     FlowMedia[Galeri Media]
     ActionMedia{Aksi?}
     
     UploadImg[Upload Gambar]
     SaveStorage[(Simpan ke /public/uploads)]
-    CreateRecord[(Buat Data MediaGallery)]
+    CreateRecord[(Buat SystemConfig category: MEDIA_GALLERY)]
     
     ToggleMedia[Ubah Visibilitas]
-    UpdateStatus[(Update Status Aktif)]
+    UpdateStatus[(Update isVisible)]
     
     DeleteMedia[Hapus Gambar]
-    RemoveFile[(Hapus File & Data)]
+    RemoveFile[(Hapus File & SystemConfig)]
     
-    %% 2. Social Embeds
     FlowSocial[Embed Sosial Media]
     InputUrl[Input URL TikTok/IG]
-    SaveEmbed[(Simpan SocialEmbed)]
+    SaveEmbed[(Simpan SystemConfig category: SOCIAL_EMBED)]
     
-    %% 3. Text Content
     FlowText[Bagian Teks]
-    SelectSection[Pilih Bagian:<br />Hero/About/Contact]
-    EditContent[Edit Judul/Isi]
-    SaveContent[(Update ContentSection)]
+    SelectSection[Pilih Section Key:<br />HERO / ABOUT / CONTACT]
+    EditContent[Edit Judul/Isi/Media]
+    SaveContent[(Update SystemConfig category: CONTENT)]
     
-    %% Public Update
     Revalidate[Revalidasi Cache Next.js]
     UpdatePublic[Landing Page Terupdate]
     
-    %% Connections
     Start --> Dashboard
     Dashboard --> TabContent
     TabContent --> SelectFeature
     
-    %% Media Branch
     SelectFeature -->|Media| FlowMedia
     FlowMedia --> ActionMedia
     
@@ -1237,13 +1056,11 @@ export default function Page() {
     DeleteMedia --> RemoveFile
     RemoveFile --> Revalidate
     
-    %% Social Branch
     SelectFeature -->|Sosial| FlowSocial
     FlowSocial --> InputUrl
     InputUrl --> SaveEmbed
     SaveEmbed --> Revalidate
     
-    %% Text Branch
     SelectFeature -->|Teks| FlowText
     FlowText --> SelectSection
     SelectSection --> EditContent
@@ -1255,7 +1072,6 @@ export default function Page() {
     hierarchy: `graph TD
     System[Sistem Manajemen NopzGarage]
     
-    %% Level 1: Roles / Access Levels
     OwnerAccess[1. Owner - Full Control]
     AdminAccess[2. Admin - Operations & Cashier]
     EmployeeAccess[3. Employee / Mechanic - Work Execution]
@@ -1266,29 +1082,24 @@ export default function Page() {
     System --> EmployeeAccess
     System --> PublicAccess
     
-    %% Owner Features
     OwnerAccess --> OwnerU[Manajemen Pengguna & Karyawan]
-    OwnerAccess --> OwnerPay[Payroll & Gaji Karyawan]
-    OwnerAccess --> OwnerFin[Laporan Keuangan & Akuntansi]
+    OwnerAccess --> OwnerPay[Penggajian & Gaji Karyawan]
+    OwnerAccess --> OwnerFin[Laporan Keuangan & Kas/Bank]
     OwnerAccess --> OwnerSet[Konfigurasi Sistem]
     
-    %% Admin Features
     AdminAccess --> AdminOrd[Input & Estimasi Order]
     AdminAccess --> AdminPay[Kasir & Rekonsiliasi Bank]
     AdminAccess --> AdminInv[Manajemen Stok & Penyesuaian]
     AdminAccess --> AdminCMS[Kelola Konten CMS Landing Page]
     
-    %% Employee Features
     EmployeeAccess --> EmpTask[Daftar Antrian Kerja]
     EmployeeAccess --> EmpWork[Update Progress Kerja]
     EmployeeAccess --> EmpSlip[Lihat Slip & Histori Gaji]
     
-    %% Public Features
     PublicAccess --> PubBook[Form Booking Online]
     PublicAccess --> PubTrack[Lacak Status Order]
     PublicAccess --> PubKanban[Papan Antrian Publik]
     
-    %% Styling
     classDef main fill:#3b82f6,stroke:#1d4ed8,stroke-width:3px,color:#fff;
     classDef owner fill:#fce4ec,stroke:#c2185b,stroke-width:2px;
     classDef admin fill:#fff3e0,stroke:#f57c00,stroke-width:2px;
@@ -1318,7 +1129,7 @@ export default function Page() {
           <h1 className="text-3xl md:text-4xl font-black text-foreground">
              Technical Documentation
           </h1>
-          <p className="text-muted-foreground">NopzGarage Management System v2.1.0</p>
+          <p className="text-muted-foreground">NopzGarage Management System v2.2.0</p>
         </div>
       </div>
 
@@ -1380,13 +1191,14 @@ export default function Page() {
         onValueChange={setActiveTab}
         className="space-y-6"
       >
-        <TabsList className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 w-full overflow-x-auto">
+        <TabsList className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-9 w-full overflow-x-auto">
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="database">Database</TabsTrigger>
           <TabsTrigger value="accounts">COA</TabsTrigger>
           <TabsTrigger value="diagrams">Diagrams</TabsTrigger>
           <TabsTrigger value="components">Components</TabsTrigger>
           <TabsTrigger value="structure">Structure</TabsTrigger>
+          <TabsTrigger value="guidelines">Guidelines</TabsTrigger>
           <TabsTrigger value="features">Features</TabsTrigger>
           <TabsTrigger value="setup">Setup</TabsTrigger>
         </TabsList>
@@ -1508,7 +1320,7 @@ export default function Page() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <GitBranch className="h-5 w-5" />
-                System Diagrams (Updated v2.1.0)
+                System Diagrams (Updated v2.2.0)
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -1600,13 +1412,13 @@ export default function Page() {
                 <AccordionItem value="seqFinance">
                   <AccordionTrigger className="text-lg font-semibold flex items-center gap-2">
                     <DollarSign className="h-5 w-5 text-green-600" />
-                    Financial & Accounting Sequence (Auto-Journal)
+                    Financial & Cash Mutation Sequence
                   </AccordionTrigger>
                   <AccordionContent>
                     <MermaidDiagram chart={diagrams.seqFinance} />
                     <p className="mt-2 text-sm text-muted-foreground">
-                      Diagram sequence ini menjelaskan bagaimana transaksi operasional (seperti pemakaian sparepart dan pembayaran) 
-                      secara otomatis memicu pencatatan akuntansi (Jurnal HPP, Jurnal Pendapatan) secara real-time.
+                      Diagram sequence ini menjelaskan bagaimana transaksi operasional (seperti pemakaian sparepart, penerimaan pembayaran order, dan pembayaran gaji) 
+                      secara otomatis memicu pembaruan saldo rekening kas/bank (Account) secara real-time.
                     </p>
                   </AccordionContent>
                 </AccordionItem>
@@ -1703,7 +1515,7 @@ export default function Page() {
                  <AccordionItem value="flowPayment">
                   <AccordionTrigger className="text-lg font-semibold flex items-center gap-2">
                     <CreditCard className="h-5 w-5 text-green-600" />
-                    Flowchart 2: Payment & Journal Logic
+                    Flowchart 2: Payment & Account Balance Logic
                   </AccordionTrigger>
                   <AccordionContent>
                     <MermaidDiagram chart={diagrams.flowPayment} />
@@ -1862,12 +1674,12 @@ export default function Page() {
                      <Folder className="h-4 w-4 text-blue-500" /> Root Directory
                    </h3>
                    <ul className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm">
-                     <li className="p-2 border rounded bg-muted/20"><span className="font-mono font-bold">app/</span>: Core logic, routing, server actions</li>
-                     <li className="p-2 border rounded bg-muted/20"><span className="font-mono font-bold">components/</span>: Reusable UI components</li>
+                     <li className="p-2 border rounded bg-muted/20"><span className="font-mono font-bold">app/</span>: Page routes, layouts, and API endpoints</li>
+                     <li className="p-2 border rounded bg-muted/20"><span className="font-mono font-bold">lib/actions/</span>: Server Actions (core backend logic)</li>
+                     <li className="p-2 border rounded bg-muted/20"><span className="font-mono font-bold">components/</span>: Reusable UI & dialog components</li>
                      <li className="p-2 border rounded bg-muted/20"><span className="font-mono font-bold">prisma/</span>: Database schema & seeds</li>
-                     <li className="p-2 border rounded bg-muted/20"><span className="font-mono font-bold">lib/</span>: Utilities, auth, helpers</li>
-                     <li className="p-2 border rounded bg-muted/20"><span className="font-mono font-bold">public/</span>: Static assets</li>
-                     <li className="p-2 border rounded bg-muted/20"><span className="font-mono font-bold">types/</span>: TypeScript definitions</li>
+                     <li className="p-2 border rounded bg-muted/20"><span className="font-mono font-bold">lib/</span>: Utilities, auth & export helpers</li>
+                     <li className="p-2 border rounded bg-muted/20"><span className="font-mono font-bold">public/</span>: Static assets & uploaded images</li>
                    </ul>
                  </div>
 
@@ -1879,20 +1691,20 @@ export default function Page() {
                    <div className="space-y-2 text-sm pl-4 border-l-2 border-muted">
                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                        <div>
-                         <p className="font-mono font-bold text-primary">actions/</p>
-                         <p className="text-muted-foreground">Server Actions (Backend Logic)</p>
-                       </div>
-                       <div>
                          <p className="font-mono font-bold text-primary">admin/</p>
-                         <p className="text-muted-foreground">Protected Admin Dashboard Routes</p>
+                         <p className="text-muted-foreground">Protected Admin & Owner Dashboard Routes</p>
                        </div>
                        <div>
                          <p className="font-mono font-bold text-primary">employee/</p>
-                         <p className="text-muted-foreground">Employee Dashboard Routes</p>
+                         <p className="text-muted-foreground">Employee Portal & Order Tracking</p>
+                       </div>
+                       <div>
+                         <p className="font-mono font-bold text-primary">kanban/ & status/</p>
+                         <p className="text-muted-foreground">Public Queue Board & Order Status Tracking</p>
                        </div>
                        <div>
                          <p className="font-mono font-bold text-primary">api/</p>
-                         <p className="text-muted-foreground">REST API Endpoints</p>
+                         <p className="text-muted-foreground">REST API & NextAuth Endpoints</p>
                        </div>
                      </div>
                    </div>
@@ -1915,11 +1727,11 @@ export default function Page() {
 
                       <div className="border rounded-lg p-4">
                         <h4 className="font-bold mb-2 flex items-center gap-2">
-                          <DollarSign className="h-4 w-4" /> Finance & Accounting
+                          <DollarSign className="h-4 w-4" /> Finance & Cashflow
                         </h4>
-                        <p className="text-sm text-muted-foreground mb-2">Double-Entry Bookkeeping</p>
+                        <p className="text-sm text-muted-foreground mb-2">Payment & Bank Reconciliation</p>
                         <div className="text-xs bg-muted p-2 rounded font-mono">
-                          Payment -{'>'} JournalEntry -{'>'} Account
+                          Order -{'>'} Payment -{'>'} Account (Kas/Bank)
                         </div>
                       </div>
 
@@ -1939,13 +1751,219 @@ export default function Page() {
                         </h4>
                         <p className="text-sm text-muted-foreground mb-2">Employee Compensation</p>
                         <div className="text-xs bg-muted p-2 rounded font-mono">
-                          Employee -{'>'} OrderFee -{'>'} Payroll
+                          Employee -{'>'} OrderItem (Komisi) -{'>'} Payment (Gaji)
                         </div>
                       </div>
 
                     </div>
                  </div>
                </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Guidelines Tab */}
+        <TabsContent value="guidelines" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <FileCode className="h-5 w-5 text-primary" />
+                Standard Coding Guidelines & Project Rules
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Accordion type="single" collapsible className="w-full">
+                
+                {/* 1. Prinsip Umum */}
+                <AccordionItem value="g1">
+                  <AccordionTrigger className="text-lg font-semibold flex items-center gap-2">
+                    <CheckCircle2 className="h-5 w-5 text-emerald-500" />
+                    1. Prinsip Umum (General Principles)
+                  </AccordionTrigger>
+                  <AccordionContent className="space-y-3 text-sm text-muted-foreground">
+                    <ul className="list-disc list-inside space-y-2">
+                      <li><strong className="text-foreground">App Router sebagai Standar:</strong> Gunakan App Router (<code className="bg-muted px-1.5 py-0.5 rounded text-foreground font-mono">app/</code>) sebagai arsitektur routing utama. Pages Router hanya untuk legacy.</li>
+                      <li><strong className="text-foreground">TypeScript Wajib:</strong> Seluruh kode proyek wajib menggunakan TypeScript (<code className="bg-muted px-1.5 py-0.5 rounded text-foreground font-mono">.ts</code> / <code className="bg-muted px-1.5 py-0.5 rounded text-foreground font-mono">.tsx</code>). JavaScript murni dilarang kecuali config root (seperti <code className="bg-muted px-1.5 py-0.5 rounded text-foreground font-mono">next.config.mjs</code>).</li>
+                      <li><strong className="text-foreground">Fitur Modern ES6+:</strong> Gunakan <code className="bg-muted px-1.5 py-0.5 rounded text-foreground font-mono">const/let</code>, arrow functions, template literals, destructuring, optional chaining (<code className="bg-muted px-1.5 py-0.5 rounded text-foreground font-mono">?.</code>), dan nullish coalescing (<code className="bg-muted px-1.5 py-0.5 rounded text-foreground font-mono">??</code>).</li>
+                      <li><strong className="text-foreground">React Server Components (RSC) Default:</strong> Komponen di <code className="bg-muted px-1.5 py-0.5 rounded text-foreground font-mono">app/</code> secara default adalah Server Component. Hanya tambahkan direktif <code className="bg-muted px-1.5 py-0.5 rounded text-foreground font-mono font-bold">&quot;use client&quot;</code> di baris pertama jika membutuhkan interaktivitas klien (useState, useEffect, event handler).</li>
+                      <li><strong className="text-foreground">Format Kode Otomatis:</strong> Menggunakan Prettier sebagai instrumen format kode standar tim.</li>
+                      <li><strong className="text-foreground">Sistem Tipe Struktural:</strong> Gunakan <code className="bg-muted px-1.5 py-0.5 rounded text-foreground font-mono font-bold">interface</code> daripada <code className="bg-muted px-1.5 py-0.5 rounded text-foreground font-mono">type</code> alias saat memodelkan struktur objek.</li>
+                      <li><strong className="text-foreground">Eksport Modul:</strong> Gunakan <code className="bg-muted px-1.5 py-0.5 rounded text-foreground font-mono">named exports</code> (<code className="bg-muted px-1.5 py-0.5 rounded text-foreground font-mono">export function Page() &#123;&#125;</code>). Dilarang default export kecuali file konvensi Next.js (<code className="bg-muted px-1.5 py-0.5 rounded text-foreground font-mono">page.tsx</code>, <code className="bg-muted px-1.5 py-0.5 rounded text-foreground font-mono">layout.tsx</code>, dll).</li>
+                    </ul>
+                  </AccordionContent>
+                </AccordionItem>
+
+                {/* 2. File & Folder Naming */}
+                <AccordionItem value="g2">
+                  <AccordionTrigger className="text-lg font-semibold flex items-center gap-2">
+                    <Folder className="h-5 w-5 text-amber-500" />
+                    2. Konvensi Penamaan File & Folder
+                  </AccordionTrigger>
+                  <AccordionContent className="space-y-3 text-sm">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      <div className="p-3 border rounded bg-muted/20">
+                        <span className="font-semibold text-foreground">Folder Route / Fitur:</span>
+                        <p className="font-mono text-xs text-primary mt-1">kebab-case (contoh: user-profile/, dashboard/)</p>
+                      </div>
+                      <div className="p-3 border rounded bg-muted/20">
+                        <span className="font-semibold text-foreground">File Konvensi Next.js:</span>
+                        <p className="font-mono text-xs text-primary mt-1">lowercase (contoh: page.tsx, layout.tsx, loading.tsx)</p>
+                      </div>
+                      <div className="p-3 border rounded bg-muted/20">
+                        <span className="font-semibold text-foreground">Komponen React (File):</span>
+                        <p className="font-mono text-xs text-primary mt-1">PascalCase (contoh: UserCard.tsx, InvoiceTable.tsx)</p>
+                      </div>
+                      <div className="p-3 border rounded bg-muted/20">
+                        <span className="font-semibold text-foreground">Utilitas / Helper:</span>
+                        <p className="font-mono text-xs text-primary mt-1">camelCase (contoh: formatDate.ts, fetchRevenue.ts)</p>
+                      </div>
+                      <div className="p-3 border rounded bg-muted/20">
+                        <span className="font-semibold text-foreground">Konfigurasi Root:</span>
+                        <p className="font-mono text-xs text-primary mt-1">Standar ekosistem (contoh: next.config.mjs, tailwind.config.ts)</p>
+                      </div>
+                      <div className="p-3 border rounded bg-muted/20">
+                        <span className="font-semibold text-foreground">Dokumentasi:</span>
+                        <p className="font-mono text-xs text-primary mt-1">UPPERCASE / kebab-case (contoh: README.md, CHANGELOG.md)</p>
+                      </div>
+                    </div>
+                  </AccordionContent>
+                </AccordionItem>
+
+                {/* 3. Aturan Kode & Identifiers */}
+                <AccordionItem value="g3">
+                  <AccordionTrigger className="text-lg font-semibold flex items-center gap-2">
+                    <Code className="h-5 w-5 text-blue-500" />
+                    3. Standar Kode & Identifiers
+                  </AccordionTrigger>
+                  <AccordionContent className="space-y-3 text-sm text-muted-foreground">
+                    <ul className="list-disc list-inside space-y-1.5">
+                      <li><strong className="text-foreground">Variabel, Fungsi & Metode:</strong> <code className="font-mono bg-muted px-1 rounded">camelCase</code> (contoh: <code className="font-mono text-foreground">getUserName()</code>, <code className="font-mono text-foreground">isActive</code>)</li>
+                      <li><strong className="text-foreground">Komponen React & Types:</strong> <code className="font-mono bg-muted px-1 rounded">PascalCase</code> (contoh: <code className="font-mono text-foreground">&lt;UserProfile /&gt;</code>, <code className="font-mono text-foreground">InvoiceStatus</code>)</li>
+                      <li><strong className="text-foreground">Konstanta Statis Modul:</strong> <code className="font-mono bg-muted px-1 rounded">CONSTANT_CASE</code> (contoh: <code className="font-mono text-foreground">MAX_TIMEOUT</code>, <code className="font-mono text-foreground">API_BASE_URL</code>)</li>
+                      <li><strong className="text-foreground">Props Component & DOM:</strong> <code className="font-mono bg-muted px-1 rounded">camelCase</code> (contoh: <code className="font-mono text-foreground">userId</code>, <code className="font-mono text-foreground">className</code>, <code className="font-mono text-foreground">htmlFor</code>)</li>
+                      <li><strong className="text-foreground">Event Handlers (Props):</strong> Awalan <code className="font-mono bg-muted px-1 rounded font-bold">on</code> (contoh: <code className="font-mono text-foreground">onClick</code>, <code className="font-mono text-foreground">onValueChange</code>)</li>
+                      <li><strong className="text-foreground">Event Handlers (Internal):</strong> Awalan <code className="font-mono bg-muted px-1 rounded font-bold">handle</code> (contoh: <code className="font-mono text-foreground">handleClick</code>, <code className="font-mono text-foreground">handleSubmit</code>)</li>
+                      <li><strong className="text-foreground">Array / Koleksi:</strong> Format Plural tanpa suffix tipe (contoh: <code className="font-mono text-foreground">users</code>, <code className="font-mono text-foreground">invoices</code> — bukan <code className="font-mono text-destructive">userList</code>)</li>
+                      <li><strong className="text-foreground">Larangan:</strong> Dilarang menggunakan Notasi Hungarian (misal: <code className="font-mono text-destructive">sName</code>) dan awalan/akhiran underscore (<code className="font-mono text-destructive">_name</code>).</li>
+                    </ul>
+                  </AccordionContent>
+                </AccordionItem>
+
+                {/* 4. Structure Directives */}
+                <AccordionItem value="g4">
+                  <AccordionTrigger className="text-lg font-semibold flex items-center gap-2">
+                    <FolderTree className="h-5 w-5 text-indigo-500" />
+                    4. Arsitektur Struktur Direktori
+                  </AccordionTrigger>
+                  <AccordionContent className="space-y-2 text-xs font-mono bg-muted p-4 rounded-lg">
+                    <div>project-root/</div>
+                    <div>├── app/              # Root layouts, route segments, server components & API route handlers</div>
+                    <div>├── components/       # Reusable UI primitives (ui/), layout (layout/) & feature components</div>
+                    <div>├── lib/              # Business logic, server actions (actions.ts), Prisma & data helpers</div>
+                    <div>├── public/           # Static assets (images/, fonts/, uploads/)</div>
+                    <div>├── middleware.ts      # Next.js edge request middleware</div>
+                    <div>└── next.config.mjs   # Root Next.js configuration</div>
+                  </AccordionContent>
+                </AccordionItem>
+
+                {/* 5. Component Writing Order */}
+                <AccordionItem value="g5">
+                  <AccordionTrigger className="text-lg font-semibold flex items-center gap-2">
+                    <Layers className="h-5 w-5 text-purple-500" />
+                    5. Urutan Penulisan File Komponen
+                  </AccordionTrigger>
+                  <AccordionContent className="space-y-2 text-sm">
+                    <ol className="list-decimal list-inside space-y-1.5 text-muted-foreground">
+                      <li><strong className="text-foreground">Direktif:</strong> <code className="font-mono bg-muted px-1.5 py-0.5 rounded text-foreground">&quot;use client&quot;;</code> (jika diperlukan)</li>
+                      <li><strong className="text-foreground">Import Statements:</strong> External libraries → Internal components → Utilities/Helpers → Types</li>
+                      <li><strong className="text-foreground">Interface/Type Props:</strong> Definisi tipe props komponen (<code className="font-mono bg-muted px-1 rounded">interface UserCardProps &#123; ... &#125;</code>)</li>
+                      <li><strong className="text-foreground">Deklarasi Komponen:</strong> Fungsi utama komponen (<code className="font-mono bg-muted px-1 rounded">export default function UserCard() &#123; ... &#125;</code>)</li>
+                      <li><strong className="text-foreground">Fungsi Helper Internal:</strong> Utility internal lokal file (jika ada)</li>
+                      <li><strong className="text-foreground">Export Statements:</strong> Default / named export</li>
+                    </ol>
+                  </AccordionContent>
+                </AccordionItem>
+
+                {/* 6 & 7. Functions, Control Flow & Loops */}
+                <AccordionItem value="g6">
+                  <AccordionTrigger className="text-lg font-semibold flex items-center gap-2">
+                    <Workflow className="h-5 w-5 text-cyan-500" />
+                    6 & 7. Deklarasi Fungsi, Control Flow & Perulangan
+                  </AccordionTrigger>
+                  <AccordionContent className="space-y-3 text-sm text-muted-foreground">
+                    <ul className="list-disc list-inside space-y-2">
+                      <li><strong className="text-foreground">Function Declaration:</strong> Gunakan <code className="font-mono bg-muted px-1.5 py-0.5 rounded text-foreground">function calculate() &#123;&#125;</code> untuk komponen & fungsi utama. Arrow function <code className="font-mono bg-muted px-1.5 py-0.5 rounded text-foreground">() =&gt; &#123;&#125;</code> khusus callback inline.</li>
+                      <li><strong className="text-foreground">Wajib Kurung Kurawal:</strong> Blok statement <code className="font-mono bg-muted px-1.5 py-0.5 rounded text-foreground">&#123; ... &#125;</code> wajib ditulis meskipun 1 baris.</li>
+                      <li><strong className="text-foreground">Guard Pattern / Early Return:</strong> Terapkan early return, hilangkan blok <code className="font-mono bg-muted px-1.5 py-0.5 rounded text-foreground">else</code> jika cabang <code className="font-mono bg-muted px-1.5 py-0.5 rounded text-foreground">if</code> mengembalikan nilai (<code className="font-mono bg-muted px-1.5 py-0.5 rounded text-foreground">return</code>).</li>
+                      <li><strong className="text-foreground">Array Iteration:</strong> Dilarang perulangan primitif (<code className="font-mono text-destructive">for (let i = 0; ...)</code>). Gunakan <code className="font-mono text-primary font-bold">.map()</code>, <code className="font-mono text-primary font-bold">.filter()</code>, <code className="font-mono text-primary font-bold">.find()</code>, <code className="font-mono text-primary font-bold">.forEach()</code>, <code className="font-mono text-primary font-bold">.every()</code>.</li>
+                      <li><strong className="text-foreground">Switch Case:</strong> Wajib meletakkan <code className="font-mono bg-muted px-1.5 py-0.5 rounded text-foreground">default</code> paling bawah dan jangan menambah <code className="font-mono text-destructive">break</code> di bawah statement <code className="font-mono bg-muted px-1.5 py-0.5 rounded text-foreground">return</code>.</li>
+                    </ul>
+                  </AccordionContent>
+                </AccordionItem>
+
+                {/* 8. Next.js Routing Conventions */}
+                <AccordionItem value="g8">
+                  <AccordionTrigger className="text-lg font-semibold flex items-center gap-2">
+                    <Boxes className="h-5 w-5 text-rose-500" />
+                    8. Konvensi Ekspor File Khusus Next.js (App Router)
+                  </AccordionTrigger>
+                  <AccordionContent className="space-y-2 text-sm">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2 font-mono text-xs">
+                      <div className="p-2 border rounded bg-muted/20">
+                        <span className="font-bold text-foreground">layout.tsx:</span>
+                        <p className="text-primary mt-0.5">export default function Layout()</p>
+                      </div>
+                      <div className="p-2 border rounded bg-muted/20">
+                        <span className="font-bold text-foreground">page.tsx:</span>
+                        <p className="text-primary mt-0.5">export default function Page()</p>
+                      </div>
+                      <div className="p-2 border rounded bg-muted/20">
+                        <span className="font-bold text-foreground">loading.tsx:</span>
+                        <p className="text-primary mt-0.5">export default function Loading()</p>
+                      </div>
+                      <div className="p-2 border rounded bg-muted/20">
+                        <span className="font-bold text-foreground">error.tsx:</span>
+                        <p className="text-primary mt-0.5">export default function Error()</p>
+                      </div>
+                      <div className="p-2 border rounded bg-muted/20">
+                        <span className="font-bold text-foreground">not-found.tsx:</span>
+                        <p className="text-primary mt-0.5">export default function NotFound()</p>
+                      </div>
+                      <div className="p-2 border rounded bg-muted/20">
+                        <span className="font-bold text-foreground">route.ts:</span>
+                        <p className="text-primary mt-0.5">export async function GET() / POST()</p>
+                      </div>
+                    </div>
+                  </AccordionContent>
+                </AccordionItem>
+
+                {/* 9, 10, 11, 12. Formatting, Comments, CSS & JSON */}
+                <AccordionItem value="g9">
+                  <AccordionTrigger className="text-lg font-semibold flex items-center gap-2">
+                    <Settings className="h-5 w-5 text-teal-500" />
+                    9-12. Formatting, JSX, Comments, CSS & JSON Rules
+                  </AccordionTrigger>
+                  <AccordionContent className="space-y-3 text-sm text-muted-foreground">
+                    <div>
+                      <h4 className="font-bold text-foreground mb-1">TypeScript / JSX Rules</h4>
+                      <p>Indentasi 2 spasi (dilarang Tab), 1 baris 1 deklarasi variabel. Atribut JSX &gt; 2 wajib ditulis multi-baris. Gunakan kutip ganda (<code className="font-mono text-foreground">&quot;...&quot;</code>) untuk string literal & self-closing tag (<code className="font-mono text-foreground">&lt;Input /&gt;</code>) dengan spasi sebelum closing.</p>
+                    </div>
+                    <div>
+                      <h4 className="font-bold text-foreground mb-1">Komentar Code</h4>
+                      <p>Komentar menggunakan Bahasa Inggris. Di luar JSX gunakan <code className="font-mono text-foreground">//</code> (max 60-80 karakter/baris). Di dalam JSX gunakan <code className="font-mono text-foreground">&#123;/* komentar */&#125;</code>. Gunakan JSDoc (<code className="font-mono text-foreground">/** ... */</code>) untuk fungsi/komponen yang di-export.</p>
+                    </div>
+                    <div>
+                      <h4 className="font-bold text-foreground mb-1">Standar CSS & Styling</h4>
+                      <p>Selector lowercase, class selector kebab-case (<code className="font-mono text-foreground">.card-header</code>). Utamakan class selector (hindari ID selector). Mobile-First responsive. Warna dengan format modern <code className="font-mono text-foreground">rgb(31 41 59 / 0.26)</code>. Media query modern (<code className="font-mono text-foreground font-bold">@media (width &gt;= 480px)</code>). Dilarang keras memakai <code className="font-mono text-destructive">!important</code>.</p>
+                    </div>
+                    <div>
+                      <h4 className="font-bold text-foreground mb-1">Standar File JSON</h4>
+                      <p>Indentasi 2 spasi, kutip ganda (<code className="font-mono text-foreground">&quot;...&quot;</code>) untuk key & string value, key camelCase, dilarang trailing comma, dan format tanggal ISO 8601 UTC (<code className="font-mono text-foreground">&quot;2026-07-15T01:30:54Z&quot;</code>).</p>
+                    </div>
+                  </AccordionContent>
+                </AccordionItem>
+
+              </Accordion>
             </CardContent>
           </Card>
         </TabsContent>
@@ -1998,10 +2016,9 @@ export default function Page() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             {[
               "README.md",
-              "ACCOUNTING_FIX_SUMMARY.md",
-              "BANK_INTEGRATION_GUIDE.md",
+              "CHANGELOG.md",
               "TECHNICAL_DOCUMENTATION.md",
-              "UPDATE-LOG.md"
+              "prisma/schema.prisma"
             ].map((file) => (
               <div key={file} className="p-3 border rounded-lg hover:bg-muted/50 cursor-pointer">
                 <div className="flex items-center gap-2">

@@ -2,7 +2,7 @@
 
 ## 📋 Deskripsi Proyek
 
-**NopzGarage Management System** adalah sistem manajemen bengkel motor berbasis web yang komprehensif dan terintegrasi. Aplikasi ini dirancang untuk mendigitalkan seluruh operasional bengkel motor "NopzGarage", mencakup manajemen order servis, inventori suku cadang, pengelolaan karyawan dan penggajian (payroll), pencatatan keuangan dengan sistem jurnal akuntansi, serta portal publik untuk pelanggan melacak status servis kendaraan mereka secara real-time.
+**NopzGarage Management System** adalah sistem manajemen bengkel motor berbasis web yang komprehensif dan terintegrasi. Aplikasi ini dirancang untuk mendigitalkan seluruh operasional bengkel motor "NopzGarage", mencakup manajemen order servis, inventori suku cadang, pengelolaan karyawan dan penggajian (payroll), pencatatan keuangan kas & bank terintegrasi (kasir, pengeluaran operasional & penggajian), serta portal publik untuk pelanggan melacak status servis kendaraan mereka secara real-time.
 
 Sistem ini dibangun menggunakan arsitektur modern dengan Next.js 14 App Router, memanfaatkan React Server Components dan Server Actions untuk performa optimal dan type-safety end-to-end. Database PostgreSQL dengan Prisma ORM memastikan integritas data dan kemudahan dalam pengembangan. Antarmuka pengguna dibangun dengan Tailwind CSS dan komponen Shadcn/UI yang memberikan pengalaman visual yang modern, responsif, dan profesional.
 
@@ -53,25 +53,25 @@ Fitur pencarian memungkinkan admin menemukan part dengan cepat berdasarkan kode 
 
 Modul Karyawan mengelola data seluruh staff bengkel termasuk mekanik, helper, kasir, dan admin. Tampilan utama didesain dalam bentuk **Card Grid** interaktif dan memiliki **Pagination** di sudut kanan bawah. Setiap kartu karyawan menampilkan nama, inisial avatar, ID unik, status keaktifan (`"Aktif"` atau `"Non"`), nomor telepon, skema gaji, dan nominal/persentase rate gaji. 
 
-Sistem mengintegrasikan master data jabatan melalui tabel **D14 Jabatan** (`/admin/employees/jabatan`) yang otomatis di-seeding saat pertama kali diakses. Pada dialog tambah/ubah karyawan, input text posisi diganti dengan dropdown pilihan dinamis dari tabel Jabatan untuk menjamin konsistensi data. Penonaktifan dan reaktivasi karyawan dilakukan dengan alur konfirmasi terstruktur yang membatasi tugas aktif namun tetap menjaga histori data keuangannya.
+Sistem mengintegrasikan master data jabatan melalui field `jabatan` pada profil karyawan untuk menjamin konsistensi data. Penonaktifan dan reaktivasi karyawan dilakukan dengan alur konfirmasi terstruktur yang membatasi tugas aktif namun tetap menjaga histori data keuangannya.
 
 ### 6. Payroll & Penggajian (`/admin/payroll`)
 
-Sistem Payroll terintegrasi dalam modul karyawan dengan perhitungan otomatis berdasarkan data order. Halaman **Gaji & Payroll** menampilkan history slip gaji dan mendukung bulk generation bagi Owner untuk menghitung gaji seluruh staff dalam rentang periode tertentu. Untuk karyawan bertipe komisi, sistem mengagregasi seluruh *OrderFee* yang belum dibayar (`isPaid: false`) dikali dengan **Rate Komisi % / Nominal (IDR)** karyawan.
+Sistem Payroll terintegrasi dalam modul karyawan dengan perhitungan otomatis berdasarkan data order. Halaman **Gaji & Payroll** menampilkan history pembayaran gaji dan mendukung bulk generation bagi Owner untuk menghitung gaji seluruh staff dalam rentang periode tertentu. Untuk karyawan bertipe komisi, sistem mengagregasi seluruh item jasa/komisi (`OrderItem` bertipe `FEE`) yang belum dibayar (`isPaid: false`) dikali dengan **Rate Komisi % / Nominal (IDR)** karyawan.
 
-Proses pencairan gaji mendukung pembayaran via Cash atau Bank Transfer (terhubung ke buku besar kas & bank). Ketika pembayaran dikonfirmasi, sistem secara otomatis: (1) membuat record Payroll baru dengan status `PAID`, (2) mengubah status `isPaid` pada semua transaksi *OrderFee* mekanik menjadi `true`, (3) membuat record pengeluaran kas (Money Out), dan (4) memposting JournalEntry dengan double-entry bookkeeping (Debit: Beban Gaji, Credit: Kas/Bank). Slip gaji yang digenerate dapat dicetak dalam format slip fisik terstruktur.
+Proses pencairan gaji mendukung pembayaran via Cash atau Bank Transfer (terhubung ke akun kas & bank pada tabel `Account`). Ketika pembayaran dikonfirmasi, sistem secara otomatis: (1) membuat record `Payment` baru dengan status/type `SALARY`, (2) mengubah status `isPaid` pada semua transaksi item komisi mekanik menjadi `true`, dan (3) memotong saldo rekening Kas/Bank terkait secara otomatis (`Account.currentBalance`). Slip gaji yang digenerate dapat dicetak dalam format slip fisik terstruktur.
 
 ### 7. Pencatatan Pemasukan (`/admin/income`)
 
-Halaman Income mencatat seluruh pemasukan non-order seperti penjualan aksesori, donasi, atau pendapatan lain-lain. Form input mencakup tanggal transaksi, kategori pemasukan (dari daftar kategori yang dapat dikonfigurasi), jumlah, dan catatan/deskripsi. Setiap pencatatan income akan otomatis membuat JournalEntry yang sesuai dengan prinsip double-entry bookkeeping.
+Halaman Income mencatat seluruh pemasukan non-order seperti penjualan aksesori, donasi, atau pendapatan lain-lain. Form input mencakup tanggal transaksi, kategori pemasukan (dari daftar kategori yang dapat dikonfigurasi), jumlah, rekening kas/bank penerima, dan catatan/deskripsi. Setiap pencatatan income akan otomatis menambah saldo akun Kas/Bank terkait (`Account.currentBalance`) dan mencatat mutasi pada tabel `Payment`.
 
 Daftar pemasukan ditampilkan dalam tabel dengan fitur pencarian dan filter berdasarkan tanggal. Admin dapat melihat detail setiap transaksi dan menghapus transaksi jika terjadi kesalahan input. Summary card di bagian atas menampilkan total pemasukan periode berjalan.
 
 ### 8. Pencatatan Pengeluaran (`/admin/expenses`)
 
-Halaman Expenses mengelola seluruh pengeluaran operasional bengkel seperti pembelian stok, biaya listrik, sewa tempat, pembelian tools, dan pengeluaran rutin lainnya. Sama seperti income, form mencakup tanggal, kategori pengeluaran, jumlah, dan deskripsi. Sistem menyediakan kategori pengeluaran yang dapat dikustomisasi sesuai kebutuhan bengkel.
+Halaman Expenses mengelola seluruh pengeluaran operasional bengkel seperti pembelian stok, biaya listrik, sewa tempat, pembelian tools, dan pengeluaran rutin lainnya. Sama seperti income, form mencakup tanggal, kategori pengeluaran, jumlah, akun kas/bank sumber, dan deskripsi/referensi nota. Sistem menyediakan kategori pengeluaran yang dapat dikustomisasi sesuai kebutuhan bengkel.
 
-Setiap expense yang dicatat akan otomatis menghasilkan JournalEntry dengan posting yang benar (Debit: Akun Beban sesuai kategori, Credit: Kas). Tabel pengeluaran menampilkan histori lengkap dengan kemampuan search dan delete. Dashboard expense menampilkan total pengeluaran dan breakdown per kategori.
+Setiap expense yang dicatat akan otomatis memotong saldo akun Kas/Bank terkait (`Account.currentBalance`) dan mencatat mutasi pada tabel `Payment`. Tabel pengeluaran menampilkan histori lengkap dengan kemampuan search dan delete. Dashboard expense menampilkan total pengeluaran dan breakdown per kategori.
 
 ### 9. Laporan Keuangan (`/admin/reports`)
 
@@ -144,7 +144,7 @@ CUSTOMER                    ADMIN/KASIR                 MEKANIK                 
     │                            │                          │       [5] Transaction:   │
     │                            │                          │       - Update Status    │
     │                            │                          │       - Reduce Stock     │
-    │                            │                          │       - Create OrderFee  │
+    │                            │                          │       - Record OrderItem │
     │                            │                          │ ◄────────────────────────│
     │                            │                          │                          │
     │                            │ [6] Status: QUEUE        │                          │
@@ -170,7 +170,7 @@ CUSTOMER                    ADMIN/KASIR                 MEKANIK                 
     │                            │                          │                          │
     │                            │                          │    [14] Transaction:     │
     │                            │                          │    - Create Payment      │
-    │                            │                          │    - Create JournalEntry │
+    │                            │                          │    - Update Cash/Bank    │
     │                            │                          │    - Update PaymentStatus│
     │                            │                          │ ◄────────────────────────│
     │                            │                          │                          │
@@ -236,19 +236,16 @@ CUSTOMER                    ADMIN/KASIR                 MEKANIK                 
     │ 1. Create Payment Record                 │
     │    - id, date, amount, orderId           │
     │    - paymentMethod, bankAccountId        │
+    │    - type: ORDER_PAYMENT                 │
     │                                          │
     │ 2. Update Order                          │
     │    - totalPaid += amount                 │
     │    - paymentStatus (PAID/PARTIAL)        │
     │                                          │
-    │ 3. Create JournalEntry                   │
-    │    - Description: "Payment Order #xxx"   │
+    │ 3. Update Account Balance                │
+    │    - currentBalance += amount            │
     │                                          │
-    │ 4. Create JournalItems                   │
-    │    - DEBIT: Cash/Bank Account            │
-    │    - CREDIT: Service Revenue             │
-    │                                          │
-    │ 5. Log Activity                          │
+    │ 4. Log Activity                          │
     │    - action: PAYMENT_RECEIVED            │
     │    - userId, timestamp                   │
     └──────────────────────────────────────────┘
@@ -274,13 +271,14 @@ CUSTOMER                    ADMIN/KASIR                 MEKANIK                 
     │                                                              │
     │  For COMMISSION-based employees:                             │
     │  ┌────────────────────────────────────────────────────────┐  │
-    │  │ SELECT SUM(amount) FROM OrderFee                       │  │
+    │  │ SELECT SUM(totalPrice) FROM OrderItem                  │  │
     │  │ WHERE employeeId = ? AND isPaid = false                │  │
+    │  │ AND itemType = 'FEE'                                   │  │
     │  └────────────────────────────────────────────────────────┘  │
     │                                                              │
-    │  + Base Salary (if any)                                      │
-    │  + Bonus (if any)                                            │
-    │  ─────────────────────────                                   │
+    │  + Base Salary (dailyRate x working days)                    │
+    │  + Bonus / Extra (if any)                                    │
+    │  ────────────────────────────────────────                    │
     │  = TOTAL PAYABLE                                             │
     │                                                              │
     └──────────────────────────────┬───────────────────────────────┘
@@ -290,30 +288,25 @@ CUSTOMER                    ADMIN/KASIR                 MEKANIK                 
                     │   Confirm Payment Dialog    │
                     │   - Period (Start-End)      │
                     │   - Total Amount            │
-                    │   - Payment Method          │
+                    │   - Payment Method & Bank   │
                     └──────────────┬──────────────┘
                                    │
                                    ▼
     ┌──────────────────────────────────────────────────────────────┐
     │                    DATABASE TRANSACTION                       │
     │                                                              │
-    │  1. Create Payroll Record                                    │
-    │     - employeeId, startDate, endDate                         │
-    │     - baseSalary, bonus, totalEarned                         │
-    │     - status: PAID                                           │
+    │  1. Create Payment Record                                    │
+    │     - employeeId, amount, type: "SALARY"                     │
+    │     - bankAccountId, paymentMethod, date                     │
     │                                                              │
-    │  2. Update OrderFees                                         │
-    │     - SET isPaid = true, paidAt = NOW()                      │
+    │  2. Update OrderItems (Commission)                           │
+    │     - SET isPaid = true                                      │
     │     - WHERE employeeId = ? AND isPaid = false                │
     │                                                              │
-    │  3. Create Payment Record                                    │
-    │     - payrollId, amount, paymentMethod                       │
+    │  3. Update Account Balance                                   │
+    │     - currentBalance -= amount                               │
     │                                                              │
-    │  4. Create JournalEntry                                      │
-    │     - DEBIT: Salary Expense Account                          │
-    │     - CREDIT: Cash/Bank Account                              │
-    │                                                              │
-    │  5. Log Activity                                             │
+    │  4. Log Activity                                             │
     │     - action: PAYROLL_PAID                                   │
     │                                                              │
     └──────────────────────────────────────────────────────────────┘
@@ -336,89 +329,52 @@ CUSTOMER                    ADMIN/KASIR                 MEKANIK                 
 │    password     │  1:1  │    name         │  1:N  │    custPhone    │
 │    role         │       │    role         │       │    vehicle      │
 │ FK employeeId   │       │    phone        │       │    plateNumber  │
-┌─────────────────┐               │                └────────┬────────┘
-│ForgotPassword   │               │                         │
-│   Request       │               │                         │
-├─────────────────┤               │                         │
-│ PK id           │               │                         │
-│ FK userId       │               │                         │
-│    status       │               ▼                         │
-│    resolvedBy   │       ┌─────────────────┐              │
-│    resolvedAt   │       │    OrderFee     │              │
-└─────────────────┘       ├─────────────────┤              │
-                          │ PK id           │              │
-                          │ FK orderId      │◄─────────────┤
-                          │ FK employeeId   │              │
-                          │    amount       │              │
-                          │    description  │              │
-                          │    isPaid       │              │
-                          │    paidAt       │              │
-                          └─────────────────┘              │
-                                                           │
-         ┌─────────────────────────────────────────────────┤
-         │                                                 │
-         ▼                                                 ▼
-┌─────────────────┐                               ┌─────────────────┐
-│   OrderItem     │                               │    Payment      │
-├─────────────────┤                               ├─────────────────┤
-│ PK id           │                               │ PK id           │
-│ FK orderId      │                               │    date         │
-│ FK sparePartId  │                               │    amount       │
-│    itemType     │                               │    note         │
-│    itemName     │                               │ FK orderId      │
-│    quantity     │                               │ FK payrollId    │
-│    unitPrice    │                               │ FK bankAccountId│
-│    totalPrice   │                               │    paymentMethod│
-└────────┬────────┘                               └────────┬────────┘
-         │                                                 │
-         ▼                                                 │
-┌─────────────────┐       ┌─────────────────┐             │
-│   SparePart     │       │   BankAccount   │◄────────────┘
+│    resetToken   │       │    jabatan      │       │    complaint    │
+│    resetExpiry  │       │    salaryType   │       │    serviceType  │
+│    forgotReqs   │       │    dailyRate    │       │    status       │
+│    isActive     │       │    commission   │       │    scheduledAt  │
+└─────────────────┘       │    isActive     │       │    items (JSON) │
+                          └────────┬────────┘       │    totalPrice   │
+                                   │                │    totalPaid    │
+                                   │                │    payStatus    │
+                                   │                │ FK mechanicId   │
+                                   │                │    feedback     │
+                                   │                │    rating       │
+                                   │                └────────┬────────┘
+                                   │                         │
+         ┌─────────────────────────┼─────────────────────────┤
+         │                         │                         │
+         ▼                         ▼                         ▼
+┌─────────────────┐       ┌─────────────────┐       ┌─────────────────┐
+│    OrderItem    │       │     Payment     │       │  SystemConfig   │
+├─────────────────┤       ├─────────────────┤       ├─────────────────┤
+│ PK id           │       │ PK id           │       │ PK id           │
+│ FK orderId      │       │    date         │       │    category     │
+│ FK sparePartId  │       │    amount       │       │    key          │
+│ FK employeeId   │       │    type         │       │    title        │
+│    itemType     │       │    note         │       │    subtitle     │
+│    itemName     │       │ FK orderId      │       │    content(JSON)│
+│    quantity     │       │ FK employeeId   │       │    imageUrl     │
+│    unitPrice    │       │ FK bankAccountId│       │    embedUrl     │
+│    totalPrice   │       │    paymentMethod│       │    platform     │
+│    isPaid       │       └────────┬────────┘       │    userId       │
+└────────┬────────┘                │                │    userName     │
+         │                         │                │    isVisible    │
+         ▼                         ▼                │    displayOrder │
+┌─────────────────┐       ┌─────────────────┐       └─────────────────┘
+│   SparePart     │       │     Account     │
 ├─────────────────┤       ├─────────────────┤
 │ PK id           │       │ PK id           │
-│    code         │       │    bankName     │
-│    name         │       │    accountNumber│
-│    stock        │       │    accountName  │
-│    minStock     │       │    isActive     │
-│    unit         │       └─────────────────┘
-│    buyPrice     │
-│    sellPrice    │
-│    isActive     │
-└─────────────────┘
-
-┌─────────────────┐       ┌─────────────────┐       ┌─────────────────┐
-│    Payroll      │       │  JournalEntry   │       │   JournalItem   │
-├─────────────────┤       ├─────────────────┤       ├─────────────────┤
-│ PK id           │       │ PK id           │◄──────│ PK id           │
-│    startDate    │       │    date         │  1:N  │ FK journalEntry │
-│    endDate      │       │    description  │       │ FK accountId    │
-│ FK employeeId   │       │    reference    │       │    debit        │
-│    baseSalary   │       │ FK paymentId    │       │    credit       │
-│    bonus        │       └─────────────────┘       └────────┬────────┘
-│    totalEarned  │                                          │
-│    status       │                                          ▼
-└─────────────────┘                                 ┌─────────────────┐
-                                                    │    Account      │
-┌─────────────────┐       ┌─────────────────┐       ├─────────────────┤
-│  ActivityLog    │       │  SystemSetting  │       │ PK id           │
-├─────────────────┤       ├─────────────────┤       │    code         │
-│ PK id           │       │ PK id           │       │    name         │
-│    action       │       │    key          │       │    type         │
-│    title        │       │    value        │       │    category     │
-│    details      │       │    updatedAt    │       │    isActive     │
-│    metadata     │       └─────────────────┘       └─────────────────┘
-│    userId       │
-│    userName     │       ┌─────────────────┐
-│    role         │       │ ContentSection  │
-│    createdAt    │       ├─────────────────┤
-└─────────────────┘       │ PK id           │
-                          │    sectionKey   │
-                          │    title        │
-                          │    subtitle     │
-                          │    content      │
-                          │    imageUrl     │
-                          │    isVisible    │
-                          └─────────────────┘
+│    code         │       │    code         │
+│    name         │       │    name         │
+│    category     │       │    type         │
+│    stock        │       │    category     │
+│    minStock     │       │    bankCode     │
+│    unit         │       │    accountNumber│
+│    buyPrice     │       │    accountName  │
+│    sellPrice    │       │    currBalance  │
+│    isActive     │       │    isActive     │
+└─────────────────┘       └─────────────────┘
 ```
 
 ---
@@ -439,14 +395,14 @@ CUSTOMER                    ADMIN/KASIR                 MEKANIK                 
     ┌──────────┐          │                                │         ┌──────────┐
     │ Customer │◄────────►│     NOPZGARAGE MANAGEMENT      │◄───────►│ Employee │
     └──────────┘          │           SYSTEM               │         └──────────┘
-         │                │                                │              │
+         │                │  (8 Consolidated Tables)       │              │
          │                └────────────────────────────────┘              │
          │                               ▲                                │
     Booking Request                      │                          View Orders
     Status Tracking              ┌───────┴───────┐                  Update Status
-         │                       │   Database    │                  View Payroll
-         │                       │  PostgreSQL   │                        │
-         ▼                       └───────────────┘                        ▼
+         │                       │  PostgreSQL   │                  View Payroll
+         │                       └───────────────┘                        │
+         ▼                                                                ▼
 ```
 
 ### DFD Level 1
@@ -476,12 +432,12 @@ CUSTOMER                    ADMIN/KASIR                 MEKANIK                 
          │         ┌──────────────────┼──────────────────┐         │
          │         │                  │                  │         │
          ▼         ▼                  ▼                  ▼         ▼
-┌────────────────────────────────────────────────────────────────────────────┐
-│                              D1: DATABASE                                  │
-│   ┌─────────┐ ┌─────────┐ ┌─────────┐ ┌─────────┐ ┌─────────┐ ┌─────────┐  │
-│   │  Order  │ │Employee │ │SparePart│ │ Payment │ │ Payroll │ │ Journal │  │
-│   └─────────┘ └─────────┘ └─────────┘ └─────────┘ └─────────┘ └─────────┘  │
-└────────────────────────────────────────────────────────────────────────────┘
+┌────────────────────────────────────────────────────────────────────────────────────────────┐
+│                            D1: CONSOLIDATED DATABASE (8 TABLES)                            │
+│ ┌──────┐ ┌──────────┐ ┌───────┐ ┌───────────┐ ┌───────────┐ ┌─────────┐ ┌───────┐ ┌──────┐ │
+│ │ User │ │ Employee │ │ Order │ │ OrderItem │ │ SparePart │ │ Account │ │Payment│ │Config│ │
+│ └──────┘ └──────────┘ └───────┘ └───────────┘ └───────────┘ └─────────┘ └───────┘ └──────┘ │
+└────────────────────────────────────────────────────────────────────────────────────────────┘
          ▲                            ▲                            ▲
          │                            │                            │
 ┌────────┴────────┐          ┌────────┴────────┐          ┌────────┴────────┐
@@ -490,8 +446,8 @@ CUSTOMER                    ADMIN/KASIR                 MEKANIK                 
 ├─────────────────┤          ├─────────────────┤          ├─────────────────┤
 │ - Record Income │          │ - Revenue Report│          │ - Login/Logout  │
 │ - Record Expense│          │ - Expense Report│          │ - User Mgmt     │
-│ - Journal Entry │          │ - Profit/Loss   │          │ - System Config │
-│ - General Ledger│          │ - Cash Flow     │          │ - Activity Log  │
+│ - Account Balances         │ - Profit/Loss   │          │ - System Config │
+│ - Payout Payroll│          │ - Cash Flow     │          │ - Activity Log  │
 └─────────────────┘          └─────────────────┘          └─────────────────┘
          ▲                            │                            ▲
          │                            │                            │
@@ -614,13 +570,9 @@ CUSTOMER                    ADMIN/KASIR                 MEKANIK                 
      │                │                │    Order       │
      │                │                │───────────────►│
      │                │                │                │
-     │                │                │ 3. INSERT      │
-     │                │                │    JournalEntry│
-     │                │                │───────────────►│
-     │                │                │                │
-     │                │                │ 4. INSERT      │
-     │                │                │    JournalItems│
-     │                │                │───────────────►│
+     │                │ 3. UPDATE      │
+     │                │    Account     │
+     │                │───────────────►│
      │                │                │                │
      │                │                │ COMMIT         │
      │                │                │───────────────►│
@@ -639,9 +591,9 @@ CUSTOMER                    ADMIN/KASIR                 MEKANIK                 
 ## 🏗️ Class Diagram
 
 ```
-┌────────────────────────────────────────────────────────────────────────────────────┐
-│                                 CLASS DIAGRAM                                       │
-└────────────────────────────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────────────────────────┐
+│                                     CLASS DIAGRAM                                       │
+└─────────────────────────────────────────────────────────────────────────────────────────┘
 
 ┌─────────────────────────────┐          ┌─────────────────────────────┐
 │          <<Entity>>         │          │          <<Entity>>         │
@@ -651,80 +603,62 @@ CUSTOMER                    ADMIN/KASIR                 MEKANIK                 
 │ - custName: string          │          │ - name: string              │
 │ - custPhone: string         │          │ - role: string              │
 │ - vehicle: string           │   N:1    │ - phone: string?            │
-│ - plateNumber: string?      │◄─────────│ - salaryType: SalaryType    │
-│ - complaint: string         │          │ - dailyRate: Decimal        │
-│ - serviceType: ServiceType  │          │ - commissionRate: Decimal   │
-│ - status: OrderStatus       │          │ - isActive: boolean         │
-│ - totalPrice: Decimal       │          ├─────────────────────────────┤
-│ - totalPaid: Decimal        │          │ + getOrders(): Order[]      │
-│ - paymentStatus: PaymentSt  │          │ + getUnpaidFees(): OrderFee[]
-│ - mechanicId: string?       │          │ + calculatePayroll(): Decimal
-├─────────────────────────────┤          └─────────────────────────────┘
-│ + calculateTotal(): Decimal │                        ▲
-│ + updateStatus(): void      │                        │
-│ + addPayment(): Payment     │                        │
-│ + getRemainingBalance(): Dec│          ┌─────────────────────────────┐
-└──────────────┬──────────────┘          │          <<Entity>>         │
-               │                         │           User              │
-               │                         ├─────────────────────────────┤
-    ┌──────────┼──────────┐              │ - id: string                │
-    │          │          │              │ - email: string             │
-    ▼          ▼          ▼              │ - password: string          │
-┌─────────┐ ┌──────────┐ ┌─────────┐    │ - role: string              │
-│OrderItem│ │ OrderFee │ │ Payment │    │ - employeeId: string?       │
-├─────────┤ ├──────────┤ ├─────────┤    │ - isActive: boolean         │
-│-id      │ │-id       │ │-id      │    ├─────────────────────────────┤
-│-orderId │ │-orderId  │ │-date    │    │ + login(): Session          │
-│-itemType│ │-employeeId│ │-amount  │    │ + logout(): void            │
-│-itemName│ │-amount   │ │-orderId │    │ + resetPassword(): void     │
-│-quantity│ │-isPaid   │ │-payrollId│   └─────────────────────────────┘
-│-unitPrice│ │-paidAt   │ │-bankAccId│
-│-totalPrice│└──────────┘ │-payMethod│
-│-sparePartId│             └────┬─────┘
-└─────┬─────┘                   │
-      │                         │
-      ▼                         ▼
-┌─────────────────────────────┐ ┌─────────────────────────────┐
-│          <<Entity>>         │ │          <<Entity>>         │
-│          SparePart          │ │        JournalEntry         │
-├─────────────────────────────┤ ├─────────────────────────────┤
-│ - id: string                │ │ - id: string                │
-│ - code: string              │ │ - date: DateTime            │
-│ - name: string              │ │ - description: string       │
-│ - stock: int                │ │ - reference: string?        │
-│ - minStock: int             │ │ - paymentId: string?        │
-│ - unit: string              │ ├─────────────────────────────┤
-│ - buyPrice: Decimal         │ │ + addItem(): JournalItem    │
-│ - sellPrice: Decimal        │ │ + validate(): boolean       │
-│ - isActive: boolean         │ └──────────────┬──────────────┘
-├─────────────────────────────┤                │
-│ + reduceStock(qty): void    │                ▼
-│ + isLowStock(): boolean     │ ┌─────────────────────────────┐
-│ + getMargin(): Decimal      │ │          <<Entity>>         │
-└─────────────────────────────┘ │         JournalItem         │
-                                ├─────────────────────────────┤
-┌─────────────────────────────┐ │ - id: string                │
-│          <<Entity>>         │ │ - journalEntryId: string    │
-│          Payroll            │ │ - accountId: string         │
-├─────────────────────────────┤ │ - debit: Decimal            │
-│ - id: string                │ │ - credit: Decimal           │
-│ - startDate: DateTime       │ └─────────────┬───────────────┘
-│ - endDate: DateTime         │               │
-│ - employeeId: string        │               ▼
-│ - baseSalary: Decimal       │ ┌─────────────────────────────┐
-│ - bonus: Decimal            │ │          <<Entity>>         │
-│ - totalEarned: Decimal      │ │          Account            │
-│ - status: PaymentStatus     │ ├─────────────────────────────┤
-├─────────────────────────────┤ │ - id: string                │
-│ + process(): void           │ │ - code: string              │
-│ + markPaid(): void          │ │ - name: string              │
-└─────────────────────────────┘ │ - type: string              │
-                                │ - category: string?         │
-                                │ - isActive: boolean         │
-                                ├─────────────────────────────┤
-                                │ + getBalance(): Decimal     │
-                                │ + getTransactions(): []     │
-                                └─────────────────────────────┘
+│ - plateNumber: string?      │◄─────────│ - jabatan: string?          │
+│ - complaint: string         │          │ - salaryType: SalaryType    │
+│ - serviceType: ServiceType  │          │ - dailyRate: Decimal        │
+│ - status: OrderStatus       │          │ - commissionRate: Decimal   │
+│ - scheduledAt: DateTime?    │          │ - isActive: boolean         │
+│ - items: Json?              │          ├─────────────────────────────┤
+│ - totalPrice: Decimal       │          │ + getOrders(): Order[]      │
+│ - totalPaid: Decimal        │          │ + getUnpaidItems(): Item[]  │
+│ - paymentStatus: PaymentSt  │          │ + calculateSalary(): Dec    │
+│ - mechanicId: string?       │          └─────────────────────────────┘
+│ - feedback: string?         │                        ▲
+│ - rating: int?              │                        │
+├─────────────────────────────┤                        │
+│ + calculateTotal(): Decimal │          ┌─────────────────────────────┐
+│ + updateStatus(): void      │          │          <<Entity>>         │
+│ + addPayment(): Payment     │          │           User              │
+│ + getRemaining(): Decimal   │          ├─────────────────────────────┤
+└──────────────┬──────────────┘          │ - id: string                │
+               │                         │ - email: string             │
+     ┌─────────┴─────────┐               │ - password: string          │
+     │                   │               │ - role: string              │
+     ▼                   ▼               │ - employeeId: string?       │
+┌─────────────────┐ ┌─────────────────┐  │ - resetToken: string?       │
+│    OrderItem    │ │     Payment     │  │ - forgotRequests: Json?     │
+├─────────────────┤ ├─────────────────┤  │ - isActive: boolean         │
+│ - id: string    │ │ - id: string    │  ├─────────────────────────────┤
+│ - orderId: str  │ │ - date: DateTime│  │ + login(): Session          │
+│ - itemType: str │ │ - amount: Dec   │  │ + logout(): void            │
+│ - itemName: str │ │ - type: string  │  │ + requestReset(): void      │
+│ - quantity: int │ │ - note: string? │  └─────────────────────────────┘
+│ - unitPrice: Dec│ │ - orderId: str? │
+│ - totalPrice:Dec│ │ - empId: string?│
+│ - isPaid: bool  │ │ - bankAccId: str│
+│ - sparePartId   │ │ - payMethod: str│
+│ - employeeId    │ └────────┬────────┘
+└────────┬────────┘          │
+         │                   │
+         ▼                   ▼
+┌─────────────────┐ ┌─────────────────┐  ┌─────────────────────────────┐
+│    SparePart    │ │     Account     │  │          <<Entity>>         │
+├─────────────────┤ ├─────────────────┤  │        SystemConfig         │
+├─────────────────┤ ├─────────────────┤  ├─────────────────────────────┤
+│ - id: string    │ │ - id: string    │  │ - id: string                │
+│ - code: string  │ │ - code: string  │  │ - category: string          │
+│ - name: string  │ │ - name: string  │  │ - key: string?              │
+│ - category: str │ │ - type: string  │  │ - title: string?            │
+│ - stock: int    │ │ - category: str?│  │ - subtitle: string?         │
+│ - minStock: int │ │ - bankCode: str?│  │ - content: Json?            │
+│ - unit: string  │ │ - accNumber: str│  │ - isVisible: boolean        │
+│ - buyPrice: Dec │ │ - accName: str? │  │ - displayOrder: int         │
+│ - sellPrice: Dec│ │ - currBalance   │  ├─────────────────────────────┤
+│ - isActive: bool│ │ - isActive: bool│  │ + getSettings(): Config     │
+├─────────────────┤ ├─────────────────┤  │ + updateConfig(): void      │
+│ + reduceStock() │ │ + updateBalance │  └─────────────────────────────┘
+│ + isLowStock()  │ │ + getStatement()│
+└─────────────────┘ └─────────────────┘
 
 <<enumeration>>                 <<enumeration>>
 ┌──────────────────┐           ┌──────────────────┐
@@ -741,8 +675,8 @@ CUSTOMER                    ADMIN/KASIR                 MEKANIK                 
 └──────────────────┘           ├──────────────────┤
                                │ DAILY            │
 <<enumeration>>                │ COMMISSION       │
-┌──────────────────┐           └──────────────────┘
-│   ServiceType    │
+┌──────────────────┐           │ MONTHLY          │
+│   ServiceType    │           └──────────────────┘
 ├──────────────────┤
 │ LIGHT_SERVICE    │
 │ MODIFICATION     │
@@ -793,8 +727,8 @@ CUSTOMER                    ADMIN/KASIR                 MEKANIK                 
          │                  │  │     Financial Management         │   │
          ├──────────────────┼──►  ○ Record Income                 │   │
          │                  │  │  ○ Record Expense                │   │
-         │                  │  │  ○ View Journal Entries          │   │
-         │                  │  │  ○ Generate Reports              │   │
+         │                  │  │  ○ View Cash Flow & Balances          │   │
+         │                  │  │  ○ Generate Reports (PDF/Excel)              │   │
          │                  │  │  ○ View Dashboard Stats          │   │
          │                  │  └─────────────────────────────────┘   │
          │                  │                                         │
@@ -881,30 +815,96 @@ NEXTAUTH_URL="http://localhost:3000"
 
 ```
 nopzgarage/
-├── app/
-│   ├── actions/           # Server Actions (Business Logic)
-│   ├── admin/             # Admin Dashboard Pages
-│   │   ├── employees/     # Employee Management
-│   │   ├── expenses/      # Expense Recording
-│   │   ├── finance/       # Financial Overview
-│   │   ├── income/        # Income Recording
-│   │   ├── inventory/     # Inventory Management
-│   │   ├── orders/        # Order Management
-│   │   ├── reports/       # Financial Reports
-│   │   └── settings/      # System Settings
-│   ├── employee/          # Employee Portal
-│   ├── kanban/            # Public Kanban
-│   ├── login/             # Authentication
-│   └── status/            # Order Status Tracking
-├── components/            # Reusable UI Components
+├── app/                   # App Router (Pages, Layouts & API)
+│   ├── (admin)/admin/     # Protected Admin & Owner Dashboard
+│   ├── (employee)/employee/# Employee Portal & Task Board
+│   ├── api/               # API Routes & NextAuth Handler
+│   ├── kanban/            # Public Kanban Queue Display
+│   ├── login/             # Authentication & Reset Password
+│   └── status/            # Public Order Status Tracking
+├── components/            # Reusable UI & Dialog Components
+│   ├── shared/            # Common UI (Mermaid, Guard, etc.)
+│   └── ui/                # Base Components (Shadcn/UI)
 ├── hooks/                 # Custom React Hooks
-├── lib/                   # Utilities & Auth Config
-├── prisma/                # Database Schema & Migrations
-└── public/                # Static Assets
+├── lib/                   # Core Utilities & Backend Logic
+│   ├── actions/           # Server Actions (Orders, Inventory, Payroll, etc.)
+│   ├── export/            # Financial Export Helpers (PDF & Excel)
+│   ├── auth.ts            # NextAuth Configuration
+│   └── prisma.ts          # Prisma Client Instance
+├── prisma/                # Database Schema & Seed Script
+│   ├── schema.prisma      # 8 Consolidated PostgreSQL Models
+│   └── seed.ts            # Initial Seed Data
+└── public/                # Static Assets & Uploads
 ```
+
+---
+
+## 📜 Standar & Panduan Pengodean (Coding Guidelines)
+
+Seluruh pengembang proyek NopzGarage wajib mematuhi 12 aturan dan standar pengodean berikut:
+
+### 1. Prinsip Umum
+- **App Router**: Gunakan App Router (`app/`) sebagai standar routing utama.
+- **TypeScript**: Wajib menggunakan TypeScript (`.ts` / `.tsx`). Penggunaan JavaScript murni dilarang kecuali file konfigurasi root (`next.config.mjs`).
+- **ES6+**: Maksimalkan `const`/`let`, arrow functions, template literals, destructuring, optional chaining (`?.`), dan nullish coalescing (`??`).
+- **React Server Components (RSC)**: Komponen di `app/` secara default adalah Server Component. Direktif `"use client"` hanya ditambahkan jika membutuhkan interaktivitas klien (`useState`, `useEffect`, event handler).
+- **Format Kode Otomatis**: Gunakan Prettier untuk konsistensi formatting.
+- **Sistem Tipe**: Deklarasikan tipe secara eksplisit. Gunakan `interface` daripada `type` alias untuk struktur objek.
+- **Eksport Modul**: Selalu gunakan named exports (`export function Component()`). Dilarang default export kecuali file konvensi Next.js (`page.tsx`, `layout.tsx`, `loading.tsx`, `error.tsx`, `not-found.tsx`).
+
+### 2. Penamaan File & Folder
+- **Route / Fitur**: Format `kebab-case` (contoh: `user-profile/`, `dashboard/`)
+- **File Konvensi Next.js**: Format `lowercase` (contoh: `page.tsx`, `layout.tsx`, `route.ts`)
+- **Komponen React**: Format `PascalCase` (contoh: `UserCard.tsx`, `InvoiceTable.tsx`)
+- **Utilitas / Helper**: Format `camelCase` (contoh: `formatDate.ts`, `fetchRevenue.ts`)
+- **Konfigurasi Root**: Mengikuti standar ekosistem (contoh: `next.config.mjs`, `tailwind.config.ts`)
+- **Dokumentasi**: Format `UPPERCASE` / `kebab-case` (contoh: `README.md`, `CHANGELOG.md`)
+
+### 3. Penulisan Kode & Identifier
+- **Variabel, Fungsi & Metode**: `camelCase` (contoh: `getUserName()`, `isActive`)
+- **Komponen & Tipe**: `PascalCase` (contoh: `<UserProfile />`, `InvoiceStatus`)
+- **Konstanta Statis**: `CONSTANT_CASE` (contoh: `MAX_TIMEOUT`, `API_BASE_URL`)
+- **Props Component & DOM**: `camelCase` (contoh: `userId`, `className`, `htmlFor`)
+- **Event Handlers**: Awalan `on` untuk props (`onClick`, `onValueChange`) & awalan `handle` untuk fungsi internal (`handleClick`, `handleSubmit`)
+- **Array / Koleksi**: Format Plural tanpa suffix tipe (`users`, `invoices` — bukan `userList`)
+- **Larangan**: Notasi Hungarian (`sName`) dan prefix/suffix underscore (`_name`) dilarang.
+
+### 4. Struktur Direktori Proyek
+Mengikuti standar Next.js App Router dengan pemisahan komponen UI (`components/`), Server Actions (`lib/actions/`), utilities (`lib/`), static assets (`public/`), dan database schema (`prisma/`).
+
+### 5. Urutan Penulisan File Komponen
+1. Direktif `"use client";` (jika diperlukan)
+2. Import statements (External → Internal Components → Utilities → Types)
+3. Interface / Type definition untuk Props
+4. Deklarasi fungsi utama komponen (`export default function Component()`)
+5. Fungsi helper internal lokal
+6. Export statement
+
+### 6 & 7. Deklarasi Fungsi, Control Flow & Perulangan
+- Gunakan `function` declaration untuk komponen dan fungsi utama. Arrow function `() => {}` khusus callback inline.
+- Wajib menggunakan blok kurung kurawal `{ ... }` pada statement pengkondisian.
+- Terapkan Guard Pattern / Early Return (hindari `else` jika cabang `if` mengembalikan nilai).
+- Gunakan metode Array modern (`.map()`, `.filter()`, `.find()`, `.forEach()`, `.every()`) daripada `for` berindeks.
+- Pada `switch`, letakkan `default` paling bawah dan tanpa `break` setelah `return`.
+
+### 8. Konvensi File Khusus Next.js
+- `layout.tsx` → `export default function Layout()`
+- `page.tsx` → `export default function Page()`
+- `loading.tsx` → `export default function Loading()`
+- `error.tsx` → `export default function Error()`
+- `not-found.tsx` → `export default function NotFound()`
+- `route.ts` → `export async function GET() / POST()`
+- `middleware.ts` → `export function middleware()`
+
+### 9, 10, 11, 12. Format, Komentar, CSS & JSON
+- **Formatting**: Indentasi 2 spasi (bukan Tab). 1 baris 1 deklarasi. Atribut JSX > 2 ditulis multi-baris. Self-closing tag dengan spasi `<Input />`.
+- **Komentar**: Bahasa Inggris. `//` di luar JSX (max 60-80 char), `{/* */}` di dalam JSX, dan JSDoc `/** */` untuk exported function.
+- **CSS**: Lowercase selectors & kebab-case class names (`.card-header`). Utamakan class selector (hindari ID). Mobile-first. Format warna modern `rgb(31 41 59 / 0.26)`. Media query modern `@media (width >= 480px)`. Dilarang menggunakan `!important`.
+- **JSON**: Indentasi 2 spasi, double quotes `""`, camelCase keys, tanpa trailing comma, format tanggal ISO 8601 UTC.
 
 ---
 
 ## 📄 Lisensi
 
 Copyright © 2024 NopzGarage. All rights reserved.
+
