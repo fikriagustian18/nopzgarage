@@ -13,7 +13,6 @@ export interface SocialEmbedItem {
   embedCode: string | null;
   title: string | null;
   description: string | null;
-  thumbnail: string | null;
   isActive: boolean;
   displayOrder: number;
   createdAt: Date;
@@ -48,7 +47,6 @@ export async function getSocialEmbeds(platform?: string): Promise<SocialEmbedIte
       embedCode: item.subtitle || null,
       title: item.title || null,
       description: item.content ? (item.content as any).description || null : null,
-      thumbnail: item.imageUrl || null,
       isActive: item.isVisible,
       displayOrder: item.displayOrder,
       createdAt: item.createdAt,
@@ -83,7 +81,6 @@ export async function getSocialEmbed(id: string): Promise<SocialEmbedItem | null
       embedCode: item.subtitle || null,
       title: item.title || null,
       description: item.content ? (item.content as any).description || null : null,
-      thumbnail: item.imageUrl || null,
       isActive: item.isVisible,
       displayOrder: item.displayOrder,
       createdAt: item.createdAt,

@@ -11,6 +11,7 @@ import {
   User,
   Loader2,
 } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 
 import {
   Dialog,
@@ -19,6 +20,7 @@ import {
   DialogTitle,
 } from "@/components/ui/Dialog";
 import { getOrderHistory } from "@/lib/actions/orders";
+import { formatOrderNo } from "@/lib/utils";
 
 interface HistoryDialogProps {
   open: boolean;
@@ -44,7 +46,7 @@ interface ActivityLog {
   action: string;
   title: string;
   details: string;
-  metadata: any;
+  metadata: Record<string, unknown> | null;
   userName: string | null;
   role: string | null;
   createdAt: string | Date;
@@ -57,7 +59,7 @@ interface TimelineStep {
   operator: string;
   time: string | Date | null;
   active: boolean;
-  icon: any;
+  icon: LucideIcon;
 }
 
 export function HistoryDialog({ open, onOpenChange, order }: HistoryDialogProps) {
@@ -92,7 +94,7 @@ export function HistoryDialog({ open, onOpenChange, order }: HistoryDialogProps)
     description: "Order diterima dan menunggu antrian servis.",
     badge: "Menunggu",
     operator: bookingLog?.userName
-      ? `${bookingLog.userName} (${bookingLog.role === "GUEST" ? "Pelanggan" : "Admin"})`
+      ? `${bookingLog.userName} (${bookingLog.role === "GUEST" ? "Pelanggan" : bookingLog.role || "Admin"})`
       : "Admin",
     time: bookingLog ? bookingLog.createdAt : order.createdAt,
     active: true,
@@ -155,14 +157,25 @@ export function HistoryDialog({ open, onOpenChange, order }: HistoryDialogProps)
     icon: Wrench,
   };
 
-  // 4. Waiting for Payment
+  // 4. Payment Events & Waiting for Payment
+  const paymentLogs = logs.filter(
+    (l) =>
+      l.action === "CREATE_PAYMENT" ||
+      l.action === "PAYMENT_RECEIVED" ||
+      (l.action === "UPDATE_STATUS" && l.metadata?.paymentStatus === "PAID")
+  );
+  const paymentLog = paymentLogs[paymentLogs.length - 1];
+  const isPaid = order.paymentStatus === "PAID";
+  const isPartial = order.paymentStatus === "PARTIAL";
   const finishLog = logs.find(
     (l) =>
       l.action === "FINISH_ORDER" ||
       (l.action === "UPDATE_STATUS" && l.metadata?.status === "READY")
   );
   const hasReady = ["READY", "COMPLETED"].includes(order.status);
-  const step4: TimelineStep = {
+
+  // 4a. Unpaid - Waiting for Payment Step (only if NOT paid)
+  const stepWaitingPayment: TimelineStep = {
     title: "Menunggu Pembayaran",
     description: "Servis selesai, menunggu konfirmasi pembayaran.",
     badge: "Menunggu",
@@ -172,25 +185,62 @@ export function HistoryDialog({ open, onOpenChange, order }: HistoryDialogProps)
       ? `${order.mechanic.name} (Mekanik)`
       : "Mekanik",
     time: finishLog ? finishLog.createdAt : hasReady ? order.updatedAt : null,
-    active: hasReady,
+    active: order.paymentStatus === "UNPAID" && hasReady,
     icon: CreditCard,
   };
 
-  // 5. Completed
+  const stepPartialPayment: TimelineStep = {
+    title: "Pembayaran Sebagian",
+    description: "Sebagian pembayaran telah diterima. Masih terdapat sisa tagihan.",
+    badge: "Proses",
+    operator: paymentLog?.userName
+      ? `${paymentLog.userName} (${paymentLog.role || "Admin"})`
+      : "Admin",
+    time: paymentLog ? paymentLog.createdAt : isPartial ? order.updatedAt : null,
+    active: isPartial,
+    icon: CreditCard,
+  };
+
+  // 4b. Paid - Payment Received Step
+  const stepPaid: TimelineStep = {
+    title: "Pembayaran Diterima",
+    description: "Pembayaran telah berhasil diterima dan diverifikasi.",
+    badge: "Selesai",
+    operator: paymentLog?.userName
+      ? `${paymentLog.userName} (${paymentLog.role || "Admin"})`
+      : "Admin",
+    time: paymentLog ? paymentLog.createdAt : isPaid ? order.updatedAt : null,
+    active: isPaid,
+    icon: CreditCard,
+  };
+
+  // 5. Ready for Pickup / Ready for Handover Step
+  const isReadyForPickup = (order.status === "READY" && isPaid) || order.status === "COMPLETED";
+  const stepReadyForPickup: TimelineStep = {
+    title: "Siap Diambil",
+    description: "Pengerjaan selesai dan pembayaran lunas. Kendaraan siap diserahkan kepada pelanggan.",
+    badge: order.status === "COMPLETED" ? "Selesai" : "Proses",
+    operator: finishLog?.userName
+      ? `${finishLog.userName} (${finishLog.role || "Admin"})`
+      : "Admin",
+    time: finishLog ? finishLog.createdAt : isReadyForPickup ? order.updatedAt : null,
+    active: isReadyForPickup,
+    icon: CheckCircle,
+  };
+
+  // 6. Completed / Handover Done
   const closeLog = logs.find(
     (l) =>
       l.action === "CLOSE_ORDER" ||
       (l.action === "UPDATE_STATUS" && l.metadata?.status === "COMPLETED")
   );
-  const hasCompleted = order.status === "COMPLETED" && order.paymentStatus === "PAID";
-  const step5: TimelineStep = {
-    title: "Selesai",
-    description: "Servis telah selesai dan kendaraan siap diambil.",
+  const hasCompleted = order.status === "COMPLETED";
+  const stepCompleted: TimelineStep = {
+    title: "Selesai & Diserahkan",
+    description: "Kendaraan telah diserahkan kepada pelanggan dan servis selesai.",
     badge: "Selesai",
     operator: closeLog?.userName
       ? `${closeLog.userName} (${closeLog.role || "Admin"})`
-      : order.mechanic?.name
-      ? `${order.mechanic.name} (Mekanik)`
       : "Admin",
     time: closeLog ? closeLog.createdAt : hasCompleted ? order.updatedAt : null,
     active: hasCompleted,
@@ -198,7 +248,17 @@ export function HistoryDialog({ open, onOpenChange, order }: HistoryDialogProps)
   };
 
   // Filter and order active steps (descending - newest first)
-  const activeSteps = [step5, step4, step3, step2, step1].filter((s) => s.active);
+  const candidateSteps = [
+    stepCompleted,
+    stepReadyForPickup,
+    stepPaid,
+    stepPartialPayment,
+    stepWaitingPayment,
+    step3,
+    step2,
+    step1,
+  ];
+  const activeSteps = candidateSteps.filter((s) => s.active);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -228,7 +288,7 @@ export function HistoryDialog({ open, onOpenChange, order }: HistoryDialogProps)
               <div className="sm:text-right">
                 <div className="text-xs text-muted-foreground font-semibold uppercase">Pelanggan</div>
                 <div className="text-base font-bold text-foreground mt-0.5">{order.custName}</div>
-                <div className="text-xs font-mono text-muted-foreground mt-0.5">{`ORD-${order.id.slice(-6).toUpperCase()}`}</div>
+                <div className="text-xs font-mono text-muted-foreground mt-0.5">{formatOrderNo(order.id)}</div>
               </div>
             </div>
 

@@ -6,7 +6,7 @@ export interface CreateLogInput {
   action: string;
   title: string;
   details: string;
-  metadata?: any;
+  metadata?: Record<string, unknown>;
   userId?: string;
   userName?: string;
   role?: string;
@@ -26,9 +26,14 @@ export async function createLog(data: CreateLogInput) {
         key: undefined,
         title: `${data.action}: ${data.title}`,
         subtitle: data.details,
-        content: data.metadata || {},
+        content: {
+          ...(data.metadata || {}),
+          ...(data.userName && { userName: data.userName }),
+          ...(data.role && { userRole: data.role }),
+        },
         userId: data.userId,
         userName: data.userName,
+        platform: data.role,
       },
     });
     return { success: true };

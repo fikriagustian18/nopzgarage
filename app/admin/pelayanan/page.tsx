@@ -621,7 +621,7 @@ export default function Page() {
                                   <Button
                                     variant="ghost"
                                     size="icon"
-                                    className="h-8 w-8 text-indigo-650 hover:text-indigo-700 hover:bg-indigo-50 dark:hover:bg-indigo-950/20 hover:cursor-pointer"
+                                    className="h-8 w-8 text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 dark:hover:bg-indigo-950/20 hover:cursor-pointer"
                                     onClick={() => {
                                       setOrderToConfirm(order);
                                       setConfirmDialogOpen(true);
@@ -1144,7 +1144,7 @@ export default function Page() {
                   <Button 
                     onClick={handleConfirmOrder}
                     disabled={confirmLoading}
-                    className="bg-indigo-650 hover:bg-indigo-700 text-white rounded-lg font-semibold flex items-center gap-1.5 hover:cursor-pointer"
+                    className="bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white rounded-lg font-semibold flex items-center gap-1.5 hover:cursor-pointer transition-colors shadow-sm focus-visible:ring-2 focus-visible:ring-indigo-500 disabled:opacity-50 disabled:pointer-events-none"
                   >
                     {confirmLoading && <Clock className="h-4 w-4 animate-spin" />}
                     Konfirmasi Booking

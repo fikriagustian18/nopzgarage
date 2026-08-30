@@ -21,6 +21,7 @@ export interface CreateUserInput {
   isActive?: boolean;
   salaryType?: SalaryType;
   dailyRate?: number;
+  monthlyRate?: number;
   commissionRate?: number;
 }
 
@@ -34,7 +35,36 @@ export interface UpdateUserInput {
   phone?: string;
   salaryType?: SalaryType;
   dailyRate?: number;
+  monthlyRate?: number;
   commissionRate?: number;
+}
+
+function validateCompensation(data: {
+  dailyRate?: number;
+  monthlyRate?: number;
+  commissionRate?: number;
+}): string | null {
+  if (
+    data.dailyRate !== undefined &&
+    (!Number.isFinite(Number(data.dailyRate)) || Number(data.dailyRate) < 0)
+  ) {
+    return "Rate harian harus berupa angka non-negatif.";
+  }
+  if (
+    data.monthlyRate !== undefined &&
+    (!Number.isFinite(Number(data.monthlyRate)) || Number(data.monthlyRate) < 0)
+  ) {
+    return "Rate bulanan harus berupa angka non-negatif.";
+  }
+  if (
+    data.commissionRate !== undefined &&
+    (!Number.isFinite(Number(data.commissionRate)) ||
+      Number(data.commissionRate) < 0 ||
+      Number(data.commissionRate) > 100)
+  ) {
+    return "Rate komisi harus berada pada rentang 0-100%.";
+  }
+  return null;
 }
 
 // ==================== Get All Users ====================
@@ -106,6 +136,10 @@ export async function createUser(data: CreateUserInput) {
     if (!session || session.user?.role !== 'OWNER') {
       return { success: false, error: 'Access denied: Only Owner can create users.' };
     }
+    const compensationError = validateCompensation(data);
+    if (compensationError) {
+      return { success: false, error: compensationError };
+    }
     // Check if email already exists
     const existingUser = await prisma.user.findUnique({
       where: { email: data.email }
@@ -129,16 +163,18 @@ export async function createUser(data: CreateUserInput) {
           isActive: data.isActive !== undefined ? data.isActive : true,
           salaryType: data.salaryType || 'COMMISSION',
           dailyRate: data.dailyRate !== undefined ? Number(data.dailyRate) : 0,
+          monthlyRate: data.monthlyRate !== undefined ? Number(data.monthlyRate) : 0,
           commissionRate: data.commissionRate !== undefined ? Number(data.commissionRate) : 0,
         }
       });
       employeeId = emp.id;
-    } else if (employeeId && (data.salaryType || data.dailyRate !== undefined || data.commissionRate !== undefined)) {
+    } else if (employeeId && (data.salaryType || data.dailyRate !== undefined || data.monthlyRate !== undefined || data.commissionRate !== undefined)) {
       await prisma.employee.update({
         where: { id: employeeId },
         data: {
           ...(data.salaryType && { salaryType: data.salaryType }),
           ...(data.dailyRate !== undefined && { dailyRate: Number(data.dailyRate) }),
+          ...(data.monthlyRate !== undefined && { monthlyRate: Number(data.monthlyRate) }),
           ...(data.commissionRate !== undefined && { commissionRate: Number(data.commissionRate) }),
         }
       });
@@ -197,7 +233,11 @@ export async function updateUser(data: UpdateUserInput) {
     if (!session || session.user?.role !== 'OWNER') {
       return { success: false, error: 'Access denied: Only Owner can update users.' };
     }
-    const { id, password, name, phone, salaryType, dailyRate, commissionRate, ...updateData } = data;
+    const compensationError = validateCompensation(data);
+    if (compensationError) {
+      return { success: false, error: compensationError };
+    }
+    const { id, password, name, phone, salaryType, dailyRate, monthlyRate, commissionRate, ...updateData } = data;
     
     let finalUpdateData: any = { ...updateData };
 
@@ -222,6 +262,7 @@ export async function updateUser(data: UpdateUserInput) {
             ...(phone !== undefined && { phone }),
             ...(salaryType && { salaryType }),
             ...(dailyRate !== undefined && { dailyRate: Number(dailyRate) }),
+            ...(monthlyRate !== undefined && { monthlyRate: Number(monthlyRate) }),
             ...(commissionRate !== undefined && { commissionRate: Number(commissionRate) }),
           }
         });
@@ -234,6 +275,7 @@ export async function updateUser(data: UpdateUserInput) {
             phone: phone || null,
             salaryType: salaryType || 'COMMISSION',
             dailyRate: dailyRate !== undefined ? Number(dailyRate) : 0,
+            monthlyRate: monthlyRate !== undefined ? Number(monthlyRate) : 0,
             commissionRate: commissionRate !== undefined ? Number(commissionRate) : 0,
           }
         });

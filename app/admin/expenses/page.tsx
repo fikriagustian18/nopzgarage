@@ -48,6 +48,7 @@ import {
   getExpenses,
   deleteExpense,
 } from "@/lib/actions/expenses";
+import { expenseSchema } from "@/lib/validations/expense";
 
 interface Expense {
   id: string;
@@ -72,6 +73,8 @@ interface ExpenseFormData {
   reference: string;
 }
 
+type ExpenseFieldErrors = Partial<Record<keyof ExpenseFormData, string>>;
+
 /**
  * Admin Expenses Management Page component.
  */
@@ -82,6 +85,7 @@ export default function Page() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [fieldErrors, setFieldErrors] = useState<ExpenseFieldErrors>({});
 
   const [formData, setFormData] = useState<ExpenseFormData>({
     description: "",
@@ -113,22 +117,30 @@ export default function Page() {
 
   // Handle new expense form submission
   async function handleSubmit() {
-    const amountNum = Number(formData.amount) || 0;
-    if (amountNum <= 0 || !formData.description || !formData.category) {
+    const validation = expenseSchema.safeParse(formData);
+    if (!validation.success) {
+      const flattened = validation.error.flatten().fieldErrors;
+      setFieldErrors({
+        category: flattened.category?.[0],
+        description: flattened.description?.[0],
+        amount: flattened.amount?.[0],
+        reference: flattened.reference?.[0],
+      });
       toast({
         variant: "destructive",
-        title: "Data tidak lengkap",
-        description: "Mohon isi kategori, deskripsi, dan nominal.",
+        title: "Data pengeluaran belum lengkap",
+        description: validation.error.issues[0]?.message,
       });
       return;
     }
 
+    setFieldErrors({});
     setIsSubmitting(true);
     const result = await createExpense({
-      description: formData.description,
-      amount: amountNum,
-      category: formData.category,
-      reference: formData.reference ? formData.reference : undefined,
+      description: validation.data.description,
+      amount: validation.data.amount,
+      category: validation.data.category,
+      reference: validation.data.reference,
     });
 
     if (result.success) {
@@ -143,6 +155,7 @@ export default function Page() {
         category: "Beban Operasional",
         reference: "",
       });
+      setFieldErrors({});
       loadData();
       setIsSubmitting(false);
       return;
@@ -254,7 +267,9 @@ export default function Page() {
 
                     <div className="space-y-4 py-4">
                       <div className="space-y-2">
-                        <Label>Kategori Pengeluaran</Label>
+                        <Label>
+                          Kategori <span className="text-red-500">*</span>
+                        </Label>
                         <Select
                           value={formData.category}
                           onValueChange={(val) =>
@@ -262,7 +277,7 @@ export default function Page() {
                           }
                         >
                           <SelectTrigger>
-                            <SelectValue placeholder="Pilih Kategori..." />
+                            <SelectValue placeholder="Pilih Kategori" />
                           </SelectTrigger>
                           <SelectContent>
                             {categories.map((category) => (
@@ -275,49 +290,74 @@ export default function Page() {
                             ))}
                           </SelectContent>
                         </Select>
+                        {fieldErrors.category && (
+                          <p className="text-xs text-destructive">{fieldErrors.category}</p>
+                        )}
                       </div>
 
                       <div className="space-y-2">
-                        <Label>Deskripsi / Keterangan</Label>
+                        <Label>
+                          Deskripsi / Keterangan <span className="text-red-500">*</span>
+                        </Label>
                         <Input
                           placeholder="Contoh: Beli Oli Drum, Bayar Listrik, dll"
                           value={formData.description}
+                          aria-invalid={Boolean(fieldErrors.description)}
                           onChange={(e) =>
-                            setFormData({
-                              ...formData,
-                              description: e.target.value,
-                            })
+                            {
+                              setFormData({ ...formData, description: e.target.value });
+                              setFieldErrors((errors) => ({ ...errors, description: undefined }));
+                            }
                           }
+                          required
                         />
+                        {fieldErrors.description && (
+                          <p className="text-xs text-destructive">{fieldErrors.description}</p>
+                        )}
                       </div>
 
                       <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-2">
-                          <Label>Nominal (Rp)</Label>
+                          <Label>
+                            Nominal (Rp) <span className="text-red-500">*</span>
+                          </Label>
                           <Input
                             type="number"
+                            min="1"
                             placeholder="0"
                             value={formData.amount}
+                            aria-invalid={Boolean(fieldErrors.amount)}
                             onChange={(e) =>
-                              setFormData({
-                                ...formData,
-                                amount: e.target.value,
-                              })
+                              {
+                                setFormData({ ...formData, amount: e.target.value });
+                                setFieldErrors((errors) => ({ ...errors, amount: undefined }));
+                              }
                             }
+                            required
                           />
+                          {fieldErrors.amount && (
+                            <p className="text-xs text-destructive">{fieldErrors.amount}</p>
+                          )}
                         </div>
                         <div className="space-y-2">
-                          <Label>Ref / No. Nota (Opsional)</Label>
+                          <Label>
+                            Ref / No. Nota <span className="text-red-500">*</span>
+                          </Label>
                           <Input
-                            placeholder="INV-001"
+                            placeholder="INV-001 / NOTA-08"
                             value={formData.reference ?? ""}
+                            aria-invalid={Boolean(fieldErrors.reference)}
                             onChange={(e) =>
-                              setFormData({
-                                ...formData,
-                                reference: e.target.value,
-                              })
+                              {
+                                setFormData({ ...formData, reference: e.target.value });
+                                setFieldErrors((errors) => ({ ...errors, reference: undefined }));
+                              }
                             }
+                            required
                           />
+                          {fieldErrors.reference && (
+                            <p className="text-xs text-destructive">{fieldErrors.reference}</p>
+                          )}
                         </div>
                       </div>
                     </div>

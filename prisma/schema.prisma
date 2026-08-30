@@ -33,6 +33,7 @@ model Employee {
   jabatan        String?
   salaryType     SalaryType  @default(DAILY)
   dailyRate      Decimal     @default(0) @db.Decimal(10, 2)
+  monthlyRate    Decimal     @default(0) @db.Decimal(12, 2)
   commissionRate Decimal     @default(0) @db.Decimal(10, 2)
   isActive       Boolean     @default(true)
   createdAt      DateTime    @default(now())
@@ -41,6 +42,7 @@ model Employee {
   orders         Order[]
   orderItems     OrderItem[]
   payments       Payment[]
+  payrolls       Payroll[]
 }
 
 model Order {
@@ -134,17 +136,42 @@ model Payment {
   note          String?
   orderId       String?
   employeeId    String?
+  payrollId     String?
   bankAccountId String?
   paymentMethod String    @default("CASH")
   createdAt     DateTime  @default(now())
   order         Order?    @relation(fields: [orderId], references: [id], onDelete: Cascade)
   employee      Employee? @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  payroll       Payroll?  @relation(fields: [payrollId], references: [id], onDelete: SetNull)
   bankAccount   Account?  @relation(fields: [bankAccountId], references: [id])
 
   @@index([orderId])
   @@index([employeeId])
+  @@index([payrollId])
   @@index([date])
   @@index([bankAccountId])
+}
+
+model Payroll {
+  id          String        @id @default(cuid())
+  employeeId  String
+  startDate   DateTime
+  endDate     DateTime
+  salaryType  SalaryType
+  baseSalary  Decimal       @db.Decimal(12, 2)
+  bonus       Decimal       @default(0) @db.Decimal(12, 2)
+  totalEarned Decimal       @db.Decimal(12, 2)
+  totalPaid   Decimal       @default(0) @db.Decimal(12, 2)
+  status      PayrollStatus @default(UNPAID)
+  details     String?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  employee    Employee      @relation(fields: [employeeId], references: [id], onDelete: Restrict)
+  payments    Payment[]
+
+  @@unique([employeeId, startDate, endDate])
+  @@index([status])
+  @@index([startDate, endDate])
 }
 
 model SystemConfig {
@@ -154,7 +181,6 @@ model SystemConfig {
   title        String?
   subtitle     String?
   content      Json?
-  imageUrl     String?
   embedUrl     String?
   platform     String?
   userId       String?
@@ -194,4 +220,10 @@ enum SalaryType {
   DAILY
   COMMISSION
   MONTHLY
+}
+
+enum PayrollStatus {
+  UNPAID
+  PARTIAL
+  PAID
 }

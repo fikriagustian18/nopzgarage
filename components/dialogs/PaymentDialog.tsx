@@ -68,9 +68,6 @@ function PaymentDialog({ open, onOpenChange, order, onSuccess }: PaymentDialogPr
   // Cash Payment States
   const [cashReceived, setCashReceived] = useState<number | string>(remaining > 0 ? remaining : 0);
 
-  // Pay Commission State
-  const [payCommission, setPayCommission] = useState(false);
-
   // Sync cashReceived with amount changes
   useEffect(() => {
     setCashReceived(amount);
@@ -86,7 +83,6 @@ function PaymentDialog({ open, onOpenChange, order, onSuccess }: PaymentDialogPr
       setNote("");
       setMethod("CASH");
       setSelectedBankId("");
-      setPayCommission(false);
     }
   }, [open, order?.id]);
 
@@ -149,7 +145,6 @@ function PaymentDialog({ open, onOpenChange, order, onSuccess }: PaymentDialogPr
         orderId: order.id,
         paymentMethod: method,
         bankAccountId: selectedBankId || undefined,
-        payCommissionNow: payCommission,
       });
 
       if (!result.success) {
@@ -396,28 +391,6 @@ function PaymentDialog({ open, onOpenChange, order, onSuccess }: PaymentDialogPr
               />
             </div>
 
-            {/* Option: Pay Employee Commission */}
-            {remaining > 0 && Number(amount) >= remaining && (
-              <div className="flex items-center space-x-2 bg-yellow-50 dark:bg-yellow-950/20 p-3 rounded-lg border border-yellow-200 dark:border-yellow-800">
-                <input
-                  type="checkbox"
-                  id="payslip"
-                  className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
-                  checked={payCommission}
-                  onChange={(e) => setPayCommission(e.target.checked)}
-                />
-                <label
-                  htmlFor="payslip"
-                  className="text-sm font-medium leading-none cursor-pointer"
-                >
-                  Cairkan komisi karyawan otomatis?
-                  <p className="text-[10px] text-muted-foreground mt-1 font-normal">
-                    Jika dicentang, status komisi karyawan untuk order ini akan berubah jadi
-                    "LUNAS". Gunakan jika uang tips/komisi langsung diberikan saat ini juga.
-                  </p>
-                </label>
-              </div>
-            )}
           </div>
 
           <div className="flex gap-3 pt-4 border-t border-border mt-3 shrink-0">

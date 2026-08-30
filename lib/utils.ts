@@ -221,15 +221,15 @@ export function formatDetailDate(dateInput?: string | Date | null): string {
 }
 
 // ==================== Order Number Formatter ====================
-/** Formats order ID into "ORD-XXXX" format */
+/** Formats order ID into "ORD-XXXXXX" format */
 export function formatOrderNo(id?: string): string {
   if (!id) {
     return "-";
   }
-  if (id.startsWith("ORD-")) {
-    return id;
+  if (id.toUpperCase().startsWith("ORD-")) {
+    return id.toUpperCase();
   }
-  return `ORD-${id.slice(-4).toUpperCase()}`;
+  return `ORD-${id.slice(-6).toUpperCase()}`;
 }
 
 // ==================== Data Serializer for Next.js Client Components ====================

@@ -36,11 +36,12 @@ import {
   Shield,
   CreditCard,
   WalletCards,
-  KeyRound
+  KeyRound,
+  Info
 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { RoleGuard } from "@/components/shared/RoleGuard";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/Tabs";
 import {
@@ -66,13 +67,14 @@ export default function Page() {
 
   const tables = [
     { name: "User", columns: 11, purpose: "Akun login pengguna sistem (Owner/Admin/Employee) & token reset password" },
-    { name: "Employee", columns: 11, purpose: "Profil data karyawan (mekanik/owner), jabatan & skema gaji (harian/komisi)" },
+    { name: "Employee", columns: 12, purpose: "Profil karyawan, jabatan, serta rate gaji harian, bulanan, atau komisi" },
     { name: "Order", columns: 16, purpose: "Transaksi servis motor, booking, status antrian & total bayar" },
     { name: "OrderItem", columns: 11, purpose: "Detail rincian item (jasa & sparepart) yang dipasang per order" },
     { name: "SparePart", columns: 12, purpose: "Master data suku cadang (stok, min stock, harga beli & harga jual)" },
     { name: "Account", columns: 11, purpose: "Bagan Akun (Chart of Accounts) & Rekening Bank bengkel (Kas/Bank/Piutang/Hutang)" },
-    { name: "Payment", columns: 10, purpose: "Transaksi pembayaran kasir (DP, pelunasan order, gaji karyawan, operasional)" },
-    { name: "SystemConfig", columns: 15, purpose: "Konsolidasi konfigurasi sistem, CMS landing page, media gallery, embed & setting" },
+    { name: "Payment", columns: 11, purpose: "Transaksi kas aktual untuk order, payroll, inventory, dan operasional" },
+    { name: "Payroll", columns: 13, purpose: "Snapshot hak gaji per karyawan dan periode, terpisah dari transaksi pembayaran" },
+    { name: "SystemConfig", columns: 14, purpose: "Konsolidasi konfigurasi sistem, CMS landing page, embed, log, dan setting" },
   ];
 
   const accounts = [
@@ -126,7 +128,7 @@ export default function Page() {
     { title: "Website CMS", status: "Complete", icon: Code },
   ];
 
-  // Mermaid Definitions based on actual active system (8 Consolidated Tables)
+  // Mermaid definitions based on the 9 active Prisma models.
   const diagrams = {
     erd: `erDiagram
     User {
@@ -150,6 +152,7 @@ export default function Page() {
         string jabatan
         enum salaryType
         decimal dailyRate
+        decimal monthlyRate
         decimal commissionRate
         boolean isActive
         datetime createdAt
@@ -221,9 +224,25 @@ export default function Page() {
         string note
         string orderId FK
         string employeeId FK
+        string payrollId FK
         string bankAccountId FK
         string paymentMethod
         datetime createdAt
+    }
+    Payroll {
+        string id PK
+        string employeeId FK
+        datetime startDate
+        datetime endDate
+        enum salaryType
+        decimal baseSalary
+        decimal bonus
+        decimal totalEarned
+        decimal totalPaid
+        enum status
+        string details
+        datetime createdAt
+        datetime updatedAt
     }
     SystemConfig {
         string id PK
@@ -232,7 +251,6 @@ export default function Page() {
         string title
         string subtitle
         json content
-        string imageUrl
         string embedUrl
         string platform
         string userId
@@ -243,14 +261,16 @@ export default function Page() {
         datetime updatedAt
     }
 
-    Employee ||--o| User : "account"
-    Employee ||--o{ Order : "mechanic_orders"
-    Employee ||--o{ OrderItem : "order_items"
-    Employee ||--o{ Payment : "employee_payments"
-    Order ||--o{ OrderItem : "items"
-    Order ||--o{ Payment : "payments"
-    SparePart ||--o{ OrderItem : "order_items"
-    Account ||--o{ Payment : "bank_payments"`,
+    Employee o|--o| User : "optional account"
+    Employee o|--o{ Order : "optional mechanic"
+    Employee o|--o{ OrderItem : "optional fee owner"
+    Employee o|--o{ Payment : "optional payee"
+    Employee ||--o{ Payroll : "payroll slips"
+    Order ||--o{ OrderItem : "order items"
+    Order o|--o{ Payment : "optional order payment"
+    SparePart o|--o{ OrderItem : "optional stock item"
+    Account o|--o{ Payment : "optional bank account"
+    Payroll o|--o{ Payment : "optional payroll payment"`,
 
     dfd0: `flowchart LR
     Customer["CUSTOMER<br />Pelanggan / Pemilik Motor"]
@@ -258,7 +278,7 @@ export default function Page() {
     Admin["ADMIN<br />Staff Admin"]
     Mechanic["MECHANIC<br />Mekanik"]
     
-    System(["0<br />SISTEM MANAJEMEN<br />NOPZGARAGE (8 Consolidated Tables)"])
+    System(["0<br />SISTEM MANAJEMEN<br />NOPZGARAGE (9 Active Models)"])
     
     Customer -->|"Registrasi Booking & Keluhan"| System
     System -->|"Informasi Antrian & Status"| Customer
@@ -304,7 +324,7 @@ export default function Page() {
     P2 --> P3
 
     Admin -->|"Kelola Sparepart & Stok"| P3
-    Mekanik -->|"Request Part / Update Progress"| P3
+    P3 -->|"Lihat Stok & Progress (Read-only)"| Mekanik
     P3 <-->|"Data Sparepart"| DS3
     P3 --> P4
 
@@ -1073,7 +1093,7 @@ export default function Page() {
     
     OwnerAccess[1. Owner - Full Control]
     AdminAccess[2. Admin - Operations & Cashier]
-    EmployeeAccess[3. Employee / Mechanic - Work Execution]
+    EmployeeAccess[3. Employee / Mechanic - Read-only Queue]
     PublicAccess[4. Public / Guest - Customer Services]
     
     System --> OwnerAccess
@@ -1092,7 +1112,7 @@ export default function Page() {
     AdminAccess --> AdminCMS[Kelola Konten CMS Landing Page]
     
     EmployeeAccess --> EmpTask[Daftar Antrian Kerja]
-    EmployeeAccess --> EmpWork[Update Progress Kerja]
+    EmployeeAccess --> EmpWork[Lihat Progress Kerja]
     EmployeeAccess --> EmpSlip[Lihat Slip & Histori Gaji]
     
     PublicAccess --> PubBook[Form Booking Online]
@@ -1253,7 +1273,64 @@ export default function Page() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Database className="h-5 w-5" />
-                Database Schema ({tables.length} Tables)
+                Entity Relationship Diagram (ERD - 9 Active Models)
+              </CardTitle>
+              <CardDescription>
+                Struktur relasi dan kardinalitas antar entitas database PostgreSQL (Prisma ORM)
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="p-4 bg-card border rounded-xl overflow-x-auto">
+                <MermaidDiagram chart={diagrams.erd} />
+              </div>
+
+              {/* ERD Notation Legend */}
+              <div className="p-4 bg-muted/40 border border-border rounded-xl space-y-3 text-xs">
+                <h4 className="font-bold text-sm text-foreground flex items-center gap-2">
+                  <Info className="h-4 w-4 text-primary" />
+                  Panduan Notasi & Simbol Kardinalitas ERD (Crow&apos;s Foot)
+                </h4>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 pt-1">
+                  <div className="p-2.5 bg-background border rounded-lg">
+                    <span className="font-mono font-bold text-primary block">||--||</span>
+                    <span className="font-semibold text-foreground">One to Exactly One</span>
+                    <p className="text-muted-foreground text-[11px] mt-0.5">Wajib tepat satu entitas.</p>
+                  </div>
+                  <div className="p-2.5 bg-background border rounded-lg">
+                    <span className="font-mono font-bold text-primary block">||--o|</span>
+                    <span className="font-semibold text-foreground">One to Optional One</span>
+                    <p className="text-muted-foreground text-[11px] mt-0.5">Satu ke nol atau satu (1 : 0..1).</p>
+                  </div>
+                  <div className="p-2.5 bg-background border rounded-lg">
+                    <span className="font-mono font-bold text-primary block">||--|{`{`}</span>
+                    <span className="font-semibold text-foreground">One to Mandatory Many</span>
+                    <p className="text-muted-foreground text-[11px] mt-0.5">Satu ke satu atau lebih (1 : 1..*).</p>
+                  </div>
+                  <div className="p-2.5 bg-background border rounded-lg">
+                    <span className="font-mono font-bold text-primary block">||--o{`{`}</span>
+                    <span className="font-semibold text-foreground">One to Optional Many</span>
+                    <p className="text-muted-foreground text-[11px] mt-0.5">Satu ke nol atau lebih (1 : 0..*).</p>
+                  </div>
+                  <div className="p-2.5 bg-background border rounded-lg">
+                    <span className="font-mono font-bold text-primary block">o|--o{`{`}</span>
+                    <span className="font-semibold text-foreground">Optional to Optional Many</span>
+                    <p className="text-muted-foreground text-[11px] mt-0.5">Foreign key induk opsional; induk memiliki nol atau banyak anak.</p>
+                  </div>
+                </div>
+                <div className="flex flex-wrap gap-4 pt-2 border-t text-[11px] text-muted-foreground">
+                  <span><strong className="text-foreground font-mono">PK</strong> = Primary Key</span>
+                  <span><strong className="text-foreground font-mono">FK</strong> = Foreign Key</span>
+                  <span><strong className="text-foreground font-mono">UK</strong> = Unique Key Constraint</span>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Database className="h-5 w-5" />
+                Database Schema Tables ({tables.length} Tables)
               </CardTitle>
             </CardHeader>
             <CardContent>

@@ -13,6 +13,7 @@ import {
   Calendar, 
   CheckCircle2, 
   Check, 
+  Copy,
   Info, 
   Bike, 
   PenTool, 
@@ -36,7 +37,7 @@ import { Textarea } from "@/components/ui/Textarea";
 import { Card, CardContent } from "@/components/ui/Card";
 import { ThemeToggle } from "@/components/shared/ThemeToggle";
 import { createBooking } from "@/lib/actions/orders";
-import { formatWhatsAppNumber } from "@/lib/utils";
+import { formatWhatsAppNumber, formatOrderNo } from "@/lib/utils";
 import { normalizeRole } from "@/lib/authCheck";
 import { 
   DEFAULT_SERVICE_OPTIONS, 
@@ -88,6 +89,8 @@ export interface SelectedService {
 }
 
 export interface SuccessValues {
+  id?: string;
+  orderNumber?: string;
   queueNumber?: string;
   custName: string;
   vehicle: string;
@@ -110,6 +113,7 @@ export function BookingWizard({
   const [selectedService, setSelectedService] = useState<SelectedService | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [successValues, setSuccessValues] = useState<SuccessValues | null>(null);
+  const [copiedOrderNo, setCopiedOrderNo] = useState(false);
 
   const step1Form = useForm<Step1Data>({
     resolver: zodResolver(step1Schema),
@@ -235,8 +239,11 @@ export function BookingWizard({
         })
       : "-";
 
+    const orderNo = successValues.orderNumber || (successValues.id ? formatOrderNo(successValues.id) : "-");
+
     return encodeURIComponent(
       `Halo NopzGarage, saya ingin mengonfirmasi booking service:\n\n` +
+      `*No. Order:* ${orderNo}\n` +
       `*No. Antrian:* ${successValues.queueNumber || "-"}\n` +
       `*Nama:* ${successValues.custName}\n` +
       `*Motor:* ${successValues.vehicle}\n` +
@@ -335,9 +342,37 @@ export function BookingWizard({
               <div className="absolute -left-2.5 top-1/2 -translate-y-1/2 w-5 h-5 rounded-full bg-background border-r border-border" />
               <div className="absolute -right-2.5 top-1/2 -translate-y-1/2 w-5 h-5 rounded-full bg-background border-l border-border" />
 
-              <div className="flex justify-between items-center border-b border-dashed border-border pb-3">
-                <span className="text-muted-foreground uppercase font-bold tracking-wider text-[10px]">Nomor Antrian</span>
-                <span className="text-xl font-black text-primary tracking-wider">{successValues.queueNumber || "Q-XX"}</span>
+              <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-3 border-b border-dashed border-border pb-4">
+                <div>
+                  <span className="text-muted-foreground uppercase font-bold tracking-wider text-[10px] block">Nomor Order</span>
+                  <div className="flex items-center gap-2 mt-0.5">
+                    <span className="text-lg font-black text-foreground font-mono">
+                      {successValues.orderNumber || (successValues.id ? formatOrderNo(successValues.id) : "-")}
+                    </span>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        const no = successValues.orderNumber || (successValues.id ? formatOrderNo(successValues.id) : "");
+                        if (no) {
+                          navigator.clipboard.writeText(no);
+                          setCopiedOrderNo(true);
+                          toast.success("Nomor order disalin ke clipboard!");
+                          setTimeout(() => setCopiedOrderNo(false), 2000);
+                        }
+                      }}
+                      className="h-7 px-2 text-xs gap-1 font-sans text-primary hover:bg-primary/10 rounded-lg"
+                    >
+                      {copiedOrderNo ? <Check className="h-3.5 w-3.5 text-green-600" /> : <Copy className="h-3.5 w-3.5" />}
+                      <span className="text-[10px] font-semibold">{copiedOrderNo ? "Tersalin" : "Salin"}</span>
+                    </Button>
+                  </div>
+                </div>
+                <div className="sm:text-right">
+                  <span className="text-muted-foreground uppercase font-bold tracking-wider text-[10px] block">Nomor Antrian</span>
+                  <span className="text-xl font-black text-primary tracking-wider">{successValues.queueNumber || "Q-XX"}</span>
+                </div>
               </div>
 
               <div className="space-y-2">

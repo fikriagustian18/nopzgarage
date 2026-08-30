@@ -3,6 +3,8 @@
 import { format, subDays, startOfMonth, endOfMonth, startOfDay, endOfDay } from "date-fns";
 import { id } from "date-fns/locale";
 
+import { auth } from "@/lib/auth";
+import { isRoleAllowed } from "@/lib/authCheck";
 import { prisma } from "@/lib/prisma";
 
 export interface DashboardStats {
@@ -63,6 +65,11 @@ export interface DashboardStats {
 export async function getDashboardStats(): Promise<{ success: boolean; data?: DashboardStats; error?: string }> {
 
   try {
+    const session = await auth();
+    if (!session || !isRoleAllowed(session.user?.role, ["OWNER", "ADMIN"])) {
+      return { success: false, error: "Access denied." };
+    }
+
     const now = new Date();
     const firstDayOfMonth = startOfMonth(now);
     const lastDayOfMonth = endOfMonth(now);
@@ -145,7 +152,16 @@ export async function getDashboardStats(): Promise<{ success: boolean; data?: Da
         prisma.payment.findMany({
             take: 5,
             where: { type: { in: ['EXPENSE', 'PAYROLL'] } },
-            orderBy: { createdAt: 'desc' }
+            orderBy: { createdAt: 'desc' },
+            // Explicit transitional selection prevents a pending additive
+            // payrollId column from taking down the entire dashboard.
+            select: {
+              id: true,
+              amount: true,
+              type: true,
+              note: true,
+              createdAt: true,
+            },
         }),
         // Bank Accounts
         prisma.account.findMany({

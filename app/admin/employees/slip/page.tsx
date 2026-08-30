@@ -64,13 +64,15 @@ interface Payroll {
     workDays?: number;
     motorCount?: number;
     bonusNote?: string;
+    monthlyRate?: number;
+    commissionRate?: number;
   } | null;
   createdAt: string;
   employee: {
     id: string;
     name: string;
     role: string;
-    salaryType: "DAILY" | "COMMISSION";
+    salaryType: "DAILY" | "COMMISSION" | "MONTHLY";
   };
 }
 
@@ -397,7 +399,11 @@ export default function Page() {
                           <div>
                             <p className="font-bold">{p.employee.name}</p>
                             <Badge variant="outline" className="text-[10px] uppercase font-mono mt-0.5">
-                              {p.employee.salaryType === "DAILY" ? "Gaji Harian" : "Komisi / Hasil"}
+                              {p.employee.salaryType === "DAILY"
+                                ? "Gaji Harian"
+                                : p.employee.salaryType === "MONTHLY"
+                                ? "Gaji Bulanan"
+                                : "Komisi / Hasil"}
                             </Badge>
                           </div>
                         </TableCell>
@@ -490,7 +496,8 @@ export default function Page() {
                   <div className="rounded-lg bg-muted/50 p-3 text-[11px] text-muted-foreground border leading-relaxed">
                     <strong>Informasi:</strong>
                     <br />- Skema Harian (DAILY) dikalkulasi berdasarkan jumlah hari kerja (Minggu libur) dikali rate harian.
-                    <br />- Skema Komisi (COMMISSION) dihitung dari jumlah unit motor yang berstatus COMPLETED tertunjuk mekanik dikali rate bagi hasil.
+                    <br />- Skema Bulanan (MONTHLY) menggunakan rate bulanan tetap untuk periode payroll.
+                    <br />- Skema Komisi (COMMISSION) memakai snapshot persentase subtotal jasa dari order lunas yang sudah selesai.
                   </div>
                 </div>
                 <DialogFooter>
@@ -601,6 +608,10 @@ export default function Page() {
                           {selectedPayroll.employee.salaryType === "DAILY" ? (
                             <span className="text-[10px] text-muted-foreground block italic">
                               ({selectedPayroll.detailsParsed?.workDays || 0} Hari Kerja)
+                            </span>
+                          ) : selectedPayroll.employee.salaryType === "MONTHLY" ? (
+                            <span className="text-[10px] text-muted-foreground block italic">
+                              (Gaji Bulanan Tetap)
                             </span>
                           ) : (
                             <span className="text-[10px] text-muted-foreground block italic">

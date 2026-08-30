@@ -63,7 +63,7 @@ async function main() {
 
   const adminEmp = await prisma.employee.upsert({
     where: { id: 'emp-admin-001' },
-    update: {},
+    update: { salaryType: 'MONTHLY', dailyRate: 0, monthlyRate: 2000000 },
     create: {
       id: 'emp-admin-001',
       name: 'Agus Pratama',
@@ -71,13 +71,14 @@ async function main() {
       phone: '081234567891',
       jabatan: 'Admin Kasir',
       salaryType: 'MONTHLY',
-      dailyRate: 100000,
+      dailyRate: 0,
+      monthlyRate: 2000000,
     },
   });
 
   const mechanicEmp = await prisma.employee.upsert({
     where: { id: 'emp-mech-001' },
-    update: {},
+    update: { salaryType: 'COMMISSION', commissionRate: 25 },
     create: {
       id: 'emp-mech-001',
       name: 'Dedi Kurniawan',
@@ -85,7 +86,7 @@ async function main() {
       phone: '081234567892',
       jabatan: 'Mekanik Senior',
       salaryType: 'COMMISSION',
-      commissionRate: 50000,
+      commissionRate: 25,
     },
   });
 

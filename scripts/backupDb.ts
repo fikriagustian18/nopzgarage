@@ -41,7 +41,7 @@ async function main() {
   }
 
   // Define backups directory
-  const backupDir = path.join(__dirname, '../backups');
+  const backupDir = path.join(process.cwd(), 'backups');
   if (!fs.existsSync(backupDir)) {
     fs.mkdirSync(backupDir, { recursive: true });
   }

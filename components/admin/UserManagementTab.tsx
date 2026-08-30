@@ -56,6 +56,7 @@ interface ManagedUser {
     phone?: string | null;
     salaryType?: SalaryType | string | null;
     dailyRate?: number | null;
+    monthlyRate?: number | null;
     commissionRate?: number | null;
   } | null;
   createdAt: string;
@@ -92,6 +93,7 @@ export function UserManagementTab() {
     phone: "",
     salaryType: "COMMISSION" as SalaryType,
     dailyRate: 0,
+    monthlyRate: 0,
     commissionRate: 0,
     isActive: true,
   });
@@ -128,6 +130,7 @@ export function UserManagementTab() {
       const res = await createUser({
         ...formData,
         dailyRate: Number(formData.dailyRate) || 0,
+        monthlyRate: Number(formData.monthlyRate) || 0,
         commissionRate: Number(formData.commissionRate) || 0,
       });
       if (res.success) {
@@ -143,6 +146,7 @@ export function UserManagementTab() {
           phone: "",
           salaryType: "COMMISSION",
           dailyRate: 0,
+          monthlyRate: 0,
           commissionRate: 0,
           isActive: true,
         });
@@ -168,6 +172,7 @@ export function UserManagementTab() {
         phone: formData.phone,
         salaryType: formData.salaryType,
         dailyRate: Number(formData.dailyRate) || 0,
+        monthlyRate: Number(formData.monthlyRate) || 0,
         commissionRate: Number(formData.commissionRate) || 0,
       });
       if (res.success) {
@@ -257,6 +262,7 @@ export function UserManagementTab() {
       phone: user.employee?.phone || "",
       salaryType: (user.employee?.salaryType as any) || "COMMISSION",
       dailyRate: Number(user.employee?.dailyRate) || 0,
+      monthlyRate: Number(user.employee?.monthlyRate) || 0,
       commissionRate: Number(user.employee?.commissionRate) || 0,
       isActive: user.isActive,
     });
@@ -494,7 +500,7 @@ export function UserManagementTab() {
                           </span>
                         ) : (user.employee.salaryType as string) === "MONTHLY" ? (
                           <span className="text-indigo-600 dark:text-indigo-400 font-mono">
-                            Rp {Number(user.employee.dailyRate || 0).toLocaleString("id-ID")} <span className="text-[10px] font-normal text-muted-foreground">/ bln</span>
+                            Rp {Number(user.employee.monthlyRate || 0).toLocaleString("id-ID")} <span className="text-[10px] font-normal text-muted-foreground">/ bln</span>
                           </span>
                         ) : (
                           <span className="text-chart-1 font-mono">
@@ -645,7 +651,7 @@ export function UserManagementTab() {
                   (selectedUser.employee.salaryType as string) === "COMMISSION"
                     ? `${Number(selectedUser.employee.commissionRate || 0)}%`
                     : (selectedUser.employee.salaryType as string) === "MONTHLY"
-                    ? `Rp ${Number(selectedUser.employee.dailyRate || 0).toLocaleString("id-ID")} / bulan`
+                    ? `Rp ${Number(selectedUser.employee.monthlyRate || 0).toLocaleString("id-ID")} / bulan`
                     : `Rp ${Number(selectedUser.employee.dailyRate || 0).toLocaleString("id-ID")} / hari`
                 ) : "-"}
               </span>
@@ -816,8 +822,8 @@ export function UserManagementTab() {
                     id="monthlyRate"
                     type="number"
                     placeholder="Contoh: 3000000"
-                    value={formData.dailyRate}
-                    onChange={(e) => setFormData({ ...formData, dailyRate: e.target.value as any })}
+                    value={formData.monthlyRate}
+                    onChange={(e) => setFormData({ ...formData, monthlyRate: e.target.value as any })}
                     className="h-11 rounded-xl"
                   />
                 </div>
@@ -964,8 +970,8 @@ export function UserManagementTab() {
                     id="edit-monthlyRate"
                     type="number"
                     placeholder="Contoh: 3000000"
-                    value={formData.dailyRate}
-                    onChange={(e) => setFormData({ ...formData, dailyRate: e.target.value as any })}
+                    value={formData.monthlyRate}
+                    onChange={(e) => setFormData({ ...formData, monthlyRate: e.target.value as any })}
                     className="h-11 rounded-xl"
                   />
                 </div>

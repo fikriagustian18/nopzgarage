@@ -16,6 +16,7 @@ export interface CreateEmployeeInput {
   phone?: string;
   salaryType: SalaryType;
   dailyRate?: number;
+  monthlyRate?: number;
   commissionRate?: number;
 }
 
@@ -26,12 +27,154 @@ export interface UpdateEmployeeInput {
   phone?: string;
   salaryType?: SalaryType;
   dailyRate?: number;
+  monthlyRate?: number;
   commissionRate?: number;
   isActive?: boolean;
 }
 
 // Infer TransactionClient strictly
 type TransactionClient = Parameters<Parameters<typeof prisma.$transaction>[0]>[0];
+
+function validateSalaryRates(data: {
+  dailyRate?: number;
+  monthlyRate?: number;
+  commissionRate?: number;
+}): string | null {
+  for (const [label, value] of [
+    ["Rate harian", data.dailyRate],
+    ["Rate bulanan", data.monthlyRate],
+  ] as const) {
+    if (value !== undefined && (!Number.isFinite(Number(value)) || Number(value) < 0)) {
+      return `${label} harus berupa angka non-negatif.`;
+    }
+  }
+
+  if (
+    data.commissionRate !== undefined &&
+    (!Number.isFinite(Number(data.commissionRate)) ||
+      Number(data.commissionRate) < 0 ||
+      Number(data.commissionRate) > 100)
+  ) {
+    return "Rate komisi harus berada pada rentang 0-100%.";
+  }
+
+  return null;
+}
+
+function isPendingPayrollMigration(error: unknown): boolean {
+  if (!error || typeof error !== "object" || !("code" in error)) {
+    return false;
+  }
+  return error.code === "P2021" || error.code === "P2022";
+}
+
+async function loadEmployeePayrolls(employee: {
+  id: string;
+  salaryType: SalaryType;
+  dailyRate: unknown;
+}) {
+  try {
+    const [rate, payrolls] = await Promise.all([
+      prisma.employee.findUnique({
+        where: { id: employee.id },
+        select: { monthlyRate: true },
+      }),
+      prisma.payroll.findMany({
+        where: { employeeId: employee.id },
+        orderBy: { createdAt: "desc" },
+        take: 20,
+        select: {
+          id: true,
+          employeeId: true,
+          startDate: true,
+          endDate: true,
+          salaryType: true,
+          baseSalary: true,
+          bonus: true,
+          totalEarned: true,
+          totalPaid: true,
+          status: true,
+          details: true,
+          createdAt: true,
+          updatedAt: true,
+        },
+      }),
+    ]);
+
+    return {
+      monthlyRate: Number(rate?.monthlyRate ?? 0),
+      payrolls,
+    };
+  } catch (error) {
+    if (!isPendingPayrollMigration(error)) {
+      throw error;
+    }
+
+    // Transitional read path: keep the employee dashboard available while the
+    // additive payroll migration is waiting for a controlled database deploy.
+    const legacyPayments = await prisma.payment.findMany({
+      where: { employeeId: employee.id, type: "PAYROLL" },
+      orderBy: { createdAt: "desc" },
+      take: 20,
+      select: {
+        id: true,
+        employeeId: true,
+        date: true,
+        amount: true,
+        note: true,
+        paymentMethod: true,
+        createdAt: true,
+      },
+    });
+
+    const monthlyRate = employee.salaryType === "MONTHLY" ? Number(employee.dailyRate) : 0;
+    const payrolls = legacyPayments.map((payment) => {
+      let details: Record<string, unknown> = {};
+      if (payment.note) {
+        try {
+          const parsed: unknown = JSON.parse(payment.note);
+          if (parsed && typeof parsed === "object") {
+            details = parsed as Record<string, unknown>;
+          }
+        } catch {
+          details = { bonusNote: payment.note };
+        }
+      }
+
+      const paidAmount = Number(payment.amount);
+      const parsedBonus = Number(details.bonus ?? 0);
+      const bonus = Number.isFinite(parsedBonus) && parsedBonus >= 0 ? parsedBonus : 0;
+      const parsedBase = Number(details.baseSalary);
+      const reconstructedMonthlyBase =
+        employee.salaryType === "MONTHLY" && paidAmount === 0 ? monthlyRate : paidAmount;
+      const baseSalary = Number.isFinite(parsedBase) && parsedBase > 0
+        ? parsedBase
+        : reconstructedMonthlyBase;
+      const parsedTotal = Number(details.totalEarned);
+      const totalEarned = Number.isFinite(parsedTotal) && parsedTotal > 0
+        ? parsedTotal
+        : baseSalary + bonus;
+
+      return {
+        id: payment.id,
+        employeeId: employee.id,
+        startDate: details.startDate || payment.date,
+        endDate: details.endDate || payment.date,
+        salaryType: employee.salaryType,
+        baseSalary,
+        bonus,
+        totalEarned,
+        totalPaid: paidAmount,
+        status: paidAmount <= 0 ? "UNPAID" : paidAmount >= totalEarned ? "PAID" : "PARTIAL",
+        details: payment.note,
+        createdAt: payment.createdAt,
+        updatedAt: payment.createdAt,
+      };
+    });
+
+    return { monthlyRate, payrolls };
+  }
+}
 
 // Function to pay all pending commissions for an employee
 /**
@@ -49,6 +192,10 @@ type TransactionClient = Parameters<Parameters<typeof prisma.$transaction>[0]>[0
  */
 export async function payAllCommissions(employeeId: string, paymentMethod: "CASH" | "TRANSFER" = "CASH", note?: string) {
   try {
+    const session = await auth();
+    if (!session || !isRoleAllowed(session.user?.role, ["OWNER"])) {
+      return { success: false, error: "Access denied: Only Owner can pay commissions." };
+    }
     console.log(`[PAY_COMMISSION] Starting payment for employee ${employeeId}`);
 
     const result = await prisma.$transaction(async (tx: TransactionClient) => {
@@ -65,7 +212,8 @@ export async function payAllCommissions(employeeId: string, paymentMethod: "CASH
         where: { 
           employeeId: employeeId,
           itemType: 'FEE',
-          isPaid: false 
+          isPaid: false,
+          order: { status: 'COMPLETED', paymentStatus: 'PAID' },
         },
         include: { order: true }
       });
@@ -129,6 +277,10 @@ export async function payAllCommissions(employeeId: string, paymentMethod: "CASH
  */
 export async function payCommission(feeId: string, paymentMethod: "CASH" | "TRANSFER" = "CASH", note?: string) {
   try {
+    const session = await auth();
+    if (!session || !isRoleAllowed(session.user?.role, ["OWNER"])) {
+      return { success: false, error: "Access denied: Only Owner can pay commissions." };
+    }
     console.log(`[PAY_ONE_COMMISSION] Starting payment for fee ${feeId}`);
 
     const result = await prisma.$transaction(async (tx: TransactionClient) => {
@@ -146,6 +298,9 @@ export async function payCommission(feeId: string, paymentMethod: "CASH" | "TRAN
       }
       if (fee.isPaid) {
         throw new Error("Komisi sudah dibayar");
+      }
+      if (fee.order?.status !== 'COMPLETED' || fee.order?.paymentStatus !== 'PAID') {
+        throw new Error("Komisi hanya dapat dibayar setelah order selesai dan lunas");
       }
 
       const amount = Number(fee.totalPrice);
@@ -212,7 +367,17 @@ export async function getEmployees(activeOnly: boolean = false) {
     const employees = await prisma.employee.findMany({
       where: activeOnly ? { isActive: true } : undefined,
       orderBy: { createdAt: 'desc' },
-      include: {
+      select: {
+        id: true,
+        name: true,
+        role: true,
+        phone: true,
+        salaryType: true,
+        dailyRate: true,
+        commissionRate: true,
+        isActive: true,
+        createdAt: true,
+        updatedAt: true,
         _count: {
           select: {
             orders: true,
@@ -226,11 +391,28 @@ export async function getEmployees(activeOnly: boolean = false) {
       },
     });
 
+    let monthlyRateByEmployee = new Map<string, number>();
+    try {
+      const monthlyRates = await prisma.employee.findMany({
+        where: { id: { in: employees.map((employee) => employee.id) } },
+        select: { id: true, monthlyRate: true },
+      });
+      monthlyRateByEmployee = new Map(
+        monthlyRates.map((employee) => [employee.id, Number(employee.monthlyRate)])
+      );
+    } catch (error) {
+      if (!isPendingPayrollMigration(error)) {
+        throw error;
+      }
+    }
+
     const employeesWithUnpaid = employees.map((emp) => {
       const unpaidAmount = emp.orderItems.reduce((sum: number, fee) => sum + Number(fee.totalPrice), 0);
       const { orderItems, ...rest } = emp;
       return {
         ...rest,
+        monthlyRate: monthlyRateByEmployee.get(emp.id) ??
+          (emp.salaryType === "MONTHLY" ? Number(emp.dailyRate) : 0),
         unpaidAmount
       };
     });
@@ -344,7 +526,17 @@ export async function getEmployeeDetail(id: string) {
     const [employee, stats, unpaidStats] = await Promise.all([
       prisma.employee.findUnique({
         where: { id },
-        include: {
+        select: {
+          id: true,
+          name: true,
+          role: true,
+          phone: true,
+          salaryType: true,
+          dailyRate: true,
+          commissionRate: true,
+          isActive: true,
+          createdAt: true,
+          updatedAt: true,
           orderItems: {
             where: { itemType: 'FEE' },
             include: {
@@ -360,10 +552,6 @@ export async function getEmployeeDetail(id: string) {
                 }
               }
             },
-            orderBy: { createdAt: 'desc' },
-            take: 20
-          },
-          payments: {
             orderBy: { createdAt: 'desc' },
             take: 20
           }
@@ -384,6 +572,8 @@ export async function getEmployeeDetail(id: string) {
     if (!employee) {
       return { success: false, error: 'Employee not found' };
     }
+
+    const payrollData = await loadEmployeePayrolls(employee);
 
     const [activeOrder, queueOrders] = await Promise.all([
       prisma.order.findFirst({
@@ -428,8 +618,19 @@ export async function getEmployeeDetail(id: string) {
     const totalUnpaid = unpaidStats._sum.totalPrice ? Number(unpaidStats._sum.totalPrice) : 0;
     const totalPaid = totalEarned - totalUnpaid;
 
+    const serializedEmployee = serializeData({
+      ...employee,
+      monthlyRate: payrollData.monthlyRate,
+      payrolls: payrollData.payrolls,
+    });
     const serialized = {
-      ...serializeData(employee),
+      ...serializedEmployee,
+      // Keep the dashboard contract explicit instead of relying on a Prisma
+      // relation name that differs from the UI terminology.
+      orderFees: serializedEmployee.orderItems.map((fee) => ({
+        ...fee,
+        amount: fee.totalPrice,
+      })),
       stats: {
         totalEarned,
         totalPaid,
@@ -460,6 +661,10 @@ export async function createEmployee(data: CreateEmployeeInput) {
     if (!session || session.user?.role !== 'OWNER') {
       return { success: false, error: 'Access denied: Only Owner can add employees.' };
     }
+    const validationError = validateSalaryRates(data);
+    if (validationError) {
+      return { success: false, error: validationError };
+    }
     const employee = await prisma.employee.create({
       data: {
         name: data.name,
@@ -467,6 +672,7 @@ export async function createEmployee(data: CreateEmployeeInput) {
         phone: data.phone,
         salaryType: data.salaryType,
         dailyRate: data.dailyRate || 0,
+        monthlyRate: data.monthlyRate || 0,
         commissionRate: data.commissionRate || 0,
         isActive: true,
       },
@@ -503,7 +709,11 @@ export async function updateEmployee(data: UpdateEmployeeInput) {
     if (!session || session.user?.role !== 'OWNER') {
       return { success: false, error: 'Access denied: Only Owner can update employee data.' };
     }
-    const { id, salaryType, dailyRate, commissionRate, ...rest } = data;
+    const validationError = validateSalaryRates(data);
+    if (validationError) {
+      return { success: false, error: validationError };
+    }
+    const { id, salaryType, dailyRate, monthlyRate, commissionRate, ...rest } = data;
     
     const updateData: Record<string, unknown> = { ...rest };
     if (salaryType) {
@@ -511,6 +721,9 @@ export async function updateEmployee(data: UpdateEmployeeInput) {
     }
     if (dailyRate !== undefined) {
       updateData.dailyRate = dailyRate;
+    }
+    if (monthlyRate !== undefined) {
+      updateData.monthlyRate = monthlyRate;
     }
     if (commissionRate !== undefined) {
       updateData.commissionRate = commissionRate;

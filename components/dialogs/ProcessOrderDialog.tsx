@@ -26,6 +26,7 @@ import { notifyOrderUpdated } from "@/hooks/useNotification";
 import { OrderItem, processOrder } from "@/lib/actions/orders";
 import { getEmployees } from "@/lib/actions/employees";
 import { getSpareParts } from "@/lib/actions/inventory";
+import { calculateCommission } from "@/lib/payroll/calculations";
 import { getContent } from "@/lib/actions/content";
 
 interface ProcessOrderDialogProps {
@@ -101,7 +102,10 @@ export function ProcessOrderDialog({
 
   // Calculations
   const totalPrice = items.reduce((sum, item) => sum + (Number(item.qty) || 0) * (Number(item.price) || 0), 0);
-  const totalFee = fees.reduce((sum, f) => sum + (Number(f.amount) || 0), 0);
+  const totalFee = fees.reduce(
+    (sum, fee) => sum + calculateDefaultFee(employees.find((employee) => employee.id === fee.employeeId)),
+    0
+  );
 
   function handleAddService() {
     setItems([...items, { name: "", qty: 1, price: 0, type: "service" }]);
@@ -123,6 +127,21 @@ export function ProcessOrderDialog({
     });
   }
 
+  // Helper to calculate default commission fee from service subtotal
+  function calculateDefaultFee(emp?: Employee | null): number {
+    if (!emp || emp.salaryType !== "COMMISSION" || !emp.commissionRate) {
+      return 0;
+    }
+    const serviceSubtotal = items
+      .filter((i) => i.type === "service")
+      .reduce((sum, item) => sum + (Number(item.qty) || 0) * (Number(item.price) || 0), 0);
+    try {
+      return calculateCommission(serviceSubtotal, emp.commissionRate);
+    } catch {
+      return 0;
+    }
+  }
+
   // Fee Handlers
   function handleAddFee() {
     setFees([...fees, { employeeId: "", name: "", amount: 0 }]);
@@ -131,13 +150,9 @@ export function ProcessOrderDialog({
   function handleUpdateFee(index: number, field: keyof FeeAllocation, value: any) {
     const newFees = [...fees];
     if (field === "employeeId") {
-      const emp = employees.find(e => e.id === value);
-      
-      let defaultAmount = 0;
-      if (emp?.salaryType === "COMMISSION" && emp?.commissionRate) {
-        defaultAmount = Number(emp.commissionRate);
-      }
-      
+      const emp = employees.find((e) => e.id === value);
+      const defaultAmount = calculateDefaultFee(emp);
+
       newFees[index] = { 
         ...newFees[index], 
         employeeId: value, 
@@ -161,21 +176,18 @@ export function ProcessOrderDialog({
   function handleLeadMechanicChange(value: string) {
     setSelectedLeadId(value);
     if (value) {
-      const isAlreadyInFees = fees.some(f => f.employeeId === value);
+      const isAlreadyInFees = fees.some((f) => f.employeeId === value);
       if (!isAlreadyInFees) {
-        const emp = employees.find(e => e.id === value);
-        if (emp) {
-          let defaultAmount = 0;
-          if (emp.salaryType === "COMMISSION" && emp.commissionRate) {
-            defaultAmount = Number(emp.commissionRate);
-          }
-          setFees(prev => [
+        const emp = employees.find((e) => e.id === value);
+        if (emp?.salaryType === "COMMISSION") {
+          const defaultAmount = calculateDefaultFee(emp);
+          setFees((prev) => [
             ...prev,
             {
               employeeId: value,
               name: emp.name,
-              amount: defaultAmount
-            }
+              amount: defaultAmount,
+            },
           ]);
         }
       }
@@ -218,20 +230,31 @@ export function ProcessOrderDialog({
       }
     }
     
-    if (fees.length === 0) {
+    const leadEmployee = employees.find((employee) => employee.id === selectedLeadId);
+    const commissionLeadHasAllocation = fees.some(
+      (fee) => fee.employeeId === selectedLeadId
+    );
+
+    if (leadEmployee?.salaryType === "COMMISSION" && !commissionLeadHasAllocation) {
       toast({
         variant: "destructive",
         title: "Periksa Alokasi Fee",
-        description: "Alokasi fee wajib diisi. Harap tentukan minimal 1 penerima fee.",
+        description: "Mekanik utama dengan sistem komisi wajib memiliki alokasi fee.",
       });
       return;
     }
 
-    if (fees.some(f => !f.employeeId || Number(f.amount) <= 0)) {
+    if (
+      fees.some(
+        (fee) =>
+          !fee.employeeId ||
+          calculateDefaultFee(employees.find((employee) => employee.id === fee.employeeId)) <= 0
+      )
+    ) {
       toast({
         variant: "destructive",
         title: "Periksa Alokasi Fee",
-        description: "Pastikan penerima fee dipilih dan nominal valid (> 0).",
+        description: "Pastikan penerima komisi valid dan subtotal jasa menghasilkan nominal di atas 0.",
       });
       return;
     }
@@ -251,7 +274,7 @@ export function ProcessOrderDialog({
       }));
       const parsedFees = fees.map(f => ({
         ...f,
-        amount: Number(f.amount) || 0,
+        amount: calculateDefaultFee(employees.find((employee) => employee.id === f.employeeId)),
       }));
 
       const result = await processOrder({
@@ -300,7 +323,7 @@ export function ProcessOrderDialog({
               Estimasi & Alokasi Fee
             </DialogTitle>
             <DialogDescription>
-              Input biaya untuk customer dan fee nominal untuk tim (Admin, Mekanik).
+              Input biaya customer dan alokasi komisi mekanik berdasarkan persentase subtotal jasa.
             </DialogDescription>
           </DialogHeader>
 
@@ -362,7 +385,7 @@ export function ProcessOrderDialog({
               <div className="bg-orange-500/10 p-3 rounded-lg text-sm mb-4 border border-orange-500/20">
                 <div className="font-semibold text-orange-600 dark:text-orange-400 border-b border-orange-500/20 pb-2 mb-2">Internal: Alokasi Fee Tim</div>
                 <div className="text-xs text-orange-600/80 dark:text-orange-400/80">
-                  Input nominal fee untuk setiap orang yang terlibat. Tidak masuk tagihan customer.
+                  Nominal komisi dihitung otomatis dari subtotal jasa dan rate karyawan. Tidak masuk tagihan customer.
                 </div>
               </div>
 
@@ -392,7 +415,7 @@ export function ProcessOrderDialog({
                     key={index}
                     className="flex gap-2 items-start bg-card p-2 border border-border rounded shadow-sm"
                   >
-                    <div className="w-[180px]">
+                    <div className="w-[190px]">
                       <Select
                         value={fee.employeeId}
                         onValueChange={(v) => handleUpdateFee(index, "employeeId", v)}
@@ -401,12 +424,14 @@ export function ProcessOrderDialog({
                           <SelectValue placeholder="Pilih Karyawan" />
                         </SelectTrigger>
                         <SelectContent>
-                          {employees.filter(e => e.role.toLowerCase().includes("mekanik")).map(e => (
+                          {employees
+                            .filter(e => e.role.toLowerCase().includes("mekanik") && e.salaryType === "COMMISSION")
+                            .map(e => (
                             <SelectItem
                               key={e.id}
                               value={e.id}
                             >
-                              {e.name} - <span className="text-gray-400 text-[10px]">{e.role}</span>
+                              {e.name} {e.salaryType === "COMMISSION" && e.commissionRate ? `(${e.commissionRate}%)` : ""} - <span className="text-gray-400 text-[10px]">{e.role}</span>
                             </SelectItem>
                           ))}
                         </SelectContent>
@@ -422,14 +447,24 @@ export function ProcessOrderDialog({
                       />
                     </div>
 
-                    <div className="flex items-center border-l pl-2 w-[100px]">
-                      <span className="text-[10px] text-gray-400 mr-1">Rp</span>
+                    <div className="flex items-center border-l pl-2 w-[120px]">
+                      {(() => {
+                        const emp = employees.find(e => e.id === fee.employeeId);
+                        return emp?.salaryType === "COMMISSION" && emp?.commissionRate ? (
+                          <span className="text-[10px] bg-primary/10 text-primary font-bold px-1.5 py-0.5 rounded mr-1 shrink-0">
+                            {emp.commissionRate}%
+                          </span>
+                        ) : (
+                          <span className="text-[10px] text-gray-400 mr-1">Rp</span>
+                        );
+                      })()}
                       <Input 
                         type="number"
                         className="h-8 text-xs border-0 focus-visible:ring-0 text-right p-0 font-bold text-orange-600"
                         placeholder="0"
-                        value={fee.amount}
-                        onChange={(e) => handleUpdateFee(index, "amount", e.target.value)}
+                        value={calculateDefaultFee(employees.find((employee) => employee.id === fee.employeeId))}
+                        readOnly
+                        aria-label="Nominal komisi hasil kalkulasi otomatis"
                       />
                     </div>
                     <Button
@@ -551,8 +586,15 @@ export function ProcessOrderDialog({
                       key={idx}
                       className="flex justify-between text-sm p-2 bg-muted/20 rounded"
                     >
-                      <span>{emp?.name || "Unknown"}</span>
-                      <span className="font-bold">Rp {Number(fee.amount).toLocaleString("id-ID")}</span>
+                      <span className="flex items-center gap-1.5">
+                        <span>{emp?.name || "Unknown"}</span>
+                        {emp?.salaryType === "COMMISSION" && emp?.commissionRate && (
+                          <span className="text-xs text-muted-foreground font-mono">
+                            (Rate: {emp.commissionRate}%)
+                          </span>
+                        )}
+                      </span>
+                      <span className="font-bold">Rp {calculateDefaultFee(emp).toLocaleString("id-ID")}</span>
                     </div>
                   );
                 })}

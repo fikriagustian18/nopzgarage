@@ -29,9 +29,20 @@ interface EmployeeData {
   name: string;
   role: string;
   phone?: string | null;
-  salaryType?: "DAILY" | "COMMISSION" | string | null;
+  salaryType?: "DAILY" | "COMMISSION" | "MONTHLY" | string | null;
   dailyRate?: number | null;
+  monthlyRate?: number | null;
   commissionRate?: number | null;
+}
+
+interface EmployeeFormState {
+  name: string;
+  role: string;
+  phone: string;
+  salaryType: string;
+  dailyRate: number | string;
+  monthlyRate: number | string;
+  commissionRate: number | string;
 }
 
 interface EmployeeDialogProps {
@@ -50,12 +61,13 @@ export function EmployeeDialog({
   onSuccess,
 }: EmployeeDialogProps) {
   const [loading, setLoading] = useState(false);
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<EmployeeFormState>({
     name: "",
     role: "Mekanik",
     phone: "",
     salaryType: "COMMISSION",
     dailyRate: 0,
+    monthlyRate: 0,
     commissionRate: 0,
   });
 
@@ -68,6 +80,7 @@ export function EmployeeDialog({
           phone: employee.phone || "",
           salaryType: employee.salaryType || "COMMISSION",
           dailyRate: Number(employee.dailyRate) || 0,
+          monthlyRate: Number(employee.monthlyRate) || 0,
           commissionRate: Number(employee.commissionRate) || 0,
         });
       } else {
@@ -77,6 +90,7 @@ export function EmployeeDialog({
           phone: "",
           salaryType: "COMMISSION",
           dailyRate: 0,
+          monthlyRate: 0,
           commissionRate: 0,
         });
       }
@@ -102,8 +116,9 @@ export function EmployeeDialog({
         name: formData.name,
         role: formData.role,
         phone: formData.phone,
-        salaryType: formData.salaryType as "DAILY" | "COMMISSION",
+        salaryType: formData.salaryType as "DAILY" | "COMMISSION" | "MONTHLY",
         dailyRate: Number(formData.dailyRate) || 0,
+        monthlyRate: Number(formData.monthlyRate) || 0,
         commissionRate: Number(formData.commissionRate) || 0,
       };
 
@@ -214,7 +229,7 @@ export function EmployeeDialog({
             <Label>Skema Gaji</Label>
             <Select
               value={formData.salaryType}
-              onValueChange={(v) => setFormData({ ...formData, salaryType: v, dailyRate: 0, commissionRate: 0 })}
+              onValueChange={(v) => setFormData({ ...formData, salaryType: v })}
             >
               <SelectTrigger>
                 <DollarSign className="w-4 h-4 mr-2 text-gray-400" />
@@ -222,6 +237,7 @@ export function EmployeeDialog({
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="DAILY">Gaji Harian (Fix)</SelectItem>
+                <SelectItem value="MONTHLY">Gaji Bulanan (Fix)</SelectItem>
                 <SelectItem value="COMMISSION">Komisi (Persentase/Borongan)</SelectItem>
               </SelectContent>
             </Select>
@@ -235,9 +251,22 @@ export function EmployeeDialog({
                 type="number"
                 placeholder="Contoh: 150000"
                 value={formData.dailyRate}
-                onChange={(e) => setFormData({ ...formData, dailyRate: e.target.value as any })}
+                onChange={(e) => setFormData({ ...formData, dailyRate: e.target.value })}
               />
               <p className="text-[10px] text-gray-500">Gaji tetap per kehadiran.</p>
+            </div>
+          )}
+
+          {formData.salaryType === "MONTHLY" && (
+            <div className="grid gap-2 animate-in fade-in slide-in-from-top-2">
+              <Label>Rate Bulanan (Rp)</Label>
+              <Input
+                type="number"
+                placeholder="Contoh: 2500000"
+                value={formData.monthlyRate}
+                onChange={(e) => setFormData({ ...formData, monthlyRate: e.target.value })}
+              />
+              <p className="text-[10px] text-gray-500">Gaji pokok tetap per periode bulanan.</p>
             </div>
           )}
 
@@ -247,14 +276,16 @@ export function EmployeeDialog({
               <div className="relative">
                 <Input
                   type="number"
-                  placeholder="Contoh: 10"
+                  placeholder="Contoh: 25"
+                  min="0"
+                  max="100"
                   value={formData.commissionRate}
-                  onChange={(e) => setFormData({ ...formData, commissionRate: e.target.value as any })}
+                  onChange={(e) => setFormData({ ...formData, commissionRate: e.target.value })}
                   className="pr-8"
                 />
                 <span className="absolute right-3 top-2.5 text-gray-500 text-sm">%</span>
               </div>
-              <p className="text-[10px] text-gray-500">Persentase fee administasi/mekanik dari total jasa.</p>
+              <p className="text-[10px] text-gray-500">Persentase fee mekanik dari total subtotal jasa (0-100%).</p>
             </div>
           )}
         </div>

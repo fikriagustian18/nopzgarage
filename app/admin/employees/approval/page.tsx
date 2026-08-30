@@ -252,9 +252,9 @@ export default function Page() {
     setPaying(true);
     try {
       const res = await createPayrollPayment({
+        payrollId: selectedPayroll.id,
         amount: payAmountNum,
         note: payNote,
-        employeeId: selectedPayroll.employeeId,
         paymentMethod: payMethod,
         bankAccountId: payMethod === "TRANSFER" ? selectedBankId : undefined,
       });

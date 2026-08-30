@@ -6,9 +6,10 @@ import { format, startOfDay, endOfDay } from "date-fns";
 import { auth } from "@/lib/auth";
 import { isRoleAllowed } from "@/lib/authCheck";
 import { prisma } from "@/lib/prisma";
-import { serializeData } from "@/lib/utils";
+import { serializeData, formatOrderNo } from "@/lib/utils";
+import { calculateCommission, normalizeCommissionRate } from "@/lib/payroll/calculations";
 import { createLog } from "./logs";
-import type { OrderStatus, ServiceType, PaymentStatus } from "@prisma/client";
+import type { OrderStatus, ServiceType } from "@prisma/client";
 
 // ==================== Interfaces ====================
 export interface OrderItem {
@@ -42,7 +43,7 @@ export interface ProcessOrderInput {
   fees?: {
     employeeId: string;
     name: string;
-    amount: number;
+    amount?: number;
     note?: string; // Additional note (e.g. "High Difficulty")
   }[];
 }
@@ -80,6 +81,23 @@ export async function processOrder(data: ProcessOrderInput): Promise<
     }
     const { orderId, items, mechanicId, fees } = data;
 
+    if (!orderId || !mechanicId || items.length === 0) {
+      return { success: false, error: 'Order, mekanik, dan minimal satu item wajib diisi.' };
+    }
+
+    const invalidItem = items.find(
+      (item) =>
+        !item.name?.trim() ||
+        !Number.isInteger(Number(item.qty)) ||
+        Number(item.qty) <= 0 ||
+        !Number.isFinite(Number(item.price)) ||
+        Number(item.price) < 0 ||
+        !['service', 'part'].includes(item.type)
+    );
+    if (invalidItem) {
+      return { success: false, error: 'Item jasa/sparepart berisi nama, jumlah, atau harga yang tidak valid.' };
+    }
+
     // 1. Calculate total price (Only service & part for customer)
     const totalPrice = items
       .filter((i) => i.type === 'service' || i.type === 'part')
@@ -88,7 +106,26 @@ export async function processOrder(data: ProcessOrderInput): Promise<
     const customerItems = items.filter(i => i.type !== 'internal_fee');
 
     // USING TRANSACTION
-    return await prisma.$transaction(async (tx) => {
+    const processedOrder = await prisma.$transaction(async (tx) => {
+      const existingOrder = await tx.order.findUnique({
+        where: { id: orderId },
+        select: { status: true },
+      });
+      if (!existingOrder) {
+        throw new Error('Order tidak ditemukan.');
+      }
+      if (!['PENDING', 'CONFIRMED', 'QUEUE', 'ESTIMATED'].includes(existingOrder.status)) {
+        throw new Error('Order yang sudah diproses tidak dapat diproses ulang.');
+      }
+
+      const leadMechanic = await tx.employee.findFirst({
+        where: { id: mechanicId, isActive: true },
+        select: { id: true },
+      });
+      if (!leadMechanic) {
+        throw new Error('Mekanik penanggung jawab tidak valid atau tidak aktif.');
+      }
+
       // 2. Update Order Header
       const order = await tx.order.update({
         where: { id: orderId },
@@ -156,40 +193,65 @@ export async function processOrder(data: ProcessOrderInput): Promise<
       // 4. Process Order Fees as OrderItem with itemType='FEE'
       let totalFeeAmount = 0;
       if (fees && fees.length > 0) {
+        const feeEmployeeIds = fees.map((fee) => fee.employeeId).filter(Boolean);
+        if (new Set(feeEmployeeIds).size !== feeEmployeeIds.length) {
+          throw new Error('Karyawan pada alokasi komisi tidak boleh duplikat.');
+        }
+        const feeEmployees = await tx.employee.findMany({
+          where: { id: { in: feeEmployeeIds }, isActive: true },
+          select: { id: true, name: true, salaryType: true, commissionRate: true },
+        });
+        const employeeById = new Map(feeEmployees.map((employee) => [employee.id, employee]));
+        const serviceSubtotal = customerItems
+          .filter((item) => item.type === 'service')
+          .reduce((sum, item) => sum + Number(item.qty) * Number(item.price), 0);
+
         for (const fee of fees) {
-          if (fee.amount > 0 && fee.employeeId) {
+          const employee = employeeById.get(fee.employeeId);
+          if (!employee || employee.salaryType !== 'COMMISSION') {
+            throw new Error('Alokasi komisi hanya dapat diberikan kepada karyawan aktif dengan skema COMMISSION.');
+          }
+          let rate: number;
+          try {
+            rate = normalizeCommissionRate(employee.commissionRate);
+          } catch {
+            throw new Error(`Rate komisi ${employee.name} harus berada pada rentang 0-100%.`);
+          }
+          const feeAmount = calculateCommission(serviceSubtotal, rate);
+          if (feeAmount > 0) {
              await tx.orderItem.create({
                data: {
                  orderId: order.id,
                  itemType: 'FEE',
-                 itemName: fee.note || `Komisi: ${fee.name}`,
-                 quantity: 1,
-                 unitPrice: fee.amount,
-                 totalPrice: fee.amount,
-                 employeeId: fee.employeeId,
+                  itemName: fee.note?.trim() || `Komisi ${rate}%: ${employee.name}`,
+                  quantity: 1,
+                  unitPrice: feeAmount,
+                  totalPrice: feeAmount,
+                  employeeId: fee.employeeId,
                  isPaid: false
                }
              });
-             totalFeeAmount += fee.amount;
+             totalFeeAmount += feeAmount;
           }
         }
       }
 
-      // 5. Log activity
-      await createLog({
-        action: "PROCESS_ORDER",
-        title: "Order Processed",
-        details: `Order processed. Total: Rp ${totalPrice.toLocaleString('id-ID')}. Stock updated. Fees: Rp ${totalFeeAmount.toLocaleString('id-ID')} (Recorded to Accounting).`,
-        metadata: { orderId: order.id, fees: totalFeeAmount },
-        userName: "Admin",
-        role: "ADMIN"
-      });
-
-      return { success: true, order: serializeOrder(order) };
+      return { order, totalFeeAmount };
     }, {
       maxWait: 5000, // Maximum time to wait for a transaction slot (5s)
       timeout: 15000, // Maximum time for the transaction to complete (15s - Accelerate limit)
     });
+
+    await createLog({
+      action: "PROCESS_ORDER",
+      title: "Order Processed",
+      details: `Order processed. Total: Rp ${totalPrice.toLocaleString('id-ID')}. Stock updated. Fees: Rp ${processedOrder.totalFeeAmount.toLocaleString('id-ID')} (Recorded to Accounting).`,
+      metadata: { orderId: processedOrder.order.id, fees: processedOrder.totalFeeAmount },
+      userName: session.user?.employeeName || session.user?.email || "Admin",
+      role: session.user?.role || "ADMIN",
+    });
+
+    return { success: true, order: serializeOrder(processedOrder.order) };
 
   } catch (error: unknown) {
     console.error('Process order error:', error);
@@ -255,6 +317,19 @@ export async function closeOrder(orderId: string) {
     const session = await auth();
     if (!session || !isRoleAllowed(session.user?.role, ['OWNER', 'ADMIN'])) {
       return { success: false, error: 'Access denied: Only Owner and Admin can close order.' };
+    }
+    const currentOrder = await prisma.order.findUnique({
+      where: { id: orderId },
+      select: { status: true, paymentStatus: true },
+    });
+    if (!currentOrder) {
+      return { success: false, error: 'Order tidak ditemukan.' };
+    }
+    if (currentOrder.status !== 'READY') {
+      return { success: false, error: 'Order hanya dapat ditutup setelah berstatus READY.' };
+    }
+    if (currentOrder.paymentStatus !== 'PAID') {
+      return { success: false, error: 'Order hanya dapat ditutup setelah pembayaran lunas.' };
     }
     const order = await prisma.order.update({
       where: { id: orderId },
@@ -340,7 +415,8 @@ export async function createBooking(data: CreateOrderInput) {
       });
     
     const serialized = serializeOrder(order);
-    return { success: true, order: { ...serialized, queueNumber } };
+    const orderNumber = formatOrderNo(order.id);
+    return { success: true, order: { ...serialized, queueNumber, orderNumber } };
   } catch (error) {
     console.error('Create booking error:', error);
     return { success: false, error: 'Gagal membuat booking' };
@@ -401,8 +477,23 @@ export async function updateOrderStatus(
 ) {
   try {
     const session = await auth();
-    if (!session || !isRoleAllowed(session.user?.role, ['OWNER', 'ADMIN', 'EMPLOYEE'])) {
+    if (!session || !isRoleAllowed(session.user?.role, ['OWNER', 'ADMIN'])) {
       return { success: false, error: 'Access denied: You do not have authorization to update order status.' };
+    }
+    const validStatuses: OrderStatus[] = [
+      'PENDING', 'ESTIMATED', 'CONFIRMED', 'QUEUE', 'IN_PROGRESS', 'READY', 'COMPLETED', 'CANCELLED'
+    ];
+    if (!validStatuses.includes(newStatus)) {
+      return { success: false, error: 'Status order tidak valid.' };
+    }
+    if (newStatus === 'COMPLETED') {
+      const currentOrder = await prisma.order.findUnique({
+        where: { id: orderId },
+        select: { status: true, paymentStatus: true },
+      });
+      if (!currentOrder || currentOrder.status !== 'READY' || currentOrder.paymentStatus !== 'PAID') {
+        return { success: false, error: 'Order hanya dapat diselesaikan dari status READY setelah pembayaran lunas.' };
+      }
     }
     const order = await prisma.order.update({
       where: { id: orderId },
@@ -743,7 +834,21 @@ export async function getOrderHistory(orderId: string) {
       }
     });
 
-    return { success: true, logs: serializeData(logs.map(l => ({ id: l.id, action: l.title?.split(':')[0] || 'LOG', title: l.title || '', details: l.subtitle || '', metadata: l.content, createdAt: l.createdAt }))) };
+    return {
+      success: true,
+      logs: serializeData(
+        logs.map((l) => ({
+          id: l.id,
+          action: l.title?.split(":")[0] || "LOG",
+          title: l.title || "",
+          details: l.subtitle || "",
+          metadata: l.content,
+          userName: l.userName || (l.content as any)?.userName || null,
+          role: (l.content as any)?.role || (l.content as any)?.userRole || l.platform || null,
+          createdAt: l.createdAt,
+        }))
+      ),
+    };
   } catch (error) {
     console.error('Get order history error:', error);
     // Fallback in case JSON querying throws an error on some DB environments
@@ -757,7 +862,21 @@ export async function getOrderHistory(orderId: string) {
         },
         orderBy: { createdAt: 'asc' }
       });
-      return { success: true, logs: serializeData(logs.map(l => ({ id: l.id, action: l.title?.split(':')[0] || 'LOG', title: l.title || '', details: l.subtitle || '', metadata: l.content, createdAt: l.createdAt }))) };
+      return {
+        success: true,
+        logs: serializeData(
+          logs.map((l) => ({
+            id: l.id,
+            action: l.title?.split(":")[0] || "LOG",
+            title: l.title || "",
+            details: l.subtitle || "",
+            metadata: l.content,
+            userName: l.userName || (l.content as any)?.userName || null,
+            role: (l.content as any)?.role || (l.content as any)?.userRole || l.platform || null,
+            createdAt: l.createdAt,
+          }))
+        ),
+      };
     } catch (fallbackError) {
       console.error('Fallback get order history error:', fallbackError);
       return { success: false, error: 'Gagal memuat riwayat order' };

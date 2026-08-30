@@ -71,6 +71,7 @@ interface Employee {
   phone: string | null;
   salaryType: "DAILY" | "COMMISSION" | "MONTHLY";
   dailyRate: number;
+  monthlyRate: number;
   commissionRate: number;
   isActive: boolean;
   createdAt: string;
@@ -116,6 +117,7 @@ export default function Page() {
     phone: "",
     salaryType: "COMMISSION" as "DAILY" | "COMMISSION" | "MONTHLY",
     dailyRate: 0,
+    monthlyRate: 0,
     commissionRate: 0,
   });
 
@@ -180,6 +182,7 @@ export default function Page() {
       phone: emp.phone || "",
       salaryType: emp.salaryType,
       dailyRate: Number(emp.dailyRate) || 0,
+      monthlyRate: Number(emp.monthlyRate) || 0,
       commissionRate: Number(emp.commissionRate) || 0,
     });
     setEditOpen(true);
@@ -227,6 +230,7 @@ export default function Page() {
         phone: formData.phone || undefined,
         salaryType: formData.salaryType as SalaryType,
         dailyRate: Number(formData.dailyRate) || 0,
+        monthlyRate: Number(formData.monthlyRate) || 0,
         commissionRate: Number(formData.commissionRate) || 0,
       });
 
@@ -240,6 +244,7 @@ export default function Page() {
           phone: "",
           salaryType: "COMMISSION",
           dailyRate: 0,
+          monthlyRate: 0,
           commissionRate: 0,
         });
         fetchData();
@@ -274,6 +279,7 @@ export default function Page() {
         phone: formData.phone || undefined,
         salaryType: formData.salaryType as SalaryType,
         dailyRate: Number(formData.dailyRate) || 0,
+        monthlyRate: Number(formData.monthlyRate) || 0,
         commissionRate: Number(formData.commissionRate) || 0,
       });
 
@@ -374,6 +380,7 @@ export default function Page() {
                   phone: "",
                   salaryType: "COMMISSION",
                   dailyRate: 0,
+                  monthlyRate: 0,
                   commissionRate: 0,
                 });
                 setCreateOpen(true);
@@ -568,7 +575,11 @@ export default function Page() {
                           <div className="flex items-center gap-2 text-muted-foreground">
                             <Wallet className="h-4 w-4 shrink-0 text-primary/70" />
                             <span className="font-medium text-foreground">
-                              Gaji: {formatMoneyShort(emp.salaryType === "DAILY" ? emp.dailyRate : emp.commissionRate)}
+                              {emp.salaryType === "COMMISSION"
+                                ? `Komisi: ${emp.commissionRate}%`
+                                : `Gaji: ${formatMoneyShort(
+                                    emp.salaryType === "MONTHLY" ? emp.monthlyRate : emp.dailyRate
+                                  )}`}
                             </span>
                           </div>
                         </div>
@@ -710,15 +721,29 @@ export default function Page() {
                     />
                   </div>
                 )}
+                {formData.salaryType === "MONTHLY" && (
+                  <div className="space-y-1">
+                    <Label htmlFor="monthlyRate" className="text-xs font-semibold">Rate Gaji Bulanan (IDR)</Label>
+                    <Input
+                      id="monthlyRate"
+                      type="number"
+                      value={formData.monthlyRate}
+                      onChange={(e) => setFormData({ ...formData, monthlyRate: Number(e.target.value) })}
+                      placeholder="Contoh: 2500000"
+                    />
+                  </div>
+                )}
                 {formData.salaryType === "COMMISSION" && (
                   <div className="space-y-1">
-                    <Label htmlFor="commissionRate" className="text-xs font-semibold">Rate Komisi % / Nominal (IDR)</Label>
+                    <Label htmlFor="commissionRate" className="text-xs font-semibold">Rate Komisi (%) (0 - 100%)</Label>
                     <Input
                       id="commissionRate"
                       type="number"
+                      min="0"
+                      max="100"
                       value={formData.commissionRate}
                       onChange={(e) => setFormData({ ...formData, commissionRate: Number(e.target.value) })}
-                      placeholder="Contoh: 25000"
+                      placeholder="Contoh: 25"
                     />
                   </div>
                 )}
@@ -824,14 +849,29 @@ export default function Page() {
                     />
                   </div>
                 )}
+                {formData.salaryType === "MONTHLY" && (
+                  <div className="space-y-1">
+                    <Label htmlFor="edit-monthlyRate" className="text-xs font-semibold">Rate Gaji Bulanan (IDR)</Label>
+                    <Input
+                      id="edit-monthlyRate"
+                      type="number"
+                      value={formData.monthlyRate}
+                      onChange={(e) => setFormData({ ...formData, monthlyRate: Number(e.target.value) })}
+                      placeholder="Contoh: 2500000"
+                    />
+                  </div>
+                )}
                 {formData.salaryType === "COMMISSION" && (
                   <div className="space-y-1">
-                    <Label htmlFor="edit-commissionRate" className="text-xs font-semibold">Rate Komisi % / Nominal (IDR)</Label>
+                    <Label htmlFor="edit-commissionRate" className="text-xs font-semibold">Rate Komisi (%) (0 - 100%)</Label>
                     <Input
                       id="edit-commissionRate"
                       type="number"
+                      min="0"
+                      max="100"
                       value={formData.commissionRate}
                       onChange={(e) => setFormData({ ...formData, commissionRate: Number(e.target.value) })}
+                      placeholder="Contoh: 25"
                     />
                   </div>
                 )}

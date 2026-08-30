@@ -77,13 +77,15 @@ interface Payroll {
     workDays?: number;
     motorCount?: number;
     bonusNote?: string;
+    monthlyRate?: number;
+    commissionRate?: number;
   } | null;
   createdAt: string;
   employee: {
     id: string;
     name: string;
     role: string;
-    salaryType: "DAILY" | "COMMISSION";
+    salaryType: "DAILY" | "COMMISSION" | "MONTHLY";
   };
 }
 
@@ -299,9 +301,9 @@ export default function Page() {
     setPaying(true);
     try {
       const res = await createPayrollPayment({
+        payrollId: selectedPayroll.id,
         amount: payAmountNum,
         note: payNote,
-        employeeId: selectedPayroll.employeeId,
         paymentMethod: payMethod,
         bankAccountId: payMethod === "TRANSFER" ? selectedBankId : undefined,
       });
@@ -629,6 +631,8 @@ export default function Page() {
                               >
                                 {p.employee.salaryType === "DAILY"
                                   ? "Gaji Harian"
+                                  : p.employee.salaryType === "MONTHLY"
+                                  ? "Gaji Bulanan"
                                   : "Komisi / Hasil"}
                               </Badge>
                             </div>
@@ -783,7 +787,9 @@ export default function Page() {
                 <div className="rounded-lg bg-muted/50 p-3 text-xs text-muted-foreground border">
                   DAILY (Harian) akan dihitung berdasarkan jumlah hari kerja dikali rate harian.
                   <br />
-                  COMMISSION (Komisi) dihitung berdasarkan total unit sepeda motor selesai dikerjakan dikali rate bagi hasil.
+                  MONTHLY (Bulanan) menggunakan rate bulanan tetap untuk periode payroll.
+                  <br />
+                  COMMISSION (Komisi) memakai snapshot persentase subtotal jasa dari order lunas yang sudah selesai.
                 </div>
               </div>
               <DialogFooter>
@@ -1114,10 +1120,15 @@ export default function Page() {
                               {" "}
                               ({selectedPayroll.detailsParsed?.workDays || 0} Hari Kerja)
                             </span>
+                          ) : selectedPayroll.employee.salaryType === "MONTHLY" ? (
+                            <span className="text-xs text-muted-foreground">
+                              {" "}
+                              (Gaji Bulanan Tetap)
+                            </span>
                           ) : (
                             <span className="text-xs text-muted-foreground">
                               {" "}
-                              ({selectedPayroll.detailsParsed?.motorCount || 0} Unit Selesai)
+                              ({selectedPayroll.detailsParsed?.motorCount || 0} Unit / Jasa Selesai)
                             </span>
                           )}
                         </span>

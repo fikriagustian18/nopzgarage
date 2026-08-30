@@ -12,8 +12,7 @@ import {
   User, 
   Calendar,
   LogOut,
-  ChevronRight,
-  ClipboardList, Loader2
+  ClipboardList
 } from "lucide-react";
 import { 
   Card, 
@@ -27,8 +26,6 @@ import { Button } from "@/components/ui/Button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/Tabs";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/Avatar";
 import { signOut } from "next-auth/react";
-import { useRouter } from "next/navigation";
-import { toast } from "sonner";
 
 interface EmployeeDashboardClientProps {
   employee: any;
@@ -37,26 +34,6 @@ interface EmployeeDashboardClientProps {
 
 export function EmployeeDashboardClient({ employee, user }: EmployeeDashboardClientProps) {
   const [activeTab, setActiveTab] = useState("overview");
-  const router = useRouter();
-  const [updatingId, setUpdatingId] = useState<string | null>(null);
-
-  async function handleUpdateStatus(orderId: string, newStatus: string) {
-    setUpdatingId(orderId);
-    try {
-      const { updateOrderStatus } = await import("@/lib/actions/orders");
-      const res = await updateOrderStatus(orderId, newStatus as any);
-      if (res.success) {
-        toast.success("Status berhasil diperbarui!");
-        router.refresh();
-      } else {
-        toast.error("Gagal memperbarui status: " + res.error);
-      }
-    } catch (err: any) {
-      toast.error("Terjadi kesalahan: " + err.message);
-    } finally {
-      setUpdatingId(null);
-    }
-  };
 
   if (!employee) {
     return (
@@ -143,10 +120,9 @@ export function EmployeeDashboardClient({ employee, user }: EmployeeDashboardCli
                 <div>
                    <h2 className="text-2xl font-black tracking-tight">Dashboard</h2>
                    <p className="text-muted-foreground">
-                      Ringkasan performa & pekerjaan Anda hari ini.
+                      Ringkasan performa & pekerjaan Anda hari ini (Akses Read-Only).
                    </p>
                 </div>
-                {/* Time or Status could go here */}
              </div>
 
              {/* Stats Grid */}
@@ -199,7 +175,7 @@ export function EmployeeDashboardClient({ employee, user }: EmployeeDashboardCli
                             <CardDescription>Order ID: #{employee.activeOrder.id.slice(-5)}</CardDescription>
                          </div>
                          <Badge className={employee.activeOrder.status === 'READY' ? "bg-green-500 hover:bg-green-600" : "animate-pulse"}>
-                            {employee.activeOrder.status === 'READY' ? 'SIAP BAYAR' : 'DIKERJAKAN'}
+                            {employee.activeOrder.status === 'READY' ? 'SIAP DIAMBIL' : 'DIKERJAKAN'}
                          </Badge>
                       </div>
                    </CardHeader>
@@ -224,22 +200,6 @@ export function EmployeeDashboardClient({ employee, user }: EmployeeDashboardCli
                                   </li>
                                ))}
                             </ul>
-                            {employee.activeOrder.status === 'IN_PROGRESS' && (
-                               <div className="mt-4 pt-4 border-t flex justify-end">
-                                  <Button 
-                                     onClick={() => handleUpdateStatus(employee.activeOrder.id, 'READY')}
-                                     disabled={updatingId === employee.activeOrder.id}
-                                     className="bg-green-600 hover:bg-green-700 text-white font-bold gap-2 w-full md:w-auto"
-                                  >
-                                     {updatingId === employee.activeOrder.id ? (
-                                        <Loader2 className="h-4 w-4 animate-spin" />
-                                     ) : (
-                                        <CheckCircle className="h-4 w-4" />
-                                     )}
-                                     Selesaikan Pekerjaan
-                                  </Button>
-                               </div>
-                            )}
                          </div>
                       </div>
                    </CardContent>
@@ -277,34 +237,19 @@ export function EmployeeDashboardClient({ employee, user }: EmployeeDashboardCli
                                      </div>
                                   </div>
                                   <Badge variant="secondary">PENDING</Badge>
-                               </div>
-                               <div className="text-xs text-muted-foreground bg-muted p-2 rounded">
-                                  {Array.isArray(order.items) ? (
-                                      <ul className="list-disc pl-3 space-y-1">
-                                          {(order.items as any[]).slice(0, 2).map((item: any, idx: number) => (
-                                              <li key={idx} className="truncate">{item.name}</li>
-                                          ))}
-                                          {(order.items as any[]).length > 2 && <li>...</li>}
-                                      </ul>
-                                  ) : "Detail items tidak tersedia"}
-                               </div>
-                                <div className="flex justify-end mt-3 pt-2 border-t border-dashed">
-                                   <Button 
-                                      size="sm"
-                                      onClick={() => handleUpdateStatus(order.id, 'IN_PROGRESS')}
-                                      disabled={updatingId !== null}
-                                      className="font-semibold gap-1 w-full"
-                                   >
-                                      {updatingId === order.id ? (
-                                         <Loader2 className="h-3 w-3 animate-spin" />
-                                      ) : (
-                                         <Wrench className="h-3 w-3" />
-                                      )}
-                                      Mulai Pekerjaan
-                                   </Button>
                                 </div>
-                            </CardContent>
-                         </Card>
+                                <div className="text-xs text-muted-foreground bg-muted p-2 rounded">
+                                   {Array.isArray(order.items) ? (
+                                       <ul className="list-disc pl-3 space-y-1">
+                                           {(order.items as any[]).slice(0, 2).map((item: any, idx: number) => (
+                                               <li key={idx} className="truncate">{item.name}</li>
+                                           ))}
+                                           {(order.items as any[]).length > 2 && <li>...</li>}
+                                       </ul>
+                                   ) : "Detail items tidak tersedia"}
+                                </div>
+                             </CardContent>
+                          </Card>
                       ))}
                    </div>
                 </div>
@@ -338,7 +283,7 @@ export function EmployeeDashboardClient({ employee, user }: EmployeeDashboardCli
                                      {formatDistanceToNow(new Date(fee.createdAt), { addSuffix: true, locale: idLocale })}
                                   </p>
                                </div>
-                               
+                                
                                <div className="flex items-center justify-between w-full md:w-auto gap-4">
                                   <Badge variant={fee.isPaid ? "default" : "secondary"}>
                                      {fee.isPaid ? "LUNAS" : "PENDING"}
@@ -438,7 +383,7 @@ export function EmployeeDashboardClient({ employee, user }: EmployeeDashboardCli
                       </div>
                       <div className="space-y-1">
                          <label className="text-xs font-medium text-muted-foreground uppercase">Tipe Gaji</label>
-                         <p className="font-medium">{employee.salaryType === 'COMMISSION' ? 'Komisi / Bagi Hasil' : 'Gaji Harian'}</p>
+                         <p className="font-medium">{employee.salaryType === 'COMMISSION' ? 'Komisi / Bagi Hasil' : employee.salaryType === 'MONTHLY' ? 'Gaji Bulanan' : 'Gaji Harian'}</p>
                       </div>
                       {employee.salaryType === 'COMMISSION' && (
                          <div className="space-y-1">
@@ -449,7 +394,13 @@ export function EmployeeDashboardClient({ employee, user }: EmployeeDashboardCli
                       {employee.salaryType === 'DAILY' && (
                          <div className="space-y-1">
                              <label className="text-xs font-medium text-muted-foreground uppercase">Gaji Harian</label>
-                             <p className="font-medium">Rp {employee.dailyRate.toLocaleString("id-ID")}</p>
+                             <p className="font-medium">Rp {Number(employee.dailyRate || 0).toLocaleString("id-ID")}</p>
+                         </div>
+                      )}
+                      {employee.salaryType === 'MONTHLY' && (
+                         <div className="space-y-1">
+                             <label className="text-xs font-medium text-muted-foreground uppercase">Gaji Bulanan</label>
+                             <p className="font-medium">Rp {Number(employee.monthlyRate || 0).toLocaleString("id-ID")}</p>
                          </div>
                       )}
                    </div>

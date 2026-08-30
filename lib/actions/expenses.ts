@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { expenseSchema } from "@/lib/validations/expense";
 import { createLog } from "./logs";
 
 export interface CreateExpenseInput {
@@ -11,7 +12,7 @@ export interface CreateExpenseInput {
   category: string;
   accountId?: string;
   date?: Date;
-  reference?: string;
+  reference: string;
 }
 
 export interface ExpenseCategory {
@@ -78,26 +79,29 @@ export async function createExpense(
       };
     }
 
-    const { description, amount, category, date, reference } = data;
-
-    if (!description || !amount || amount <= 0) {
+    const validation = expenseSchema.safeParse(data);
+    if (!validation.success) {
       return {
         success: false,
-        error: "Deskripsi dan nominal valid harus diisi.",
+        error: validation.error.issues[0]?.message || "Data pengeluaran tidak valid.",
       };
     }
 
-    const categoryName = category || "Pengeluaran Umum";
-    const noteText = reference
-      ? `[${categoryName}] [Ref: ${reference}] ${description}`
-      : `[${categoryName}] ${description}`;
+    const {
+      description: cleanDesc,
+      amount: numericAmount,
+      category: categoryName,
+      date,
+      reference: cleanRef,
+    } = validation.data;
+    const noteText = `[${categoryName}] [Ref: ${cleanRef}] ${cleanDesc}`;
 
     const payment = await prisma.payment.create({
       data: {
         type: "EXPENSE",
-        amount: amount,
+        amount: numericAmount,
         note: noteText,
-        createdAt: date ?? new Date(),
+        date: date ?? new Date(),
         paymentMethod: "CASH",
       },
     });
@@ -105,8 +109,8 @@ export async function createExpense(
     await createLog({
       action: "CREATE_EXPENSE",
       title: "Pengeluaran Dicatat",
-      details: `Pengeluaran Rp ${amount.toLocaleString("id-ID")} - ${categoryName} (${description})`,
-      metadata: { paymentId: payment.id },
+      details: `Pengeluaran Rp ${numericAmount.toLocaleString("id-ID")} - ${categoryName} [${cleanRef}] (${cleanDesc})`,
+      metadata: { paymentId: payment.id, reference: cleanRef },
       userName: "Admin",
       role: "ADMIN",
     });

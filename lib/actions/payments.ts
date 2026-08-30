@@ -16,7 +16,6 @@ export interface CreatePaymentInput {
   employeeId?: string;
   paymentMethod?: "CASH" | "TRANSFER" | "QRIS" | "CARD";
   bankAccountId?: string;
-  payCommissionNow?: boolean;
 }
 
 interface DecimalLike {
@@ -89,11 +88,15 @@ export async function createPayment(data: CreatePaymentInput) {
         error: "Order ID is required",
       };
     }
+    const paymentAmount = Number(data.amount);
+    if (!Number.isFinite(paymentAmount) || paymentAmount <= 0) {
+      return { success: false, error: "Payment amount must be greater than 0." };
+    }
 
     const result = await prisma.$transaction(async (tx: TransactionClient) => {
       const payment = await tx.payment.create({
         data: {
-          amount: data.amount,
+          amount: paymentAmount,
           note: data.note,
           orderId: data.orderId!,
           type: "ORDER_PAYMENT",
@@ -102,7 +105,7 @@ export async function createPayment(data: CreatePaymentInput) {
         },
       });
 
-      return await handleOrderPayment(tx, data.orderId!, payment, data.payCommissionNow);
+      return await handleOrderPayment(tx, data.orderId!, payment);
     }, {
       maxWait: 5000,
       timeout: 15000,
@@ -134,7 +137,7 @@ export async function createPayment(data: CreatePaymentInput) {
   }
 }
 
-async function handleOrderPayment(tx: TransactionClient, orderId: string, payment: any, payCommissionNow?: boolean) {
+async function handleOrderPayment(tx: TransactionClient, orderId: string, payment: any) {
   const order = await tx.order.findUnique({
     where: { id: orderId },
     include: { orderItems: true }
@@ -147,6 +150,10 @@ async function handleOrderPayment(tx: TransactionClient, orderId: string, paymen
   const amount = Number(payment.amount);
   const newTotalPaid = Number(order.totalPaid) + amount;
   const totalPrice = Number(order.totalPrice);
+
+  if (amount > totalPrice - Number(order.totalPaid)) {
+    throw new Error("Nominal pembayaran melebihi sisa tagihan order.");
+  }
 
   if (payment.paymentMethod && ["TRANSFER", "QRIS", "CARD"].includes(payment.paymentMethod) && payment.bankAccountId) {
     const bankAccount = await tx.account.findUnique({ where: { id: payment.bankAccountId } });
@@ -173,20 +180,13 @@ async function handleOrderPayment(tx: TransactionClient, orderId: string, paymen
     },
   });
 
-  if (paymentStatus === "PAID" && payCommissionNow) {
-    await tx.orderItem.updateMany({
-      where: { orderId: orderId, itemType: "FEE", isPaid: false },
-      data: { isPaid: true }
-    });
-  }
-
   return serializePayment(payment);
 }
 
 export interface CreatePayrollPaymentInput {
+  payrollId: string;
   amount: number;
   note?: string;
-  employeeId?: string;
   paymentMethod?: "CASH" | "TRANSFER" | "QRIS" | "CARD";
   bankAccountId?: string;
 }
@@ -207,18 +207,90 @@ export async function createPayrollPayment(data: CreatePayrollPaymentInput) {
       return { success: false, error: "Access denied: Only Owner can approve payroll payments." };
     }
 
-    const payment = await prisma.payment.create({
-      data: {
-        amount: data.amount,
-        type: "PAYROLL",
-        note: data.note,
-        employeeId: data.employeeId || null,
-        paymentMethod: data.paymentMethod || "CASH",
-        bankAccountId: data.bankAccountId || null,
-      },
+    const amount = Number(data.amount);
+    if (!data.payrollId || !Number.isFinite(amount) || amount <= 0) {
+      return { success: false, error: "Payroll dan nominal pembayaran yang valid wajib diisi." };
+    }
+
+    const payment = await prisma.$transaction(async (tx) => {
+      const payroll = await tx.payroll.findUnique({ where: { id: data.payrollId } });
+      if (!payroll) {
+        throw new Error("Slip payroll tidak ditemukan.");
+      }
+
+      const totalEarned = Number(payroll.totalEarned);
+      const currentPaid = Number(payroll.totalPaid);
+      const outstanding = totalEarned - currentPaid;
+      if (amount > outstanding) {
+        throw new Error(`Nominal pembayaran melebihi sisa payroll Rp ${outstanding.toLocaleString("id-ID")}.`);
+      }
+
+      if (
+        data.paymentMethod &&
+        ["TRANSFER", "QRIS", "CARD"].includes(data.paymentMethod) &&
+        !data.bankAccountId
+      ) {
+        throw new Error("Rekening sumber wajib dipilih untuk pembayaran non-tunai.");
+      }
+
+      const created = await tx.payment.create({
+        data: {
+          amount,
+          type: "PAYROLL",
+          note: data.note?.trim() || null,
+          employeeId: payroll.employeeId,
+          payrollId: payroll.id,
+          paymentMethod: data.paymentMethod || "CASH",
+          bankAccountId: data.bankAccountId || null,
+        },
+      });
+
+      if (data.bankAccountId) {
+        const bankAccount = await tx.account.findUnique({
+          where: { id: data.bankAccountId },
+          select: { currentBalance: true, isActive: true },
+        });
+        if (!bankAccount?.isActive) {
+          throw new Error("Rekening sumber tidak ditemukan atau tidak aktif.");
+        }
+        if (Number(bankAccount.currentBalance) < amount) {
+          throw new Error("Saldo rekening sumber tidak mencukupi.");
+        }
+        await tx.account.update({
+          where: { id: data.bankAccountId },
+          data: { currentBalance: { decrement: amount } },
+        });
+      }
+
+      const totalPaid = currentPaid + amount;
+      const status: "PARTIAL" | "PAID" = totalPaid >= totalEarned ? "PAID" : "PARTIAL";
+      await tx.payroll.update({
+        where: { id: payroll.id },
+        data: { totalPaid, status },
+      });
+
+      if (status === "PAID" && payroll.details) {
+        try {
+          const details: unknown = JSON.parse(payroll.details);
+          if (details && typeof details === "object" && "feeItemIds" in details) {
+            const feeItemIds = (details as { feeItemIds?: unknown }).feeItemIds;
+            if (Array.isArray(feeItemIds) && feeItemIds.every((id) => typeof id === "string")) {
+              await tx.orderItem.updateMany({
+                where: { id: { in: feeItemIds }, employeeId: payroll.employeeId },
+                data: { isPaid: true },
+              });
+            }
+          }
+        } catch {
+          // Legacy payroll notes may be plain text and have no fee snapshot IDs.
+        }
+      }
+
+      return created;
     });
 
     revalidatePath("/admin/payroll");
+    revalidatePath("/admin/employees/approval");
     revalidatePath("/admin/reports");
     revalidatePath("/admin/employees");
 
@@ -226,7 +298,7 @@ export async function createPayrollPayment(data: CreatePayrollPaymentInput) {
       action: "PAYROLL_PAYMENT",
       title: "Payroll Payment",
       details: `Payroll payment of Rp ${Number(data.amount).toLocaleString('id-ID')} processed via ${data.paymentMethod || 'CASH'}.`,
-      metadata: { paymentId: payment.id, employeeId: data.employeeId },
+      metadata: { paymentId: payment.id, payrollId: data.payrollId, employeeId: payment.employeeId },
       userName: "Owner",
       role: "OWNER",
     });

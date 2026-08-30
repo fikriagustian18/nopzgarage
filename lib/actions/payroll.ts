@@ -1,9 +1,14 @@
 "use server";
 
+import { endOfDay, startOfDay } from "date-fns";
 import { revalidatePath } from "next/cache";
+import type { PayrollStatus } from "@prisma/client";
+
 import { auth } from "@/lib/auth";
+import { isRoleAllowed } from "@/lib/authCheck";
 import { prisma } from "@/lib/prisma";
 import { serializeData } from "@/lib/utils";
+import { calculateCommission, normalizeCommissionRate } from "@/lib/payroll/calculations";
 
 export interface GeneratePayrollInput {
   employeeId: string;
@@ -17,116 +22,259 @@ export interface PayrollDetail {
   workDays?: number;
   motorCount?: number;
   bonusNote?: string;
+  salaryType?: string;
+  monthlyRate?: number;
+  commissionRate?: number;
+  serviceRevenue?: number;
+  feeItemIds?: string[];
 }
 
-function serializePayroll(payroll: any) {
-  if (!payroll) {
-    return null;
-  }
+const PAYROLL_STATUSES = new Set<PayrollStatus>(["UNPAID", "PARTIAL", "PAID"]);
+
+function serializePayroll<T>(payroll: T): unknown {
   return serializeData(payroll);
 }
 
 function calculateWorkDays(startDate: Date, endDate: Date): number {
   let count = 0;
   const current = new Date(startDate);
-  
+
   while (current <= endDate) {
     if (current.getDay() !== 0) {
       count++;
     }
     current.setDate(current.getDate() + 1);
   }
-  
+
   return count;
 }
 
-/**
- * Generates a payroll record for an individual employee.
- * 
- * @param data - Payroll generation payload.
- * @returns Created payroll record.
- */
-export async function generatePayroll(data: GeneratePayrollInput) {
+function normalizePeriod(startDate: Date, endDate: Date) {
+  const start = startOfDay(new Date(startDate));
+  const end = endOfDay(new Date(endDate));
+
+  if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) {
+    throw new Error("Periode payroll tidak valid.");
+  }
+  if (start > end) {
+    throw new Error("Tanggal mulai payroll tidak boleh melewati tanggal akhir.");
+  }
+
+  return { start, end };
+}
+
+function parsePayrollDetails(details?: string | null): PayrollDetail {
+  if (!details) {
+    return {};
+  }
+
   try {
-    const session = await auth();
-    if (!session || session.user?.role !== "OWNER") {
-      return { success: false, error: "Access denied: Only Owner can generate payroll." };
-    }
-    const employee = await prisma.employee.findUnique({
-      where: { id: data.employeeId },
-    });
-
-    if (!employee) {
-      return { success: false, error: "Employee not found" };
-    }
-
-    let baseSalary = 0;
-    const details: PayrollDetail = {};
-
-    if (employee.salaryType === "DAILY") {
-      const workDays = calculateWorkDays(data.startDate, data.endDate);
-      baseSalary = workDays * Number(employee.dailyRate);
-      details.workDays = workDays;
-    } else if (employee.salaryType === "COMMISSION") {
-      const motorCount = await prisma.order.count({
-        where: {
-          mechanicId: employee.id,
-          status: "COMPLETED",
-          updatedAt: {
-            gte: data.startDate,
-            lte: data.endDate,
-          },
-        },
-      });
-      baseSalary = motorCount * Number(employee.commissionRate);
-      details.motorCount = motorCount;
-    }
-
-    const bonusAmount = data.bonusAmount || 0;
-    if (bonusAmount > 0 && data.bonusNote) {
-      details.bonusNote = data.bonusNote;
-    }
-
-    const totalEarned = baseSalary + bonusAmount;
-
-    const noteString = JSON.stringify({
-      startDate: data.startDate.toISOString(),
-      endDate: data.endDate.toISOString(),
-      baseSalary,
-      bonus: bonusAmount,
-      totalEarned,
-      ...details,
-    });
-
-    const payment = await prisma.payment.create({
-      data: {
-        type: "PAYROLL",
-        employeeId: data.employeeId,
-        amount: totalEarned,
-        note: noteString,
-        date: new Date(),
-        paymentMethod: "CASH",
-      },
-      include: {
-        employee: true,
-      },
-    });
-
-    revalidatePath("/admin/payroll");
-    
-    return { success: true, payroll: serializePayroll(payment) };
-  } catch (error) {
-    console.error("Generate payroll error:", error);
-    return { success: false, error: "Failed to generate payroll" };
+    const parsed: unknown = JSON.parse(details);
+    return parsed && typeof parsed === "object" ? (parsed as PayrollDetail) : {};
+  } catch {
+    return { bonusNote: details };
   }
 }
 
-/**
- * Fetches payroll records with optional filters.
- * 
- * @param filters - Optional filters by employeeId, status, and date range.
- * @returns List of payroll records.
- */
+function getPayrollStatus(totalEarned: number, totalPaid: number): PayrollStatus {
+  if (totalPaid <= 0) {
+    return "UNPAID";
+  }
+  if (totalPaid >= totalEarned) {
+    return "PAID";
+  }
+  return "PARTIAL";
+}
+
+function toPayrollView(payroll: {
+  id: string;
+  employeeId: string;
+  startDate: Date;
+  endDate: Date;
+  baseSalary: unknown;
+  bonus: unknown;
+  totalEarned: unknown;
+  totalPaid: unknown;
+  status: PayrollStatus;
+  details: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+  employee: unknown;
+  payments: unknown[];
+}) {
+  return {
+    ...payroll,
+    baseSalary: Number(payroll.baseSalary),
+    bonus: Number(payroll.bonus),
+    totalEarned: Number(payroll.totalEarned),
+    totalPaid: Number(payroll.totalPaid),
+    detailsParsed: parsePayrollDetails(payroll.details),
+  };
+}
+
+async function createPayrollForEmployee(data: GeneratePayrollInput) {
+  const { start, end } = normalizePeriod(data.startDate, data.endDate);
+  const bonusAmount = Number(data.bonusAmount ?? 0);
+
+  if (!Number.isFinite(bonusAmount) || bonusAmount < 0) {
+    throw new Error("Bonus payroll harus berupa angka non-negatif.");
+  }
+
+  const existing = await prisma.payroll.findUnique({
+    where: {
+      employeeId_startDate_endDate: {
+        employeeId: data.employeeId,
+        startDate: start,
+        endDate: end,
+      },
+    },
+    include: { employee: true, payments: true },
+  });
+
+  if (existing) {
+    return { payroll: existing, wasExisting: true };
+  }
+
+  const employee = await prisma.employee.findUnique({
+    where: { id: data.employeeId },
+  });
+
+  if (!employee) {
+    throw new Error("Karyawan tidak ditemukan.");
+  }
+
+  let baseSalary = 0;
+  const details: PayrollDetail = { salaryType: employee.salaryType };
+
+  if (employee.salaryType === "DAILY") {
+    const workDays = calculateWorkDays(start, end);
+    baseSalary = workDays * Number(employee.dailyRate);
+    details.workDays = workDays;
+  } else if (employee.salaryType === "MONTHLY") {
+    baseSalary = Number(employee.monthlyRate);
+    details.monthlyRate = baseSalary;
+  } else {
+    const feeItems = await prisma.orderItem.findMany({
+      where: {
+        employeeId: employee.id,
+        itemType: "FEE",
+        isPaid: false,
+        createdAt: { gte: start, lte: end },
+        order: {
+          status: "COMPLETED",
+          paymentStatus: "PAID",
+        },
+      },
+      select: { id: true, totalPrice: true, orderId: true },
+    });
+
+    const eligibleOrderIds = new Set(feeItems.map((item) => item.orderId));
+
+    if (feeItems.length > 0) {
+      baseSalary = feeItems.reduce((sum, item) => sum + Number(item.totalPrice), 0);
+      details.feeItemIds = feeItems.map((item) => item.id);
+      details.motorCount = eligibleOrderIds.size;
+    } else {
+      // Backward-compatible fallback for completed orders created before FEE snapshots.
+      const completedOrders = await prisma.order.findMany({
+        where: {
+          mechanicId: employee.id,
+          status: "COMPLETED",
+          paymentStatus: "PAID",
+          updatedAt: { gte: start, lte: end },
+        },
+        select: { id: true, items: true },
+      });
+
+      let totalServiceRevenue = 0;
+      for (const order of completedOrders) {
+        if (!Array.isArray(order.items)) {
+          continue;
+        }
+        for (const item of order.items) {
+          if (
+            item &&
+            typeof item === "object" &&
+            "type" in item &&
+            String(item.type).toLowerCase() === "service"
+          ) {
+            const quantity = "qty" in item ? Number(item.qty) : 0;
+            const price = "price" in item ? Number(item.price) : 0;
+            totalServiceRevenue +=
+              (Number.isFinite(quantity) ? quantity : 0) *
+              (Number.isFinite(price) ? price : 0);
+          }
+        }
+      }
+
+      let ratePercent: number;
+      try {
+        ratePercent = normalizeCommissionRate(employee.commissionRate);
+      } catch {
+        throw new Error(`Rate komisi ${employee.name} harus berada pada rentang 0-100%.`);
+      }
+
+      baseSalary = calculateCommission(totalServiceRevenue, ratePercent);
+      details.motorCount = completedOrders.length;
+      details.serviceRevenue = totalServiceRevenue;
+    }
+
+    details.commissionRate = Number(employee.commissionRate);
+  }
+
+  if (!Number.isFinite(baseSalary) || baseSalary < 0) {
+    throw new Error("Hasil kalkulasi gaji tidak valid.");
+  }
+
+  if (data.bonusNote?.trim()) {
+    details.bonusNote = data.bonusNote.trim();
+  }
+
+  const totalEarned = baseSalary + bonusAmount;
+  const payroll = await prisma.payroll.create({
+    data: {
+      employeeId: employee.id,
+      startDate: start,
+      endDate: end,
+      salaryType: employee.salaryType,
+      baseSalary,
+      bonus: bonusAmount,
+      totalEarned,
+      totalPaid: 0,
+      status: "UNPAID",
+      details: JSON.stringify(details),
+    },
+    include: { employee: true, payments: true },
+  });
+
+  return { payroll, wasExisting: false };
+}
+
+export async function generatePayroll(data: GeneratePayrollInput) {
+  try {
+    const session = await auth();
+    if (!session || !isRoleAllowed(session.user?.role, ["OWNER"])) {
+      return { success: false, error: "Access denied: Only Owner can generate payroll." };
+    }
+
+    const result = await createPayrollForEmployee(data);
+    revalidatePath("/admin/payroll");
+    revalidatePath("/admin/employees/approval");
+
+    return {
+      success: true,
+      payroll: serializePayroll(toPayrollView(result.payroll)),
+      wasExisting: result.wasExisting,
+    };
+  } catch (error) {
+    console.error("Generate payroll error:", error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Failed to generate payroll",
+    };
+  }
+}
+
 export async function getPayrolls(filters?: {
   employeeId?: string;
   status?: string;
@@ -135,255 +283,153 @@ export async function getPayrolls(filters?: {
 }) {
   try {
     const session = await auth();
-    if (!session || !["OWNER", "ADMIN"].includes(session.user?.role || "")) {
-      return { success: false, error: "Access denied: Only Owner and Admin can access payroll list." };
+    if (!session || !isRoleAllowed(session.user?.role, ["OWNER", "ADMIN", "EMPLOYEE"])) {
+      return { success: false, error: "Access denied." };
     }
-    const isOwner = session.user?.role === "OWNER";
-    const finalEmployeeId = isOwner ? filters?.employeeId : session.user?.employeeId;
-    if (!isOwner && !finalEmployeeId) {
+
+    const isOwner = isRoleAllowed(session.user?.role, ["OWNER"]);
+    const employeeId = isOwner ? filters?.employeeId : session.user?.employeeId ?? undefined;
+    if (!isOwner && !employeeId) {
       return { success: true, payrolls: [] };
     }
 
-    const payments = await prisma.payment.findMany({
+    const status =
+      filters?.status && PAYROLL_STATUSES.has(filters.status as PayrollStatus)
+        ? (filters.status as PayrollStatus)
+        : undefined;
+
+    const payrolls = await prisma.payroll.findMany({
       where: {
-        type: "PAYROLL",
-        ...(finalEmployeeId && { employeeId: finalEmployeeId }),
-        ...(filters?.dateFrom && {
-          date: { gte: filters.dateFrom },
-        }),
-        ...(filters?.dateTo && {
-          date: { lte: filters.dateTo },
-        }),
+        ...(employeeId && { employeeId }),
+        ...(status && { status }),
+        ...(filters?.dateFrom || filters?.dateTo
+          ? {
+              startDate: {
+                ...(filters.dateFrom && { gte: startOfDay(filters.dateFrom) }),
+                ...(filters.dateTo && { lte: endOfDay(filters.dateTo) }),
+              },
+            }
+          : {}),
       },
-      include: {
-        employee: true,
-      },
-      orderBy: {
-        createdAt: "desc",
-      },
+      include: { employee: true, payments: { orderBy: { date: "asc" } } },
+      orderBy: { createdAt: "desc" },
     });
 
-    const payrolls = payments.map((p) => {
-      let detailsParsed = null;
-      let startDate = p.createdAt;
-      let endDate = p.createdAt;
-      let baseSalary = Number(p.amount);
-      let bonus = 0;
-
-      if (p.note) {
-        try {
-          const parsed = JSON.parse(p.note);
-          detailsParsed = parsed;
-          if (parsed.startDate) {
-            startDate = new Date(parsed.startDate);
-          }
-          if (parsed.endDate) {
-            endDate = new Date(parsed.endDate);
-          }
-          if (parsed.baseSalary !== undefined) {
-            baseSalary = parsed.baseSalary;
-          }
-          if (parsed.bonus !== undefined) {
-            bonus = parsed.bonus;
-          }
-        } catch (e) {
-          detailsParsed = { bonusNote: p.note };
-        }
-      }
-
-      return {
-        id: p.id,
-        employeeId: p.employeeId,
-        employee: p.employee,
-        startDate,
-        endDate,
-        baseSalary,
-        bonus,
-        totalEarned: Number(p.amount),
-        totalPaid: Number(p.amount),
-        status: "PAID",
-        details: p.note,
-        detailsParsed,
-        createdAt: p.createdAt,
-        updatedAt: p.createdAt,
-        payments: [p],
-      };
-    });
-
-    return { success: true, payrolls: payrolls.map(serializePayroll) };
+    return {
+      success: true,
+      payrolls: payrolls.map((payroll) => serializePayroll(toPayrollView(payroll))),
+    };
   } catch (error) {
     console.error("Get payrolls error:", error);
     return { success: false, error: "Failed to load payroll list" };
   }
 }
 
-/**
- * Fetches detailed info for a single payroll record.
- * 
- * @param payrollId - Payroll ID.
- * @returns Payroll detail payload.
- */
 export async function getPayrollDetail(payrollId: string) {
   try {
     const session = await auth();
-    if (!session || !["OWNER", "ADMIN"].includes(session.user?.role || "")) {
-      return { success: false, error: "Access denied: Only Owner and Admin can view payroll details." };
+    if (!session || !isRoleAllowed(session.user?.role, ["OWNER", "ADMIN", "EMPLOYEE"])) {
+      return { success: false, error: "Access denied." };
     }
-    const payment = await prisma.payment.findUnique({
+
+    const payroll = await prisma.payroll.findUnique({
       where: { id: payrollId },
-      include: {
-        employee: true,
-      },
+      include: { employee: true, payments: { orderBy: { date: "asc" } } },
     });
 
-    if (!payment || payment.type !== "PAYROLL") {
+    if (!payroll) {
       return { success: false, error: "Payroll not found" };
     }
-    const isOwner = session.user?.role === "OWNER";
-    if (!isOwner && payment.employeeId !== session.user?.employeeId) {
-      return { success: false, error: "Access denied: You can only view your own payroll details." };
+
+    const isOwner = isRoleAllowed(session.user?.role, ["OWNER"]);
+    if (!isOwner && payroll.employeeId !== session.user?.employeeId) {
+      return { success: false, error: "Access denied: You can only view your own payroll." };
     }
 
-    let detailsParsed = null;
-    let startDate = payment.createdAt;
-    let endDate = payment.createdAt;
-    let baseSalary = Number(payment.amount);
-    let bonus = 0;
-
-    if (payment.note) {
-      try {
-        const parsed = JSON.parse(payment.note);
-        detailsParsed = parsed;
-        if (parsed.startDate) {
-          startDate = new Date(parsed.startDate);
-        }
-        if (parsed.endDate) {
-          endDate = new Date(parsed.endDate);
-        }
-        if (parsed.baseSalary !== undefined) {
-          baseSalary = parsed.baseSalary;
-        }
-        if (parsed.bonus !== undefined) {
-          bonus = parsed.bonus;
-        }
-      } catch (e) {
-        detailsParsed = { bonusNote: payment.note };
-      }
-    }
-
-    const payrollObj = {
-      id: payment.id,
-      employeeId: payment.employeeId,
-      employee: payment.employee,
-      startDate,
-      endDate,
-      baseSalary,
-      bonus,
-      totalEarned: Number(payment.amount),
-      totalPaid: Number(payment.amount),
-      status: "PAID",
-      details: payment.note,
-      detailsParsed,
-      createdAt: payment.createdAt,
-      updatedAt: payment.createdAt,
-      payments: [payment],
-    };
-
-    return { 
-      success: true, 
-      payroll: serializePayroll(payrollObj),
-    };
+    return { success: true, payroll: serializePayroll(toPayrollView(payroll)) };
   } catch (error) {
     console.error("Get payroll detail error:", error);
     return { success: false, error: "Failed to load payroll details" };
   }
 }
 
-/**
- * Updates a payroll bonus amount and note.
- * 
- * @param payrollId - Payroll ID.
- * @param updates - Bonus amount and note updates.
- * @returns Updated payroll object.
- */
 export async function updatePayroll(
   payrollId: string,
-  updates: {
-    bonusAmount?: number;
-    bonusNote?: string;
-  }
+  updates: { bonusAmount?: number; bonusNote?: string }
 ) {
   try {
     const session = await auth();
-    if (!session || session.user?.role !== "OWNER") {
+    if (!session || !isRoleAllowed(session.user?.role, ["OWNER"])) {
       return { success: false, error: "Access denied: Only Owner can update payroll." };
     }
-    const payment = await prisma.payment.findUnique({
-      where: { id: payrollId },
-    });
 
-    if (!payment) {
+    const payroll = await prisma.payroll.findUnique({ where: { id: payrollId } });
+    if (!payroll) {
       return { success: false, error: "Payroll not found" };
     }
 
-    let detailsParsed: any = {};
-    if (payment.note) {
-      try {
-        detailsParsed = JSON.parse(payment.note);
-      } catch (e) {
-        detailsParsed = { bonusNote: payment.note };
+    const bonus = Number(updates.bonusAmount ?? payroll.bonus);
+    if (!Number.isFinite(bonus) || bonus < 0) {
+      return { success: false, error: "Bonus harus berupa angka non-negatif." };
+    }
+
+    const totalEarned = Number(payroll.baseSalary) + bonus;
+    const totalPaid = Number(payroll.totalPaid);
+    if (totalEarned < totalPaid) {
+      return { success: false, error: "Total gaji tidak boleh lebih kecil dari nominal yang sudah dibayar." };
+    }
+
+    const details = parsePayrollDetails(payroll.details);
+    if (updates.bonusNote !== undefined) {
+      const note = updates.bonusNote.trim();
+      if (note) {
+        details.bonusNote = note;
+      } else {
+        delete details.bonusNote;
       }
     }
 
-    const newBonus = updates.bonusAmount ?? (detailsParsed.bonus || 0);
-    if (updates.bonusNote) {
-      detailsParsed.bonusNote = updates.bonusNote;
-    }
-    detailsParsed.bonus = newBonus;
-
-    const baseSalary = detailsParsed.baseSalary || Number(payment.amount);
-    const newTotal = baseSalary + newBonus;
-    detailsParsed.totalEarned = newTotal;
-
-    const updated = await prisma.payment.update({
+    const updated = await prisma.payroll.update({
       where: { id: payrollId },
       data: {
-        amount: newTotal,
-        note: JSON.stringify(detailsParsed),
+        bonus,
+        totalEarned,
+        status: getPayrollStatus(totalEarned, totalPaid),
+        details: JSON.stringify(details),
       },
-      include: {
-        employee: true,
-      },
+      include: { employee: true, payments: { orderBy: { date: "asc" } } },
     });
 
     revalidatePath("/admin/payroll");
-    
-    return { success: true, payroll: serializePayroll(updated) };
+    revalidatePath("/admin/employees/approval");
+    return { success: true, payroll: serializePayroll(toPayrollView(updated)) };
   } catch (error) {
     console.error("Update payroll error:", error);
     return { success: false, error: "Failed to update payroll" };
   }
 }
 
-/**
- * Deletes a payroll record by ID.
- * 
- * @param payrollId - Payroll ID.
- * @returns Success response.
- */
 export async function deletePayroll(payrollId: string) {
   try {
     const session = await auth();
-    if (!session || session.user?.role !== "OWNER") {
+    if (!session || !isRoleAllowed(session.user?.role, ["OWNER"])) {
       return { success: false, error: "Access denied: Only Owner can delete payroll." };
     }
 
-    await prisma.payment.delete({
+    const payroll = await prisma.payroll.findUnique({
       where: { id: payrollId },
+      select: { totalPaid: true, _count: { select: { payments: true } } },
     });
+    if (!payroll) {
+      return { success: false, error: "Payroll not found" };
+    }
+    if (Number(payroll.totalPaid) > 0 || payroll._count.payments > 0) {
+      return { success: false, error: "Slip yang sudah memiliki pembayaran tidak dapat dihapus." };
+    }
 
+    await prisma.payroll.delete({ where: { id: payrollId } });
     revalidatePath("/admin/payroll");
-    
+    revalidatePath("/admin/employees/approval");
     return { success: true };
   } catch (error) {
     console.error("Delete payroll error:", error);
@@ -391,66 +437,42 @@ export async function deletePayroll(payrollId: string) {
   }
 }
 
-/**
- * Retrieves an employee summary including completed orders and payroll earnings.
- * 
- * @param employeeId - Employee ID.
- * @returns Summary stats payload.
- */
 export async function getEmployeeSummary(employeeId: string) {
   try {
     const session = await auth();
-    if (!session || session.user?.role !== "OWNER") {
+    if (!session || !isRoleAllowed(session.user?.role, ["OWNER"])) {
       return { success: false, error: "Access denied: Only Owner can access employee summary." };
     }
+
     const employee = await prisma.employee.findUnique({
       where: { id: employeeId },
       include: {
         orders: {
-          where: {
-            status: "COMPLETED",
-          },
-          select: {
-            id: true,
-            vehicle: true,
-            totalPrice: true,
-            updatedAt: true,
-          },
-          orderBy: {
-            updatedAt: "desc",
-          },
+          where: { status: "COMPLETED" },
+          select: { id: true, vehicle: true, totalPrice: true, updatedAt: true },
+          orderBy: { updatedAt: "desc" },
           take: 10,
         },
       },
     });
-
     if (!employee) {
       return { success: false, error: "Employee not found" };
     }
 
-    const totalCompleted = await prisma.order.count({
-      where: {
-        mechanicId: employeeId,
-        status: "COMPLETED",
-      },
-    });
+    const [totalCompleted, paidPayrolls] = await Promise.all([
+      prisma.order.count({ where: { mechanicId: employeeId, status: "COMPLETED" } }),
+      prisma.payroll.aggregate({
+        where: { employeeId },
+        _sum: { totalPaid: true },
+      }),
+    ]);
 
-    const totalPaidPayrolls = await prisma.payment.aggregate({
-      where: {
-        employeeId,
-        type: "PAYROLL",
-      },
-      _sum: {
-        amount: true,
-      },
-    });
-
-    return { 
-      success: true, 
+    return {
+      success: true,
       employee: serializeData(employee),
       stats: {
         totalCompleted,
-        totalEarned: totalPaidPayrolls._sum.amount ? Number(totalPaidPayrolls._sum.amount) : 0,
+        totalEarned: Number(paidPayrolls._sum.totalPaid ?? 0),
       },
     };
   } catch (error) {
@@ -459,51 +481,44 @@ export async function getEmployeeSummary(employeeId: string) {
   }
 }
 
-/**
- * Generates bulk payroll for all active non-owner employees over a date period.
- * 
- * @param startDate - Start date of the period.
- * @param endDate - End date of the period.
- * @returns Bulk generation results array.
- */
-export async function bulkGeneratePayroll(
-  startDate: Date,
-  endDate: Date
-) {
+export async function bulkGeneratePayroll(startDate: Date, endDate: Date) {
   try {
     const session = await auth();
-    if (!session || session.user?.role !== "OWNER") {
-      return { success: false, error: "Access denied: Only Owner can perform bulk payroll generation." };
+    if (!session || !isRoleAllowed(session.user?.role, ["OWNER"])) {
+      return { success: false, error: "Access denied: Only Owner can generate payroll." };
     }
+
+    normalizePeriod(startDate, endDate);
     const employees = await prisma.employee.findMany({
       where: {
         isActive: true,
-        role: {
-          not: "Owner",
-        },
+        role: { notIn: ["Owner", "OWNER"] },
       },
+      orderBy: { name: "asc" },
     });
 
     const results = [];
-    
     for (const employee of employees) {
-      const result = await generatePayroll({
+      const result = await createPayrollForEmployee({
         employeeId: employee.id,
         startDate,
         endDate,
       });
-      
       results.push({
         employeeName: employee.name,
-        ...serializePayroll(result.payroll),
+        payroll: serializePayroll(toPayrollView(result.payroll)),
+        wasExisting: result.wasExisting,
       });
     }
 
     revalidatePath("/admin/payroll");
-    
+    revalidatePath("/admin/employees/approval");
     return { success: true, results };
   } catch (error) {
     console.error("Bulk generate payroll error:", error);
-    return { success: false, error: "Failed bulk payroll generation" };
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Failed bulk payroll generation",
+    };
   }
 }

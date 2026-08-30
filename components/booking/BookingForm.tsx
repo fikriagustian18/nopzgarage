@@ -7,6 +7,8 @@ import * as z from "zod";
 import { 
   CheckCircle2, 
   Loader2, 
+  Copy,
+  Check,
   User, 
   Phone, 
   Bike, 
@@ -38,7 +40,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/Select";
-import { formatWhatsAppNumber } from "@/lib/utils";
+import { formatWhatsAppNumber, formatOrderNo } from "@/lib/utils";
 import { 
   DEFAULT_SERVICE_OPTIONS, 
   DefaultServiceOption 
@@ -61,6 +63,7 @@ export type BookingFormData = z.infer<typeof bookingSchema>;
 
 export interface BookingOrderResult {
   id?: string;
+  orderNumber?: string;
   queueNumber?: string;
   custName: string;
   custPhone: string;
@@ -78,10 +81,11 @@ export interface BookingFormProps {
 
 export function BookingForm({ 
   serviceOptions = [], 
-  garagePhone 
+  garagePhone = "0812-3456-7890" 
 }: BookingFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [successValues, setSuccessValues] = useState<BookingOrderResult | null>(null);
+  const [copiedOrderNo, setCopiedOrderNo] = useState(false);
 
   const services = serviceOptions.length > 0 ? serviceOptions : DEFAULT_SERVICE_OPTIONS;
 
@@ -133,9 +137,11 @@ export function BookingForm({
       : "-";
 
     const cleanPhone = formatWhatsAppNumber(garagePhone || "0812-3456-7890");
+    const orderNo = successValues.orderNumber || (successValues.id ? formatOrderNo(successValues.id) : "-");
 
     const waText = encodeURIComponent(
       `Halo NopzGarage, saya ingin mengonfirmasi booking service:\n\n` +
+      `*No. Order:* ${orderNo}\n` +
       `*No. Antrian:* ${successValues.queueNumber || "-"}\n` +
       `*Nama:* ${successValues.custName}\n` +
       `*Motor:* ${successValues.vehicle}\n` +
@@ -164,9 +170,37 @@ export function BookingForm({
         </div>
 
         <div className="bg-muted/40 border rounded-xl p-5 mb-6 space-y-3">
-          <div className="flex justify-between items-center pb-3 border-b border-border/50">
-            <span className="text-xs uppercase font-bold text-muted-foreground tracking-wider">No. Antrian</span>
-            <span className="text-2xl font-black text-primary font-mono">{successValues.queueNumber || "QT-PENDING"}</span>
+          <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-3 pb-3 border-b border-border/50">
+            <div>
+              <span className="text-xs uppercase font-bold text-muted-foreground tracking-wider block">No. Order</span>
+              <div className="flex items-center gap-2 mt-0.5">
+                <span className="text-lg font-black text-foreground font-mono">
+                  {successValues.orderNumber || (successValues.id ? formatOrderNo(successValues.id) : "-")}
+                </span>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    const no = successValues.orderNumber || (successValues.id ? formatOrderNo(successValues.id) : "");
+                    if (no) {
+                      navigator.clipboard.writeText(no);
+                      setCopiedOrderNo(true);
+                      toast.success("Nomor order disalin ke clipboard!");
+                      setTimeout(() => setCopiedOrderNo(false), 2000);
+                    }
+                  }}
+                  className="h-7 px-2 text-xs gap-1 font-sans text-primary hover:bg-primary/10 rounded-lg"
+                >
+                  {copiedOrderNo ? <Check className="h-3.5 w-3.5 text-green-600" /> : <Copy className="h-3.5 w-3.5" />}
+                  <span className="text-[10px] font-semibold">{copiedOrderNo ? "Tersalin" : "Salin"}</span>
+                </Button>
+              </div>
+            </div>
+            <div className="sm:text-right">
+              <span className="text-xs uppercase font-bold text-muted-foreground tracking-wider block">No. Antrian</span>
+              <span className="text-2xl font-black text-primary font-mono">{successValues.queueNumber || "QT-PENDING"}</span>
+            </div>
           </div>
           <div className="grid grid-cols-2 gap-2 text-xs">
             <div>

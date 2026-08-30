@@ -60,7 +60,7 @@ const DB_MODELS = [
       { name: "scheduledAt", type: "DateTime (nullable)" },
       { name: "totalPrice", type: "Decimal" },
       { name: "totalPaid", type: "Decimal" },
-      { name: "paymentStatus", type: "PaymentStatus (UNPAID | HALF_PAID | PAID)" },
+      { name: "paymentStatus", type: "PaymentStatus (UNPAID | PARTIAL | PAID)" },
       { name: "mechanicId", type: "String (nullable)" },
       { name: "createdAt", type: "DateTime" }
     ],
@@ -75,6 +75,7 @@ const DB_MODELS = [
       { name: "phone", type: "String (nullable)" },
       { name: "salaryType", type: "SalaryType (DAILY | COMMISSION | MONTHLY)" },
       { name: "dailyRate", type: "Decimal" },
+      { name: "monthlyRate", type: "Decimal" },
       { name: "commissionRate", type: "Decimal" },
       { name: "isActive", type: "Boolean" }
     ],
@@ -116,9 +117,26 @@ const DB_MODELS = [
       { name: "amount", type: "Decimal" },
       { name: "paymentMethod", type: "String" },
       { name: "orderId", type: "String (nullable)" },
+      { name: "payrollId", type: "String (nullable)" },
       { name: "bankAccountId", type: "String (nullable)" }
     ],
     presetJson: '{\n  "take": 10,\n  "orderBy": {\n    "date": "desc"\n  }\n}'
+  },
+  {
+    name: "Payroll",
+    fields: [
+      { name: "id", type: "String (cuid)" },
+      { name: "employeeId", type: "String" },
+      { name: "startDate", type: "DateTime" },
+      { name: "endDate", type: "DateTime" },
+      { name: "salaryType", type: "SalaryType" },
+      { name: "baseSalary", type: "Decimal" },
+      { name: "bonus", type: "Decimal" },
+      { name: "totalEarned", type: "Decimal" },
+      { name: "totalPaid", type: "Decimal" },
+      { name: "status", type: "PayrollStatus (UNPAID | PARTIAL | PAID)" }
+    ],
+    presetJson: '{\n  "take": 10,\n  "orderBy": {\n    "createdAt": "desc"\n  },\n  "include": {\n    "employee": true,\n    "payments": true\n  }\n}'
   },
   {
     name: "SystemSetting",

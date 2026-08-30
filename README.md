@@ -316,64 +316,9 @@ CUSTOMER                    ADMIN/KASIR                 MEKANIK                 
 
 ## 🗂️ Entity Relationship Diagram (ERD)
 
-```
-┌─────────────────────────────────────────────────────────────────────────────────────────┐
-│                           CONSOLIDATED 8-TABLE ERD - NOPZGARAGE                         │
-└─────────────────────────────────────────────────────────────────────────────────────────┘
-
-┌─────────────────┐       ┌─────────────────┐       ┌─────────────────┐
-│      User       │       │    Employee     │       │     Order       │
-├─────────────────┤       ├─────────────────┤       ├─────────────────┤
-│ PK id           │       │ PK id           │       │ PK id           │
-│    email        │◄──────│ FK employeeId   │◄──────│    custName     │
-│    password     │  1:1  │    name         │  1:N  │    custPhone    │
-│    role         │       │    role         │       │    vehicle      │
-│ FK employeeId   │       │    phone        │       │    plateNumber  │
-│    resetToken   │       │    jabatan      │       │    complaint    │
-│    resetExpiry  │       │    salaryType   │       │    serviceType  │
-│    forgotReqs   │       │    dailyRate    │       │    status       │
-│    isActive     │       │    commission   │       │    scheduledAt  │
-└─────────────────┘       │    isActive     │       │    items (JSON) │
-                          └────────┬────────┘       │    totalPrice   │
-                                   │                │    totalPaid    │
-                                   │                │    payStatus    │
-                                   │                │ FK mechanicId   │
-                                   │                └────────┬────────┘
-                                   │                         │
-         ┌─────────────────────────┼─────────────────────────┤
-         │                         │                         │
-         ▼                         ▼                         ▼
-┌─────────────────┐       ┌─────────────────┐       ┌─────────────────┐
-│    OrderItem    │       │     Payment     │       │  SystemConfig   │
-├─────────────────┤       ├─────────────────┤       ├─────────────────┤
-│ PK id           │       │ PK id           │       │ PK id           │
-│ FK orderId      │       │    date         │       │    category     │
-│ FK sparePartId  │       │    amount       │       │    key          │
-│ FK employeeId   │       │    type         │       │    title        │
-│    itemType     │       │    note         │       │    subtitle     │
-│    itemName     │       │ FK orderId      │       │    content(JSON)│
-│    quantity     │       │ FK employeeId   │       │    imageUrl     │
-│    unitPrice    │       │ FK bankAccountId│       │    embedUrl     │
-│    totalPrice   │       │    paymentMethod│       │    platform     │
-│    isPaid       │       └────────┬────────┘       │    userId       │
-└────────┬────────┘                │                │    userName     │
-         │                         │                │    isVisible    │
-         ▼                         ▼                │    displayOrder │
-┌─────────────────┐       ┌─────────────────┐       └─────────────────┘
-│   SparePart     │       │     Account     │
-├─────────────────┤       ├─────────────────┤
-│ PK id           │       │ PK id           │
-│    code         │       │    code         │
-│    name         │       │    name         │
-│    category     │       │    type         │
-│    stock        │       │    category     │
-│    minStock     │       │    bankCode     │
-│    unit         │       │    accountNumber│
-│    buyPrice     │       │    accountName  │
-│    sellPrice    │       │    currBalance  │
-│    isActive     │       │    isActive     │
-└─────────────────┘       └─────────────────┘
-```
+Diagram crow's-foot yang menjadi sumber dokumentasi utama tersedia pada bagian
+[Database Schema & Entity Relationship Diagram](#database-schema--entity-relationship-diagram-erd).
+Diagram tersebut dihasilkan dari 9 model aktif dan mengikuti nullability foreign key pada schema Prisma.
 
 ---
 
@@ -393,7 +338,7 @@ CUSTOMER                    ADMIN/KASIR                 MEKANIK                 
     ┌──────────┐          │                                │         ┌──────────┐
     │ Customer │◄────────►│     NOPZGARAGE MANAGEMENT      │◄───────►│ Employee │
     └──────────┘          │           SYSTEM               │         └──────────┘
-         │                │  (8 Consolidated Tables)       │              │
+         │                │     (9 Active Models)          │              │
          │                └────────────────────────────────┘              │
          │                               ▲                                │
     Booking Request                      │                          View Orders
@@ -431,7 +376,7 @@ CUSTOMER                    ADMIN/KASIR                 MEKANIK                 
          │         │                  │                  │         │
          ▼         ▼                  ▼                  ▼         ▼
 ┌────────────────────────────────────────────────────────────────────────────────────────────┐
-│                            D1: CONSOLIDATED DATABASE (8 TABLES)                            │
+│                              D1: ACTIVE DATABASE (9 MODELS)                               │
 │ ┌──────┐ ┌──────────┐ ┌───────┐ ┌───────────┐ ┌───────────┐ ┌─────────┐ ┌───────┐ ┌──────┐ │
 │ │ User │ │ Employee │ │ Order │ │ OrderItem │ │ SparePart │ │ Account │ │Payment│ │Config│ │
 │ └──────┘ └──────────┘ └───────┘ └───────────┘ └───────────┘ └─────────┘ └───────┘ └──────┘ │
@@ -828,10 +773,172 @@ nopzgarage/
 │   ├── auth.ts            # NextAuth Configuration
 │   └── prisma.ts          # Prisma Client Instance
 ├── prisma/                # Database Schema & Seed Script
-│   ├── schema.prisma      # 8 Consolidated PostgreSQL Models
+│   ├── schema.prisma      # 9 Active PostgreSQL Models
 │   └── seed.ts            # Initial Seed Data
 └── public/                # Static Assets & Uploads
 ```
+
+---
+
+## 🗄️ Database Schema & Entity Relationship Diagram (ERD)
+
+Arsitektur database sistem NopzGarage menggunakan **9 model aktif** pada PostgreSQL dan Prisma ORM. Slip payroll dipisahkan dari transaksi kas agar hak gaji dapat dilacak sebelum maupun sesudah pembayaran:
+
+```mermaid
+erDiagram
+    User {
+        string id PK
+        string email UK
+        string password
+        string role
+        string employeeId FK
+        string resetToken UK
+        datetime resetTokenExpiry
+        json forgotRequests
+        boolean isActive
+        datetime createdAt
+        datetime updatedAt
+    }
+    Employee {
+        string id PK
+        string name
+        string role
+        string phone
+        string jabatan
+        enum salaryType
+        decimal dailyRate
+        decimal monthlyRate
+        decimal commissionRate
+        boolean isActive
+        datetime createdAt
+        datetime updatedAt
+    }
+    Order {
+        string id PK
+        string custName
+        string custPhone
+        string vehicle
+        string plateNumber
+        string complaint
+        enum serviceType
+        enum status
+        datetime scheduledAt
+        json items
+        decimal totalPrice
+        decimal totalPaid
+        enum paymentStatus
+        string mechanicId FK
+        datetime createdAt
+        datetime updatedAt
+    }
+    OrderItem {
+        string id PK
+        string orderId FK
+        string itemType
+        string itemName
+        int quantity
+        decimal unitPrice
+        decimal totalPrice
+        string sparePartId FK
+        string employeeId FK
+        boolean isPaid
+        datetime createdAt
+    }
+    SparePart {
+        string id PK
+        string code UK
+        string name
+        string category
+        int stock
+        int minStock
+        string unit
+        decimal buyPrice
+        decimal sellPrice
+        boolean isActive
+        datetime createdAt
+        datetime updatedAt
+    }
+    Account {
+        string id PK
+        string code UK
+        string name
+        string type
+        string category
+        string bankCode
+        string accountNumber
+        string accountName
+        decimal currentBalance
+        boolean isActive
+        datetime createdAt
+    }
+    Payment {
+        string id PK
+        datetime date
+        decimal amount
+        string type
+        string note
+        string orderId FK
+        string employeeId FK
+        string payrollId FK
+        string bankAccountId FK
+        string paymentMethod
+        datetime createdAt
+    }
+    Payroll {
+        string id PK
+        string employeeId FK
+        datetime startDate
+        datetime endDate
+        enum salaryType
+        decimal baseSalary
+        decimal bonus
+        decimal totalEarned
+        decimal totalPaid
+        enum status
+        string details
+        datetime createdAt
+        datetime updatedAt
+    }
+    SystemConfig {
+        string id PK
+        string category
+        string key UK
+        string title
+        string subtitle
+        json content
+        string embedUrl
+        string platform
+        string userId
+        string userName
+        boolean isVisible
+        int displayOrder
+        datetime createdAt
+        datetime updatedAt
+    }
+
+    Employee o|--o| User : "optional account"
+    Employee o|--o{ Order : "optional mechanic"
+    Employee o|--o{ OrderItem : "optional fee owner"
+    Employee o|--o{ Payment : "optional payee"
+    Employee ||--o{ Payroll : "payroll slips"
+    Order ||--o{ OrderItem : "order items"
+    Order o|--o{ Payment : "optional order payment"
+    SparePart o|--o{ OrderItem : "optional stock item"
+    Account o|--o{ Payment : "optional bank account"
+    Payroll o|--o{ Payment : "optional payroll payment"
+```
+
+### 🔑 Panduan Notasi & Kardinalitas (Crow's Foot)
+| Notasi | Hubungan Kardinalitas | Penjelasan |
+|---|---|---|
+| `\|\|--\|\|` | Exactly One to Exactly One | 1 entitas induk wajib berelasi tepat dengan 1 entitas anak |
+| `\|\|--o\|` | One to Optional One (1 : 0..1) | 1 entitas induk memiliki maksimal 1 entitas anak opsional |
+| `\|\|--\|{` | One to Mandatory Many (1 : 1..*) | 1 entitas induk memiliki sekurang-kurangnya 1 entitas anak |
+| `\|\|--o{` | One to Optional Many (1 : 0..*) | 1 entitas induk memiliki 0 atau banyak entitas anak |
+| `o\|--o{` | Optional One to Optional Many (0..1 : 0..*) | Foreign key induk boleh kosong dan induk dapat memiliki banyak anak |
+| **PK** | Primary Key | Kunci utama / identitas unik setiap baris tabel |
+| **FK** | Foreign Key | Kunci asing yang merujuk pada tabel relasi |
+| **UK** | Unique Key | Constraint yang menjamin keunikan nilai kolom |
 
 ---
 
@@ -903,4 +1010,3 @@ Mengikuti standar Next.js App Router dengan pemisahan komponen UI (`components/`
 ## 📄 Lisensi
 
 Copyright © 2024 NopzGarage. All rights reserved.
-

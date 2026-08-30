@@ -1,6 +1,8 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { auth } from "@/lib/auth";
+import { isRoleAllowed } from "@/lib/authCheck";
 import { prisma } from "@/lib/prisma";
 import { createLog } from "./logs";
 
@@ -29,11 +31,56 @@ interface OrderHistoryItem {
   } | null;
 }
 
+async function canManageInventory(): Promise<boolean> {
+  const session = await auth();
+  return Boolean(session && isRoleAllowed(session.user?.role, ['OWNER', 'ADMIN']));
+}
+
+function parseRequiredNumber(value: unknown): number | null {
+  if (typeof value === 'string' && value.trim() === '') {
+    return null;
+  }
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+function validateInventoryNumbers(values: {
+  stock: unknown;
+  minStock: unknown;
+  buyPrice: unknown;
+  sellPrice: unknown;
+}) {
+  const stock = parseRequiredNumber(values.stock);
+  const minStock = parseRequiredNumber(values.minStock);
+  const buyPrice = parseRequiredNumber(values.buyPrice);
+  const sellPrice = parseRequiredNumber(values.sellPrice);
+
+  if (
+    stock === null ||
+    minStock === null ||
+    buyPrice === null ||
+    sellPrice === null ||
+    !Number.isInteger(stock) ||
+    !Number.isInteger(minStock) ||
+    stock < 0 ||
+    minStock < 0 ||
+    buyPrice < 0 ||
+    sellPrice < 0
+  ) {
+    return null;
+  }
+
+  return { stock, minStock, buyPrice, sellPrice };
+}
+
 /**
  * Generates the next sequential code for a SparePart (e.g. BRG-0001, BRG-0002).
  */
 export async function generateNextSparePartCode() {
   try {
+    if (!(await canManageInventory())) {
+      return { success: false, error: 'Access denied: Only Owner and Admin can access inventory.' };
+    }
     const brgParts = await prisma.sparePart.findMany({
       where: { code: { startsWith: 'BRG-' } },
       select: { code: true }
@@ -78,6 +125,12 @@ export async function generateNextSparePartCode() {
  */
 export async function createSparePart(data: CreateSparePartInput) {
   try {
+    if (!(await canManageInventory())) {
+      return { success: false, error: 'Access denied: Only Owner and Admin can create inventory items.' };
+    }
+    if (!data.name?.trim() || !data.unit?.trim()) {
+      return { success: false, error: 'Nama barang dan satuan wajib diisi.' };
+    }
     let code = data.code;
     if (!code || code.trim() === '' || code === 'Memuat...') {
       const generated = await generateNextSparePartCode();
@@ -99,20 +152,30 @@ export async function createSparePart(data: CreateSparePartInput) {
       }
     }
 
+    const numericValues = validateInventoryNumbers(data);
+    if (!numericValues) {
+      return { success: false, error: 'Stok wajib berupa bilangan bulat non-negatif dan harga wajib berupa angka non-negatif.' };
+    }
+    const { stock, minStock, buyPrice, sellPrice } = numericValues;
+
     const sparePart = await prisma.sparePart.create({
       data: {
         ...data,
         code,
-        category: data.category || 'Oli',
-        buyPrice: data.buyPrice,
-        sellPrice: data.sellPrice,
+        name: data.name.trim(),
+        category: data.category?.trim() || 'Oli',
+        unit: data.unit.trim(),
+        stock,
+        minStock,
+        buyPrice,
+        sellPrice,
         isActive: true
       },
     });
 
     // If initial stock exists, create inventory expense payment record
-    if (data.stock > 0) {
-      const initialValue = data.stock * data.buyPrice;
+    if (stock > 0) {
+      const initialValue = stock * buyPrice;
 
       await prisma.payment.create({
         data: {
@@ -163,18 +226,44 @@ export async function createSparePart(data: CreateSparePartInput) {
  */
 export async function updateSparePart(id: string, data: Partial<CreateSparePartInput>) {
   try {
+    if (!(await canManageInventory())) {
+      return { success: false, error: 'Access denied: Only Owner and Admin can update inventory.' };
+    }
     const existingPart = await prisma.sparePart.findUnique({ where: { id } });
     if (!existingPart) {
       return { success: false, error: 'Produk tidak ditemukan' };
     }
 
-    const stockChange = data.stock !== undefined ? data.stock - existingPart.stock : 0;
-    const buyPrice = data.buyPrice !== undefined ? data.buyPrice : Number(existingPart.buyPrice);
+    const numericValues = validateInventoryNumbers({
+      stock: data.stock ?? existingPart.stock,
+      minStock: data.minStock ?? existingPart.minStock,
+      buyPrice: data.buyPrice ?? existingPart.buyPrice,
+      sellPrice: data.sellPrice ?? existingPart.sellPrice,
+    });
+    if (!numericValues) {
+      return { success: false, error: 'Stok wajib berupa bilangan bulat non-negatif dan harga wajib berupa angka non-negatif.' };
+    }
+    const { stock, minStock, buyPrice, sellPrice } = numericValues;
+    if (data.name !== undefined && !data.name.trim()) {
+      return { success: false, error: 'Nama barang wajib diisi.' };
+    }
+    if (data.unit !== undefined && !data.unit.trim()) {
+      return { success: false, error: 'Satuan barang wajib diisi.' };
+    }
+
+    const stockChange = stock - existingPart.stock;
 
     const sparePart = await prisma.sparePart.update({
       where: { id },
       data: {
         ...data,
+        ...(data.name !== undefined && { name: data.name.trim() }),
+        ...(data.unit !== undefined && { unit: data.unit.trim() }),
+        ...(data.category !== undefined && { category: data.category.trim() }),
+        stock,
+        minStock,
+        buyPrice,
+        sellPrice,
       },
     });
 
@@ -226,6 +315,9 @@ export async function updateSparePart(id: string, data: Partial<CreateSparePartI
  */
 export async function deleteSparePart(id: string) {
   try {
+    if (!(await canManageInventory())) {
+      return { success: false, error: 'Access denied: Only Owner and Admin can update inventory.' };
+    }
     await prisma.sparePart.update({
       where: { id },
       data: { isActive: false }
@@ -258,6 +350,9 @@ export async function deleteSparePart(id: string) {
  */
 export async function reactivateSparePart(id: string) {
   try {
+    if (!(await canManageInventory())) {
+      return { success: false, error: 'Access denied: Only Owner and Admin can update inventory.' };
+    }
     await prisma.sparePart.update({
       where: { id },
       data: { isActive: true }
@@ -290,6 +385,9 @@ export async function reactivateSparePart(id: string) {
  */
 export async function getSpareParts(includeInactive = false) {
   try {
+    if (!(await canManageInventory())) {
+      return { success: false, error: 'Access denied: Only Owner and Admin can access inventory.' };
+    }
     const spareParts = await prisma.sparePart.findMany({
       where: includeInactive ? undefined : { isActive: true },
       orderBy: { name: 'asc' },
@@ -317,6 +415,9 @@ export async function getSpareParts(includeInactive = false) {
  */
 export async function getSparePartDetail(id: string) {
   try {
+    if (!(await canManageInventory())) {
+      return { success: false, error: 'Access denied: Only Owner and Admin can access inventory.' };
+    }
     const sparePart = await prisma.sparePart.findUnique({
       where: { id },
       include: {
@@ -395,6 +496,21 @@ export async function addStock(
   date: string | Date
 ) {
   try {
+    if (!(await canManageInventory())) {
+      return { success: false, error: 'Access denied: Only Owner and Admin can update inventory.' };
+    }
+    const parsedQuantity = parseRequiredNumber(quantity);
+    const parsedBuyPrice = parseRequiredNumber(buyPrice);
+    if (
+      parsedQuantity === null ||
+      !Number.isInteger(parsedQuantity) ||
+      parsedQuantity <= 0 ||
+      parsedBuyPrice === null ||
+      parsedBuyPrice < 0 ||
+      !supplier?.trim()
+    ) {
+      return { success: false, error: 'Jumlah, harga beli, dan supplier wajib valid.' };
+    }
     const sparePart = await prisma.sparePart.findUnique({ where: { id: sparePartId } });
     if (!sparePart) {
       return { success: false, error: 'Barang tidak ditemukan' };
@@ -403,18 +519,18 @@ export async function addStock(
     const updated = await prisma.sparePart.update({
       where: { id: sparePartId },
       data: {
-        stock: { increment: quantity },
-        buyPrice: buyPrice
+        stock: { increment: parsedQuantity },
+        buyPrice: parsedBuyPrice
       }
     });
 
-    const purchaseValue = quantity * buyPrice;
+    const purchaseValue = parsedQuantity * parsedBuyPrice;
 
     await prisma.payment.create({
       data: {
         type: 'EXPENSE',
         amount: purchaseValue,
-        note: `Stok Masuk - ${sparePart.name} (+${quantity} ${sparePart.unit}) dari ${supplier}`,
+        note: `Stok Masuk - ${sparePart.name} (+${parsedQuantity} ${sparePart.unit}) dari ${supplier.trim()}`,
       }
     });
 
@@ -423,8 +539,8 @@ export async function addStock(
     await createLog({
       action: "STOCK_IN",
       title: "Stok Masuk",
-      details: `Stok masuk: +${quantity} ${sparePart.unit} untuk ${sparePart.name} dari ${supplier}. Harga beli: Rp ${buyPrice.toLocaleString('id-ID')}.`,
-      metadata: { sparePartId, quantity, supplier, buyPrice, date: new Date(date).toISOString() },
+      details: `Stok masuk: +${parsedQuantity} ${sparePart.unit} untuk ${sparePart.name} dari ${supplier.trim()}. Harga beli: Rp ${parsedBuyPrice.toLocaleString('id-ID')}.`,
+      metadata: { sparePartId, quantity: parsedQuantity, supplier: supplier.trim(), buyPrice: parsedBuyPrice, date: new Date(date).toISOString() },
       userName: "Admin",
       role: "ADMIN"
     });
@@ -453,19 +569,31 @@ export async function reduceStock(
   date: string | Date
 ) {
   try {
+    if (!(await canManageInventory())) {
+      return { success: false, error: 'Access denied: Only Owner and Admin can update inventory.' };
+    }
+    const parsedQuantity = parseRequiredNumber(quantity);
+    if (
+      parsedQuantity === null ||
+      !Number.isInteger(parsedQuantity) ||
+      parsedQuantity <= 0 ||
+      !description?.trim()
+    ) {
+      return { success: false, error: 'Jumlah dan deskripsi stok keluar wajib valid.' };
+    }
     const sparePart = await prisma.sparePart.findUnique({ where: { id: sparePartId } });
     if (!sparePart) {
       return { success: false, error: 'Barang tidak ditemukan' };
     }
 
-    if (sparePart.stock < quantity) {
+    if (sparePart.stock < parsedQuantity) {
       return { success: false, error: `Stok tidak cukup. Sisa stok saat ini: ${sparePart.stock}` };
     }
 
     const updated = await prisma.sparePart.update({
       where: { id: sparePartId },
       data: {
-        stock: { decrement: quantity }
+        stock: { decrement: parsedQuantity }
       }
     });
 
@@ -474,8 +602,8 @@ export async function reduceStock(
     await createLog({
       action: "STOCK_OUT",
       title: "Stok Keluar",
-      details: `Stok keluar: -${quantity} ${sparePart.unit} untuk ${sparePart.name}. Keperluan/Pelanggan: ${description}.`,
-      metadata: { sparePartId, quantity, description, date: new Date(date).toISOString() },
+      details: `Stok keluar: -${parsedQuantity} ${sparePart.unit} untuk ${sparePart.name}. Keperluan/Pelanggan: ${description.trim()}.`,
+      metadata: { sparePartId, quantity: parsedQuantity, description: description.trim(), date: new Date(date).toISOString() },
       userName: "Admin",
       role: "ADMIN"
     });

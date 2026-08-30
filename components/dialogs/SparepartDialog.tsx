@@ -41,6 +41,17 @@ interface SparepartDialogProps {
   onSuccess?: () => void;
 }
 
+interface FormState {
+  code: string;
+  name: string;
+  category: string;
+  stock: string | number;
+  minStock: string | number;
+  unit: string;
+  buyPrice: string | number;
+  sellPrice: string | number;
+}
+
 export function SparepartDialog({
   open,
   onOpenChange,
@@ -49,7 +60,7 @@ export function SparepartDialog({
   onSuccess,
 }: SparepartDialogProps) {
   const [loading, setLoading] = useState(false);
-  const [formData, setFormData] = useState<CreateSparePartInput>({
+  const [formData, setFormData] = useState<FormState>({
     code: "",
     name: "",
     category: "Oli",
@@ -102,12 +113,35 @@ export function SparepartDialog({
     setLoading(true);
 
     try {
+      const stock = formData.stock === "" ? Number.NaN : Number(formData.stock);
+      const minStock = formData.minStock === "" ? Number.NaN : Number(formData.minStock);
+      const buyPrice = formData.buyPrice === "" ? Number.NaN : Number(formData.buyPrice);
+      const sellPrice = formData.sellPrice === "" ? Number.NaN : Number(formData.sellPrice);
+
+      if (
+        !Number.isInteger(stock) || stock < 0 ||
+        !Number.isInteger(minStock) || minStock < 0 ||
+        !Number.isFinite(buyPrice) || buyPrice < 0 ||
+        !Number.isFinite(sellPrice) || sellPrice < 0
+      ) {
+        toast({
+          variant: "destructive",
+          title: "❌ Data tidak valid",
+          description: "Semua field angka wajib diisi. Stok harus bilangan bulat dan seluruh nilai tidak boleh negatif.",
+        });
+        setLoading(false);
+        return;
+      }
+
       const payload: CreateSparePartInput = {
-        ...formData,
-        stock: Number(formData.stock) || 0,
-        minStock: Number(formData.minStock) || 0,
-        buyPrice: Number(formData.buyPrice) || 0,
-        sellPrice: Number(formData.sellPrice) || 0,
+        code: formData.code,
+        name: formData.name,
+        category: formData.category,
+        unit: formData.unit,
+        stock,
+        minStock,
+        buyPrice,
+        sellPrice,
       };
 
       const result =
@@ -249,7 +283,7 @@ export function SparepartDialog({
                 min="0"
                 value={formData.stock}
                 onChange={(e) =>
-                  setFormData({ ...formData, stock: Number(e.target.value) || 0 })
+                  setFormData({ ...formData, stock: e.target.value })
                 }
                 required
               />
@@ -262,7 +296,7 @@ export function SparepartDialog({
                 min="0"
                 value={formData.minStock}
                 onChange={(e) =>
-                  setFormData({ ...formData, minStock: Number(e.target.value) || 0 })
+                  setFormData({ ...formData, minStock: e.target.value })
                 }
                 required
               />
@@ -278,7 +312,7 @@ export function SparepartDialog({
                 min="0"
                 value={formData.buyPrice}
                 onChange={(e) =>
-                  setFormData({ ...formData, buyPrice: Number(e.target.value) || 0 })
+                  setFormData({ ...formData, buyPrice: e.target.value })
                 }
                 required
               />
@@ -291,7 +325,7 @@ export function SparepartDialog({
                 min="0"
                 value={formData.sellPrice}
                 onChange={(e) =>
-                  setFormData({ ...formData, sellPrice: Number(e.target.value) || 0 })
+                  setFormData({ ...formData, sellPrice: e.target.value })
                 }
                 required
               />

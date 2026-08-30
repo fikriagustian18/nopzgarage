@@ -5,6 +5,9 @@
   "scripts": {
     "dev": "next dev",
     "build": "prisma generate && next build",
+    "typecheck": "tsc --noEmit",
+    "test": "node --test --experimental-strip-types tests/business-rules.test.ts",
+    "audit:data": "node --experimental-strip-types scripts/auditImplementationPlan.ts",
     "start": "next start",
     "lint": "eslint",
     "postinstall": "prisma generate"
