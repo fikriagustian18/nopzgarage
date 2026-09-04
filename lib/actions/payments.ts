@@ -139,8 +139,7 @@ export async function createPayment(data: CreatePaymentInput) {
 
 async function handleOrderPayment(tx: TransactionClient, orderId: string, payment: any) {
   const order = await tx.order.findUnique({
-    where: { id: orderId },
-    include: { orderItems: true }
+    where: { id: orderId }
   });
 
   if (!order) {
@@ -271,18 +270,37 @@ export async function createPayrollPayment(data: CreatePayrollPaymentInput) {
 
       if (status === "PAID" && payroll.details) {
         try {
-          const details: unknown = JSON.parse(payroll.details);
-          if (details && typeof details === "object" && "feeItemIds" in details) {
-            const feeItemIds = (details as { feeItemIds?: unknown }).feeItemIds;
-            if (Array.isArray(feeItemIds) && feeItemIds.every((id) => typeof id === "string")) {
-              await tx.orderItem.updateMany({
-                where: { id: { in: feeItemIds }, employeeId: payroll.employeeId },
-                data: { isPaid: true },
+          const details: any = JSON.parse(payroll.details);
+          const targetOrderIds: string[] = Array.isArray(details?.orderIds) ? details.orderIds : [];
+          for (const orderId of targetOrderIds) {
+            const order = await tx.order.findUnique({
+              where: { id: orderId },
+              select: { id: true, items: true },
+            });
+            if (order && Array.isArray(order.items)) {
+              let modified = false;
+              const updatedItems = order.items.map((it: any) => {
+                if (
+                  it && typeof it === 'object' &&
+                  ['fee', 'internal_fee'].includes(String(it.type || it.itemType || '').toLowerCase()) &&
+                  it.employeeId === payroll.employeeId &&
+                  !it.isPaid
+                ) {
+                  modified = true;
+                  return { ...it, isPaid: true };
+                }
+                return it;
               });
+              if (modified) {
+                await tx.order.update({
+                  where: { id: order.id },
+                  data: { items: updatedItems as any },
+                });
+              }
             }
           }
         } catch {
-          // Legacy payroll notes may be plain text and have no fee snapshot IDs.
+          // Ignore json parse error
         }
       }
 

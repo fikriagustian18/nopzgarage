@@ -14,6 +14,11 @@ const COLORS = {
   border: [232, 233, 235], // #e8e9eb
 };
 
+function printableValue(value?: string): string {
+  const trimmed = value?.trim() ?? "";
+  return trimmed.includes("[") && trimmed.includes("]") ? "" : trimmed;
+}
+
 export class PDFGenerator {
   private doc: jsPDF;
   private currentY: number = 0;
@@ -35,12 +40,12 @@ export class PDFGenerator {
   // Add letterhead to the document
   addLetterhead(config?: Partial<LetterheadConfig>) {
     const letterhead = {
-      companyName: config?.companyName || COMPANY_INFO.name,
-      address: config?.address || COMPANY_INFO.address,
-      city: config?.city || COMPANY_INFO.city,
-      phone: config?.phone || COMPANY_INFO.phone,
-      email: config?.email || COMPANY_INFO.email,
-      socialMedia: config?.socialMedia || COMPANY_INFO.socialMedia,
+      companyName: config?.companyName ?? COMPANY_INFO.name,
+      address: config?.address ?? COMPANY_INFO.address,
+      city: config?.city ?? COMPANY_INFO.city,
+      phone: config?.phone ?? COMPANY_INFO.phone,
+      email: config?.email ?? COMPANY_INFO.email,
+      socialMedia: config?.socialMedia ?? COMPANY_INFO.socialMedia,
     };
 
     // Try to add logo if available
@@ -65,14 +70,31 @@ export class PDFGenerator {
     // Address and contact info
     this.doc.setFontSize(8);
     this.doc.setFont("helvetica", "normal");
-    const contactLine1 = `Jl. ${letterhead.address}`;
-    const contactLine2 = `Tel: ${letterhead.phone} | Email: ${letterhead.email}`;
-    const socialLine = letterhead.socialMedia
-      ? `Instagram: @${letterhead.socialMedia.instagram || "nopzgarage"} | Facebook: ${letterhead.socialMedia.facebook || "nopzgarage"}`
-      : "";
+    const rawAddress = printableValue(letterhead.address);
+    const rawCity = printableValue(letterhead.city);
+    const addressCombined = [rawAddress, rawCity].filter(Boolean).join(", ");
+    const contactLine1 = addressCombined;
 
-    this.doc.text(contactLine1, this.pageWidth / 2, 22, { align: "center" });
-    this.doc.text(contactLine2, this.pageWidth / 2, 26, { align: "center" });
+    const rawPhone = printableValue(letterhead.phone);
+    const rawEmail = printableValue(letterhead.email);
+    const contactParts: string[] = [];
+    if (rawPhone) contactParts.push(`Tel: ${rawPhone}`);
+    if (rawEmail) contactParts.push(`Email: ${rawEmail}`);
+    const contactLine2 = contactParts.join(" | ");
+
+    const socialParts: string[] = [];
+    const instagram = printableValue(letterhead.socialMedia?.instagram).replace(/^@/, "");
+    const facebook = printableValue(letterhead.socialMedia?.facebook);
+    if (instagram) socialParts.push(`Instagram: @${instagram}`);
+    if (facebook) socialParts.push(`Facebook: ${facebook}`);
+    const socialLine = socialParts.join(" | ");
+
+    if (contactLine1) {
+      this.doc.text(contactLine1, this.pageWidth / 2, 22, { align: "center" });
+    }
+    if (contactLine2) {
+      this.doc.text(contactLine2, this.pageWidth / 2, contactLine1 ? 26 : 22, { align: "center" });
+    }
     if (socialLine) {
       this.doc.text(socialLine, this.pageWidth / 2, 30, { align: "center" });
     }

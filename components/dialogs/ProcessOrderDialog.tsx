@@ -679,13 +679,15 @@ function ItemInput({
         {item.type === "part" ? (
           <div className="relative">
             <Select
-              value={item.name}
+              value={item.sparePartId || ""}
               onValueChange={(value) => {
-                const part = spareParts.find((p: any) => p.name === value);
+                const part = spareParts.find((candidate) => candidate.id === value);
                 if (part) {
-                  onUpdate(index, { name: part.name, price: part.sellPrice });
-                } else {
-                  onUpdate(index, { name: value });
+                  onUpdate(index, {
+                    name: part.name,
+                    price: part.sellPrice,
+                    sparePartId: part.id,
+                  });
                 }
               }}
             >
@@ -696,7 +698,7 @@ function ItemInput({
                 {spareParts.map((part: any) => (
                   <SelectItem
                     key={part.id}
-                    value={part.name}
+                    value={part.id}
                   >
                     <div className="flex justify-between w-full gap-4 items-center">
                       <span className="font-medium">{part.name}</span>

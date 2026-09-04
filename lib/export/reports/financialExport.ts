@@ -24,7 +24,7 @@ function exportCashFlowToPDF(
 ): Blob {
   const pdf = new PDFGenerator(orientation);
 
-  pdf.addLetterhead();
+  pdf.addLetterhead(data.letterhead);
   pdf.addTitle("LAPORAN ARUS KAS (CASH FLOW STATEMENT)", `Periode: ${data.period}`);
 
   // Summary Section
@@ -93,7 +93,7 @@ function exportCashFlowToPDF(
 async function exportCashFlowToExcel(data: CashFlowData): Promise<Blob> {
   const excel = new ExcelGenerator();
   excel.createSheet("Arus Kas");
-  excel.addLetterhead();
+  excel.addLetterhead(data.letterhead);
   excel.addTitle("LAPORAN ARUS KAS (CASH FLOW STATEMENT)", `Periode: ${data.period}`);
 
   // Summary Table
@@ -154,7 +154,7 @@ function exportCombinedFinancialReportToPDF(
 ): Blob {
   const pdf = new PDFGenerator(orientation);
 
-  pdf.addLetterhead();
+  pdf.addLetterhead(data.letterhead);
   pdf.addTitle("LAPORAN KEUANGAN (PENDAPATAN & PENGELUARAN)", `Periode: ${data.period}`);
 
   // Summary Metrics Table
@@ -278,7 +278,7 @@ async function exportCombinedFinancialReportToExcel(
 
   // Sheet 1: Ringkasan Laba Rugi
   excel.createSheet("Ringkasan Keuangan");
-  excel.addLetterhead();
+  excel.addLetterhead(data.letterhead);
   excel.addTitle("IKHTISAR KEUANGAN BENGKEL", `Periode: ${data.period}`);
 
   excel.addRow(["RINGKASAN EKSEKUTIF"]);
@@ -323,7 +323,7 @@ async function exportCombinedFinancialReportToExcel(
 
   // Sheet 2: Pendapatan
   excel.createSheet("Data Pendapatan");
-  excel.addLetterhead();
+  excel.addLetterhead(data.letterhead);
   excel.addTitle("DAFTAR TRANSAKSI PENDAPATAN & PEMASUKAN", `Periode: ${data.period}`);
 
   const orderHeaders = [
@@ -361,7 +361,7 @@ async function exportCombinedFinancialReportToExcel(
 
   // Sheet 3: Pengeluaran
   excel.createSheet("Data Pengeluaran");
-  excel.addLetterhead();
+  excel.addLetterhead(data.letterhead);
   excel.addTitle("DAFTAR TRANSAKSI PENGELUARAN BENGKEL", `Periode: ${data.period}`);
 
   const expHeaders = [

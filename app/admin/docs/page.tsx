@@ -16,7 +16,6 @@ import {
   GitBranch,
   Repeat,
   DollarSign,
-  Calculator,
   Lock,
   Folder,
   FolderTree,
@@ -24,7 +23,7 @@ import {
   Wrench,
   Users,
   Layers,
-  Image,
+  Image as ImageIcon,
   LayoutTemplate,
   UserCheck,
   Activity,
@@ -58,7 +57,7 @@ export default function Page() {
 
   const stats = {
     totalTables: 8,
-    totalRelationships: 8,
+    totalRelationships: 7,
     totalEnums: 4,
     totalComponents: 56,
     totalPages: 26,
@@ -68,8 +67,7 @@ export default function Page() {
   const tables = [
     { name: "User", columns: 11, purpose: "Akun login pengguna sistem (Owner/Admin/Employee) & token reset password" },
     { name: "Employee", columns: 12, purpose: "Profil karyawan, jabatan, serta rate gaji harian, bulanan, atau komisi" },
-    { name: "Order", columns: 16, purpose: "Transaksi servis motor, booking, status antrian & total bayar" },
-    { name: "OrderItem", columns: 11, purpose: "Detail rincian item (jasa & sparepart) yang dipasang per order" },
+    { name: "Order", columns: 16, purpose: "Transaksi servis motor, booking, status antrian & total bayar (termasuk rincian items JSON)" },
     { name: "SparePart", columns: 12, purpose: "Master data suku cadang (stok, min stock, harga beli & harga jual)" },
     { name: "Account", columns: 11, purpose: "Bagan Akun (Chart of Accounts) & Rekening Bank bengkel (Kas/Bank/Piutang/Hutang)" },
     { name: "Payment", columns: 11, purpose: "Transaksi kas aktual untuk order, payroll, inventory, dan operasional" },
@@ -176,19 +174,6 @@ export default function Page() {
         datetime createdAt
         datetime updatedAt
     }
-    OrderItem {
-        string id PK
-        string orderId FK
-        string itemType
-        string itemName
-        int quantity
-        decimal unitPrice
-        decimal totalPrice
-        string sparePartId FK
-        string employeeId FK
-        boolean isPaid
-        datetime createdAt
-    }
     SparePart {
         string id PK
         string code UK
@@ -263,12 +248,9 @@ export default function Page() {
 
     Employee o|--o| User : "optional account"
     Employee o|--o{ Order : "optional mechanic"
-    Employee o|--o{ OrderItem : "optional fee owner"
     Employee o|--o{ Payment : "optional payee"
     Employee ||--o{ Payroll : "payroll slips"
-    Order ||--o{ OrderItem : "order items"
     Order o|--o{ Payment : "optional order payment"
-    SparePart o|--o{ OrderItem : "optional stock item"
     Account o|--o{ Payment : "optional bank account"
     Payroll o|--o{ Payment : "optional payroll payment"`,
 
@@ -278,7 +260,7 @@ export default function Page() {
     Admin["ADMIN<br />Staff Admin"]
     Mechanic["MECHANIC<br />Mekanik"]
     
-    System(["0<br />SISTEM MANAJEMEN<br />NOPZGARAGE (9 Active Models)"])
+    System(["0<br />SISTEM MANAJEMEN<br />NOPZGARAGE (8 Active Models)"])
     
     Customer -->|"Registrasi Booking & Keluhan"| System
     System -->|"Informasi Antrian & Status"| Customer
@@ -309,10 +291,10 @@ export default function Page() {
     P5(["5.0<br />Laporan & Konfigurasi CMS/Sistem"])
 
     DS1[("DS1 User & Employee")]
-    DS2[("DS2 Order & OrderItem")]
+    DS2[("DS2 Order (items JSON)")]
     DS3[("DS3 SparePart")]
     DS4[("DS4 Account & Payment")]
-    DS5[("DS5 SystemConfig")]
+    DS5[("DS5 SystemConfig & Payroll")]
 
     P1 <-->|"Data Pengguna & Karyawan"| DS1
     P1 --> P2
@@ -320,7 +302,7 @@ export default function Page() {
     Pelanggan -->|"Data Booking Servis & Keluhan"| P2
     P2 -->|"Nomor Antrian, Estimasi, Status & Kwitansi"| Pelanggan
     Admin -->|"Input & Update Order"| P2
-    P2 <-->|"Data Order & Items"| DS2
+    P2 <-->|"Data Order & Items JSON"| DS2
     P2 --> P3
 
     Admin -->|"Kelola Sparepart & Stok"| P3
@@ -376,8 +358,7 @@ export default function Page() {
     P24(["2.4<br />Pengerjaan Servis<br />(Status: IN_PROGRESS)"])
     P25(["2.5<br />Penyelesaian Order<br />(Status: READY/COMPLETED)"])
 
-    DS2_Order[("DS2 Order")]
-    DS2_OrderItem[("DS2 OrderItem")]
+    DS2_Order[("DS2 Order (items JSON)")]
     DS3_SparePart[("DS3 SparePart")]
     DS1_Employee[("DS1 Employee")]
 
@@ -385,7 +366,7 @@ export default function Page() {
     P21 -->|"Simpan Order PENDING"| DS2_Order
 
     Admin -->|"Input Estimasi Items"| P22
-    P22 <-->|"Simpan Items & Update Order"| DS2_OrderItem
+    P22 <-->|"Simpan Items JSON & Update Order"| DS2_Order
     P22 -->|"Update Status (CONFIRMED/QUEUE)"| DS2_Order
 
     Admin -->|"Pilih Mekanik"| P23
@@ -398,7 +379,7 @@ export default function Page() {
 
     Mekanik -->|"Set Selesai"| P25
     P25 -->|"Update Status (READY)"| DS2_Order
-    P25 -->|"Record OrderItem Komisi"| DS2_OrderItem`,
+    P25 -->|"Record Fee/Komisi JSON"| DS2_Order`,
 
     dfd2inventory: `flowchart TB
     Admin["ADMIN / OWNER"]
@@ -885,7 +866,7 @@ export default function Page() {
     Sys-->>Admin: Simpan Order & Generate ID
     
     Admin->>Sys: Input Estimasi Biaya (Jasa & Parts)
-    Sys-->>Admin: Simpan OrderItem (Status: ESTIMATED)
+    Sys-->>Admin: Simpan Estimasi Items JSON (Status: ESTIMATED)
     
     Cust->>Admin: Setujui Estimasi
     Admin->>Sys: Konfirmasi Order (Status: CONFIRMED/QUEUE)
@@ -1665,7 +1646,7 @@ export default function Page() {
                  {/* Flowchart: CMS */}
                  <AccordionItem value="flowCMS">
                   <AccordionTrigger className="text-lg font-semibold flex items-center gap-2">
-                    <Image className="h-5 w-5 text-orange-500" />
+                    <ImageIcon className="h-5 w-5 text-orange-500" />
                     Flowchart 6: CMS & Content Management
                   </AccordionTrigger>
                   <AccordionContent>
@@ -1797,7 +1778,7 @@ export default function Page() {
                         </h4>
                         <p className="text-sm text-muted-foreground mb-2">Core Service & Order Processing</p>
                         <div className="text-xs bg-muted p-2 rounded font-mono">
-                          Order -{'>'} OrderItem -{'>'} SparePart
+                          Order (items JSON) -{'>'} SparePart
                         </div>
                       </div>
 
@@ -1827,7 +1808,7 @@ export default function Page() {
                         </h4>
                         <p className="text-sm text-muted-foreground mb-2">Employee Compensation</p>
                         <div className="text-xs bg-muted p-2 rounded font-mono">
-                          Employee -{'>'} OrderItem (Komisi) -{'>'} Payment (Gaji)
+                          Employee -{'>'} Payroll (Slip Gaji & Komisi) -{'>'} Payment (Gaji)
                         </div>
                       </div>
 
@@ -2026,7 +2007,7 @@ export default function Page() {
                     </div>
                     <div>
                       <h4 className="font-bold text-foreground mb-1">Komentar Code</h4>
-                      <p>Komentar menggunakan Bahasa Inggris. Di luar JSX gunakan <code className="font-mono text-foreground">//</code> (max 60-80 karakter/baris). Di dalam JSX gunakan <code className="font-mono text-foreground">&#123;/* komentar */&#125;</code>. Gunakan JSDoc (<code className="font-mono text-foreground">/** ... */</code>) untuk fungsi/komponen yang di-export.</p>
+                      <p>Komentar menggunakan Bahasa Inggris. Di luar JSX gunakan <code className="font-mono text-foreground">{"//"}</code> (max 60-80 karakter/baris). Di dalam JSX gunakan <code className="font-mono text-foreground">{"{/* komentar */}"}</code>. Gunakan JSDoc (<code className="font-mono text-foreground">{"/** ... */"}</code>) untuk fungsi/komponen yang di-export.</p>
                     </div>
                     <div>
                       <h4 className="font-bold text-foreground mb-1">Standar CSS & Styling</h4>

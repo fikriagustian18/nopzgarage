@@ -1,6 +1,10 @@
 "use server";
 
 import { auth } from "@/lib/auth";
+import {
+  calculatePeriodFinancialActivity,
+  isCogsPayment,
+} from "@/lib/finance/reportCalculations";
 import { prisma } from "@/lib/prisma";
 import { serializeData } from "@/lib/utils";
 
@@ -44,31 +48,66 @@ export async function getFinancialReports(startDate?: string, endDate?: string) 
       orderBy: { code: 'asc' },
     });
 
+    const dateFilter = start || end ? {
+      date: {
+        ...(start && { gte: start }),
+        ...(end && { lte: end }),
+      }
+    } : {};
+
     const payments = await prisma.payment.findMany({
-      where: {
-        ...(start || end ? {
-          createdAt: {
-            ...(start && { gte: start }),
-            ...(end && { lte: end }),
-          }
-        } : {})
-      }
+      where: dateFilter,
+      include: {
+        order: {
+          select: { items: true },
+        },
+      },
+      orderBy: [{ date: "asc" }, { createdAt: "asc" }],
     });
 
-    let periodRevenue = 0;
-    let periodExpense = 0;
+    const activity = calculatePeriodFinancialActivity(payments);
+    const {
+      periodRevenue,
+      periodExpense,
+      serviceRevenue,
+      partRevenue,
+      unallocatedRevenue,
+      salaryExpense,
+      cogsExpense,
+      operationalExpense,
+    } = activity;
 
-    payments.forEach(p => {
-      const amt = Number(p.amount);
-      if (p.type === 'ORDER_PAYMENT' || p.type === 'INCOME') {
-        periodRevenue += amt;
-      } else if (p.type === 'EXPENSE' || p.type === 'PAYROLL') {
-        periodExpense += amt;
+    const revenueAccounts = allAccounts.filter((account) => account.type === "REVENUE");
+    const otherRevenueAccount = revenueAccounts.find(
+      (account) => account.code !== "401" && account.code !== "402"
+    );
+    const fallbackRevenueCode =
+      otherRevenueAccount?.code ??
+      (revenueAccounts.some((account) => account.code === "401") ? "401" : revenueAccounts[0]?.code);
+
+    const accountBalances = allAccounts.map((account) => {
+      let balance = Number(account.currentBalance || 0);
+
+      // Dynamically calculate nominal balances for the selected period
+      if (account.code === '401') {
+        balance = serviceRevenue;
+      } else if (account.code === '402') {
+        balance = partRevenue;
+      } else if (account.code === '501') {
+        balance = salaryExpense;
+      } else if (account.code === '502') {
+        balance = operationalExpense;
+      } else if (account.code === '511') {
+        balance = cogsExpense;
+      } else if (account.type === 'REVENUE') {
+        balance = 0;
+      } else if (['EXPENSE', 'COST_OF_GOODS_SOLD'].includes(account.type)) {
+        balance = 0;
       }
-    });
 
-    const accountBalances = allAccounts.map((account: any) => {
-      const balance = Number(account.currentBalance || 0);
+      if (account.code === fallbackRevenueCode) {
+        balance += unallocatedRevenue;
+      }
 
       return {
         id: account.id,
@@ -91,34 +130,46 @@ export async function getFinancialReports(startDate?: string, endDate?: string) 
       };
     });
 
-    const revenues = accountBalances.filter((a: any) => a.type === 'REVENUE');
-    const expenses = accountBalances.filter((a: any) => ['EXPENSE', 'COST_OF_GOODS_SOLD'].includes(a.type));
+    const revenues = accountBalances.filter((account) => account.type === 'REVENUE');
+    const expenses = accountBalances.filter((account) => ['EXPENSE', 'COST_OF_GOODS_SOLD'].includes(account.type));
     
-    const totalRevenue = periodRevenue || revenues.reduce((sum: number, a: any) => sum + a.balance, 0);
-    const totalExpense = periodExpense || expenses.reduce((sum: number, a: any) => sum + a.balance, 0);
+    const totalRevenue = periodRevenue;
+    const totalExpense = periodExpense;
     const netIncome = totalRevenue - totalExpense;
 
-    const assets = accountBalances.filter((a: any) => a.type === 'ASSET' || a.type === 'BANK');
-    const liabilities = accountBalances.filter((a: any) => a.type === 'LIABILITY');
-    const equity = accountBalances.filter((a: any) => a.type === 'EQUITY');
+    const assets = accountBalances.filter((account) => account.type === 'ASSET' || account.type === 'BANK');
+    const liabilities = accountBalances.filter((account) => account.type === 'LIABILITY');
+    const equity = accountBalances.filter((account) => account.type === 'EQUITY');
 
-    const totalAsset = assets.reduce((sum: number, a: any) => sum + a.balance, 0);
-    const totalLiability = liabilities.reduce((sum: number, a: any) => sum + a.balance, 0);
-    let totalEquity = equity.reduce((sum: number, a: any) => sum + a.balance, 0) + netIncome;
+    const totalAsset = assets.reduce((sum, account) => sum + account.balance, 0);
+    const totalLiability = liabilities.reduce((sum, account) => sum + account.balance, 0);
+    const totalEquity = equity.reduce((sum, account) => sum + account.balance, 0) + netIncome;
 
     const beginningCash = 0;
     const endingCash = totalAsset;
 
-    const cashTransactions = payments.map((p) => ({
-      id: p.id,
-      date: p.createdAt instanceof Date ? p.createdAt.toISOString() : p.createdAt,
-      description: p.note || `Transaksi ${p.type}`,
-      reference: p.orderId || p.employeeId || p.id,
-      inflow: p.type === 'ORDER_PAYMENT' || p.type === 'INCOME' ? Number(p.amount) : 0,
-      outflow: p.type === 'EXPENSE' || p.type === 'PAYROLL' ? Number(p.amount) : 0,
-      classification: (p.type === 'ORDER_PAYMENT' ? 'REVENUE' : 'OPERATING') as "REVENUE" | "PARTS" | "OPERATING" | "OTHER",
-      balance: Number(p.amount)
-    }));
+    const cashTransactions = payments.map((p) => {
+      let classification: "REVENUE" | "PARTS" | "OPERATING" | "OTHER" = "OPERATING";
+      if (p.type === 'ORDER_PAYMENT' || p.type === 'INCOME') {
+        classification = "REVENUE";
+      } else if (isCogsPayment(p)) {
+        classification = "PARTS";
+      } else if (p.type === 'PAYROLL') {
+        classification = "OPERATING";
+      }
+
+      const txDate = p.date || p.createdAt;
+      return {
+        id: p.id,
+        date: txDate instanceof Date ? txDate.toISOString() : txDate,
+        description: p.note || `Transaksi ${p.type}`,
+        reference: p.orderId || p.employeeId || p.id,
+        inflow: p.type === 'ORDER_PAYMENT' || p.type === 'INCOME' ? Number(p.amount) : 0,
+        outflow: p.type === 'EXPENSE' || p.type === 'PAYROLL' ? Number(p.amount) : 0,
+        classification,
+        balance: Number(p.amount)
+      };
+    });
 
     return {
       success: true,
@@ -146,8 +197,8 @@ export async function getFinancialReports(startDate?: string, endDate?: string) 
           inflowRevenue: periodRevenue,
           inflowOther: 0,
           totalInflow: periodRevenue,
-          outflowParts: 0,
-          outflowOperating: periodExpense,
+          outflowParts: cogsExpense,
+          outflowOperating: Math.max(0, periodExpense - cogsExpense),
           outflowOther: 0,
           totalOutflow: periodExpense,
           netChange: periodRevenue - periodExpense,
@@ -210,30 +261,34 @@ export async function getOperationalReports() {
       return { success: false, error: 'Akses ditolak: Hanya Owner yang dapat mengakses laporan operasional.' };
     }
 
-    const orders = await prisma.order.findMany({
-      include: {
-        orderItems: {
-          include: {
-            sparePart: true
+    const [orders, payments, spareParts, stockLogs] = await Promise.all([
+      prisma.order.findMany({
+        include: {
+          mechanic: {
+            select: {
+              name: true
+            }
           }
         },
-        mechanic: {
-          select: {
-            name: true
-          }
-        }
-      },
-      orderBy: { createdAt: 'desc' }
-    });
-
-    const payments = await prisma.payment.findMany({
-      where: { type: 'EXPENSE' },
-      orderBy: { createdAt: 'desc' }
-    });
+        orderBy: { createdAt: 'desc' }
+      }),
+      prisma.payment.findMany({
+        where: { type: 'EXPENSE' },
+        orderBy: { date: 'desc' }
+      }),
+      prisma.sparePart.findMany({
+        orderBy: { name: 'asc' }
+      }),
+      prisma.systemConfig.findMany({
+        where: { category: 'LOG' },
+        orderBy: { createdAt: 'desc' },
+        take: 50,
+      }),
+    ]);
 
     const expenses = payments.map(p => ({
       id: p.id,
-      date: p.createdAt,
+      date: p.date,
       description: p.note || 'Pengeluaran',
       reference: p.id,
       amount: toNumber(p.amount),
@@ -243,37 +298,37 @@ export async function getOperationalReports() {
       sourceCode: '101',
     }));
 
-    const spareParts = await prisma.sparePart.findMany({
-      orderBy: { name: 'asc' }
-    });
+    const serializedOrders = orders.map((o: any) => {
+      const rawItems = Array.isArray(o.items) ? o.items : [];
+      const customerItems = rawItems.filter((item: any) => {
+        const type = String(item?.type || item?.itemType || "").toLowerCase();
+        return type !== "fee" && type !== "internal_fee";
+      });
+      const orderItems = customerItems.map((item: any, idx: number) => {
+        const qty = Number(item.qty || item.quantity || 1);
+        const unitPrice = toNumber(item.price || item.unitPrice || 0);
+        return {
+          id: item.id || `${o.id}-${idx}`,
+          itemName: item.name || item.itemName || "Item",
+          quantity: qty,
+          unitPrice,
+          totalPrice: qty * unitPrice,
+          itemType: item.type || item.itemType || "service",
+          createdAt: o.createdAt instanceof Date ? o.createdAt.toISOString() : o.createdAt,
+          sparePart: null,
+        };
+      });
 
-    const stockLogs = await prisma.systemConfig.findMany({
-      where: { category: 'LOG' },
-      orderBy: { createdAt: 'desc' },
-      take: 50,
+      return {
+        ...o,
+        totalPrice: toNumber(o.totalPrice),
+        totalPaid: toNumber(o.totalPaid),
+        createdAt: o.createdAt instanceof Date ? o.createdAt.toISOString() : o.createdAt,
+        updatedAt: o.updatedAt instanceof Date ? o.updatedAt.toISOString() : o.updatedAt,
+        scheduledAt: o.scheduledAt instanceof Date ? o.scheduledAt.toISOString() : o.scheduledAt,
+        orderItems,
+      };
     });
-
-    const serializedOrders = orders.map((o: any) => ({
-      ...o,
-      totalPrice: toNumber(o.totalPrice),
-      totalPaid: toNumber(o.totalPaid),
-      createdAt: o.createdAt instanceof Date ? o.createdAt.toISOString() : o.createdAt,
-      updatedAt: o.updatedAt instanceof Date ? o.updatedAt.toISOString() : o.updatedAt,
-      scheduledAt: o.scheduledAt instanceof Date ? o.scheduledAt.toISOString() : o.scheduledAt,
-      orderItems: o.orderItems.map((item: any) => ({
-        ...item,
-        unitPrice: toNumber(item.unitPrice),
-        totalPrice: toNumber(item.totalPrice),
-        createdAt: item.createdAt instanceof Date ? item.createdAt.toISOString() : item.createdAt,
-        sparePart: item.sparePart ? {
-          ...item.sparePart,
-          buyPrice: toNumber(item.sparePart.buyPrice),
-          sellPrice: toNumber(item.sparePart.sellPrice),
-          createdAt: item.sparePart.createdAt instanceof Date ? item.sparePart.createdAt.toISOString() : item.sparePart.createdAt,
-          updatedAt: item.sparePart.updatedAt instanceof Date ? item.sparePart.updatedAt.toISOString() : item.sparePart.updatedAt,
-        } : null,
-      }))
-    }));
 
     const serializedExpenses = expenses.map((e: any) => ({
       ...e,

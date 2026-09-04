@@ -1,16 +1,16 @@
 // lib/config/company-info.ts
 export const COMPANY_INFO = {
   name: "Nopz Garage",
-  address: "Jl. [Alamat Lengkap]", // TODO: Update with actual address
-  city: "[Kota]",
-  postalCode: "[Kode Pos]",
-  phone: "[Nomor Telepon]", // TODO: Update with actual phone
-  email: "info@nopzgarage.com", // TODO: Update with actual email
+  address: "",
+  city: "",
+  postalCode: "",
+  phone: "",
+  email: "info@nopzgarage.com",
   website: "www.nopzgarage.com",
   socialMedia: {
-    instagram: "@nopzgarage", // TODO: Update with actual Instagram
-    facebook: "nopzgarage", // TODO: Update with actual Facebook
-    twitter: "@nopzgarage", // Optional
+    instagram: "nopzgarage",
+    facebook: "nopzgarage",
+    twitter: "nopzgarage",
   },
   logo: "/logo.svg", // Path to logo in public directory
 };

@@ -13,10 +13,12 @@ import type { OrderStatus, ServiceType } from "@prisma/client";
 
 // ==================== Interfaces ====================
 export interface OrderItem {
+  id?: string;
   name: string;
   qty: number;
   price: number;
   type: 'service' | 'part' | 'internal_fee';
+  sparePartId?: string;
   employeeId?: string; // Optional for internal_fee
 }
 
@@ -118,6 +120,17 @@ export async function processOrder(data: ProcessOrderInput): Promise<
         throw new Error('Order yang sudah diproses tidak dapat diproses ulang.');
       }
 
+      const claimedOrder = await tx.order.updateMany({
+        where: {
+          id: orderId,
+          status: { in: ['PENDING', 'CONFIRMED', 'QUEUE', 'ESTIMATED'] },
+        },
+        data: { status: 'IN_PROGRESS' },
+      });
+      if (claimedOrder.count !== 1) {
+        throw new Error('Order sedang atau sudah diproses oleh permintaan lain.');
+      }
+
       const leadMechanic = await tx.employee.findFirst({
         where: { id: mechanicId, isActive: true },
         select: { id: true },
@@ -126,72 +139,62 @@ export async function processOrder(data: ProcessOrderInput): Promise<
         throw new Error('Mekanik penanggung jawab tidak valid atau tidak aktif.');
       }
 
-      // 2. Update Order Header
-      const order = await tx.order.update({
-        where: { id: orderId },
-        data: {
-          items: customerItems as unknown as Parameters<typeof tx.order.update>[0]['data']['items'],
-          totalPrice,
-          mechanicId,
-          status: 'IN_PROGRESS',
-          scheduledAt: new Date(),
-          // Clear old relations if re-processing to avoid duplicates
-          orderItems: { deleteMany: {} },
-        },
-        include: { mechanic: true }
-      });
-
-      // 3. Process Items & Update Stock
+      // 2. Process Items & Update Stock
+      const processedCustomerItems: Record<string, unknown>[] = [];
       for (const item of customerItems) {
-        let sparePartId = null;
+        let sparePartId: string | null = null;
         
         // Check if this is a part
         if (item.type === 'part') {
-          // Find spare part in DB by name
-          const part = await tx.sparePart.findFirst({ where: { name: item.name } });
-          if (part) {
-            sparePartId = part.id;
-            
-            // CHECK STOCK
-            if (part.stock < item.qty) {
-              throw new Error(`Stok ${item.name} tidak cukup. Sisa: ${part.stock}`);
-            }
-
-            // DECREMENT STOCK
-            await tx.sparePart.update({
-              where: { id: part.id },
-              data: { stock: { decrement: item.qty } }
-            });
-
-            // === COGS (Cost of Goods Sold) RECORD ===
-            const hpp = Number(part.buyPrice) * item.qty;
-            await tx.payment.create({
-              data: {
-                type: 'EXPENSE',
-                amount: hpp,
-                note: `HPP - ${item.name} (${item.qty} ${part.unit}) - Order #${order.id.slice(-6)}`,
-                orderId: order.id,
-              }
-            });
+          const part = item.sparePartId
+            ? await tx.sparePart.findUnique({ where: { id: item.sparePartId } })
+            : await tx.sparePart.findFirst({ where: { name: item.name } });
+          if (!part) {
+            throw new Error(`Sparepart ${item.name} tidak ditemukan.`);
           }
+
+          sparePartId = part.id;
+
+          // Decrement atomically so two concurrent orders cannot oversell.
+          const stockUpdate = await tx.sparePart.updateMany({
+            where: { id: part.id, stock: { gte: item.qty } },
+            data: { stock: { decrement: item.qty } }
+          });
+          if (stockUpdate.count !== 1) {
+            const latestPart = await tx.sparePart.findUnique({
+              where: { id: part.id },
+              select: { stock: true },
+            });
+            throw new Error(`Stok ${item.name} tidak cukup. Sisa: ${latestPart?.stock ?? 0}`);
+          }
+
+          // === COGS (Cost of Goods Sold) RECORD ===
+          const hpp = Number(part.buyPrice) * item.qty;
+          await tx.payment.create({
+            data: {
+              type: 'EXPENSE',
+              amount: hpp,
+              note: `HPP - ${part.name} (${item.qty} ${part.unit}) - Order #${orderId.slice(-6)}`,
+              orderId,
+            }
+          });
         }
 
-        // Save to OrderItem details
-        await tx.orderItem.create({
-          data: {
-            orderId: order.id,
-            itemType: item.type,
-            itemName: item.name,
-            quantity: item.qty,
-            unitPrice: item.price,
-            totalPrice: item.qty * item.price,
-            sparePartId
-          }
+        processedCustomerItems.push({
+          id: item.id || crypto.randomUUID(),
+          name: item.name.trim(),
+          qty: Number(item.qty),
+          price: Number(item.price),
+          totalPrice: Number(item.qty) * Number(item.price),
+          type: item.type,
+          sparePartId,
+          ...(item.employeeId && { employeeId: item.employeeId }),
         });
       }
 
-      // 4. Process Order Fees as OrderItem with itemType='FEE'
+      // 3. Process Order Fees
       let totalFeeAmount = 0;
+      const feeItems: any[] = [];
       if (fees && fees.length > 0) {
         const feeEmployeeIds = fees.map((fee) => fee.employeeId).filter(Boolean);
         if (new Set(feeEmployeeIds).size !== feeEmployeeIds.length) {
@@ -219,22 +222,36 @@ export async function processOrder(data: ProcessOrderInput): Promise<
           }
           const feeAmount = calculateCommission(serviceSubtotal, rate);
           if (feeAmount > 0) {
-             await tx.orderItem.create({
-               data: {
-                 orderId: order.id,
-                 itemType: 'FEE',
-                  itemName: fee.note?.trim() || `Komisi ${rate}%: ${employee.name}`,
-                  quantity: 1,
-                  unitPrice: feeAmount,
-                  totalPrice: feeAmount,
-                  employeeId: fee.employeeId,
-                 isPaid: false
-               }
-             });
-             totalFeeAmount += feeAmount;
+            feeItems.push({
+              id: crypto.randomUUID(),
+              name: fee.note?.trim() || `Komisi ${rate}%: ${employee.name}`,
+              qty: 1,
+              price: feeAmount,
+              totalPrice: feeAmount,
+              type: 'fee',
+              employeeId: fee.employeeId,
+              employeeName: employee.name,
+              isPaid: false,
+            });
+            totalFeeAmount += feeAmount;
           }
         }
       }
+
+      const allItems = [...processedCustomerItems, ...feeItems];
+
+      // 4. Update Order Header with JSON items
+      const order = await tx.order.update({
+        where: { id: orderId },
+        data: {
+          items: allItems as unknown as Parameters<typeof tx.order.update>[0]['data']['items'],
+          totalPrice,
+          mechanicId,
+          status: 'IN_PROGRESS',
+          scheduledAt: new Date(),
+        },
+        include: { mechanic: true }
+      });
 
       return { order, totalFeeAmount };
     }, {
@@ -607,7 +624,6 @@ export async function getOrderDetail(orderId: string) {
       include: {
         mechanic: true,
         payments: { orderBy: { date: 'desc' } },
-        orderItems: { include: { employee: true, sparePart: true } }, // Includes FEE items for commissions
       },
     });
 
@@ -615,7 +631,37 @@ export async function getOrderDetail(orderId: string) {
       return { success: false, error: 'Order not found' };
     }
 
-    return { success: true, order: serializeData(order) };
+    const rawItems = Array.isArray(order.items) ? order.items : [];
+    const customerItems = rawItems.filter((item: any) => {
+      const type = String(item?.type || item?.itemType || "").toLowerCase();
+      return type !== "fee" && type !== "internal_fee";
+    });
+    const feeItems = rawItems.filter((item: any) => {
+      const type = String(item?.type || item?.itemType || "").toLowerCase();
+      return type === "fee" || type === "internal_fee";
+    });
+
+    const mapItem = (item: any, idx: number) => ({
+      id: item.id || `item-${idx}`,
+      itemName: item.name || item.itemName || "Item",
+      quantity: Number(item.qty || item.quantity || 1),
+      unitPrice: Number(item.price || item.unitPrice || 0),
+      totalPrice: Number(item.qty || item.quantity || 1) * Number(item.price || item.unitPrice || 0),
+      itemType: item.type || item.itemType || "service",
+      employeeId: item.employeeId,
+      employeeName: item.employeeName,
+      sparePartId: item.sparePartId,
+      isPaid: Boolean(item.isPaid),
+    });
+
+    const normalizedOrder = {
+      ...order,
+      orderItems: customerItems.map(mapItem),
+      orderFees: feeItems.map(mapItem),
+      allItems: rawItems.map(mapItem),
+    };
+
+    return { success: true, order: serializeData(normalizedOrder) };
   } catch (error) {
     console.error('Get order detail error:', error);
     return { success: false, error: 'Gagal load detail order' };

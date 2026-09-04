@@ -48,10 +48,11 @@ import { Badge } from "@/components/ui/Badge";
 
 // 3. Utilities & Logic
 import { getFinancialReports, getOperationalReports } from "@/lib/actions/finance";
+import { getCompanyInfo } from "@/lib/config/companyInfo.server";
 import { exportCashFlow, exportCombinedFinancialReport } from "@/lib/export/reports/financialExport";
 
 // 4. Types
-import type { CashFlowData, CombinedFinancialExportData } from "@/lib/export/types";
+import type { CashFlowData, CombinedFinancialExportData, LetterheadConfig } from "@/lib/export/types";
 
 interface OrderItem {
   id: string;
@@ -168,6 +169,7 @@ export default function Page() {
   const [reportData, setReportData] = useState<FinancialReportData | null>(null);
   const [orders, setOrders] = useState<Order[]>([]);
   const [expenses, setExpenses] = useState<Expense[]>([]);
+  const [companySettings, setCompanySettings] = useState<Partial<LetterheadConfig> | null>(null);
 
   // Filter States
   const [startDate, setStartDate] = useState("");
@@ -184,6 +186,21 @@ export default function Page() {
     
     setStartDate(toLocalDateString(start));
     setEndDate(toLocalDateString(now));
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    void getCompanyInfo()
+      .then((settings) => {
+        if (!cancelled) {
+          setCompanySettings(settings);
+        }
+      })
+      .catch((err) => console.error("Gagal memuat info bengkel untuk export:", err));
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   useEffect(() => {
@@ -216,6 +233,7 @@ export default function Page() {
       } else {
         setError(opRes.error || "Gagal memuat laporan operasional.");
       }
+
     } catch (err) {
       console.error(err);
       setError("Terjadi kesalahan sistem.");
@@ -489,7 +507,8 @@ export default function Page() {
           })),
         }
       : undefined,
-  }), [filteredOrders, filteredExpenses, totalRevenue, totalExpense, netProfit, startDate, endDate, reportData]);
+    letterhead: companySettings || undefined,
+  }), [filteredOrders, filteredExpenses, totalRevenue, totalExpense, netProfit, startDate, endDate, reportData, companySettings]);
 
   const cashFlowExportData = useMemo<CashFlowData | null>(() => {
     if (!reportData?.cashFlowStatement) {
@@ -516,8 +535,9 @@ export default function Page() {
         classification: t.classification,
         balance: t.balance,
       })),
+      letterhead: companySettings || undefined,
     };
-  }, [reportData, startDate, endDate]);
+  }, [reportData, startDate, endDate, companySettings]);
 
   // --- Early returns (after all hooks) ---
   if (loading || !isMounted) {

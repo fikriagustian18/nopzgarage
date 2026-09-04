@@ -148,15 +148,22 @@ async function main() {
     });
   }
 
-  // ==================== 5. Orders & 6. OrderItems ====================
-  console.log('📋 Creating Sample Orders & OrderItems...');
-
+  // ==================== 5. Orders (with embedded items JSON) ====================
+  console.log('📋 Creating Sample Orders...');
   const oliPart = await prisma.sparePart.findUnique({ where: { code: 'OLI-001' } });
   const kampasPart = await prisma.sparePart.findUnique({ where: { code: 'BRK-001' } });
 
+  const sampleItems = [
+    ...(oliPart ? [{ name: oliPart.name, qty: 1, price: Number(oliPart.sellPrice), type: 'part', sparePartId: oliPart.id }] : []),
+    ...(kampasPart ? [{ name: kampasPart.name, qty: 1, price: Number(kampasPart.sellPrice), type: 'part', sparePartId: kampasPart.id }] : []),
+    { name: 'Jasa Servis Ringan', qty: 1, price: 25000, type: 'service', employeeId: mechanicEmp.id },
+  ];
+
   const sampleOrder = await prisma.order.upsert({
     where: { id: 'order-sample-001' },
-    update: {},
+    update: {
+      items: sampleItems,
+    },
     create: {
       id: 'order-sample-001',
       custName: 'Rudi Hermawan',
@@ -170,50 +177,11 @@ async function main() {
       totalPaid: 150000,
       paymentStatus: 'PAID',
       mechanicId: mechanicEmp.id,
+      items: sampleItems,
     },
   });
 
-  if (oliPart) {
-    await prisma.orderItem.create({
-      data: {
-        orderId: sampleOrder.id,
-        itemType: 'SPAREPART',
-        itemName: oliPart.name,
-        quantity: 1,
-        unitPrice: oliPart.sellPrice,
-        totalPrice: oliPart.sellPrice,
-        sparePartId: oliPart.id,
-      },
-    });
-  }
-
-  if (kampasPart) {
-    await prisma.orderItem.create({
-      data: {
-        orderId: sampleOrder.id,
-        itemType: 'SPAREPART',
-        itemName: kampasPart.name,
-        quantity: 1,
-        unitPrice: kampasPart.sellPrice,
-        totalPrice: kampasPart.sellPrice,
-        sparePartId: kampasPart.id,
-      },
-    });
-  }
-
-  await prisma.orderItem.create({
-    data: {
-      orderId: sampleOrder.id,
-      itemType: 'SERVICE',
-      itemName: 'Jasa Servis Ringan',
-      quantity: 1,
-      unitPrice: 25000,
-      totalPrice: 25000,
-      employeeId: mechanicEmp.id,
-    },
-  });
-
-  // ==================== 7. Payments ====================
+  // ==================== 6. Payments ====================
   console.log('💳 Creating Payments...');
   const cashAccount = await prisma.account.findUnique({ where: { code: '101' } });
 
@@ -228,7 +196,7 @@ async function main() {
     },
   });
 
-  // ==================== 8. SystemConfig ====================
+  // ==================== 7. SystemConfig ====================
   console.log('⚙️ Creating SystemConfigs...');
   const configs = [
     { key: 'max_booking_per_hour', category: 'SETTING', title: 'Max Booking Per Jam', content: { value: '3' } },

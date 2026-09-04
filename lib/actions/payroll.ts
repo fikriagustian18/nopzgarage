@@ -27,6 +27,13 @@ export interface PayrollDetail {
   commissionRate?: number;
   serviceRevenue?: number;
   feeItemIds?: string[];
+  orderIds?: string[];
+}
+
+interface CommissionOrderSnapshot {
+  id: string;
+  items: unknown;
+  mechanicId: string | null;
 }
 
 const PAYROLL_STATUSES = new Set<PayrollStatus>(["UNPAID", "PARTIAL", "PAID"]);
@@ -154,59 +161,67 @@ async function createPayrollForEmployee(data: GeneratePayrollInput) {
     baseSalary = Number(employee.monthlyRate);
     details.monthlyRate = baseSalary;
   } else {
-    const feeItems = await prisma.orderItem.findMany({
-      where: {
-        employeeId: employee.id,
-        itemType: "FEE",
-        isPaid: false,
-        createdAt: { gte: start, lte: end },
-        order: {
-          status: "COMPLETED",
-          paymentStatus: "PAID",
-        },
-      },
-      select: { id: true, totalPrice: true, orderId: true },
-    });
+    const completedOrders = await prisma.$queryRaw<CommissionOrderSnapshot[]>`
+      SELECT orders."id", orders."items", orders."mechanicId"
+      FROM "Order" AS orders
+      WHERE orders."status" = 'COMPLETED'
+        AND orders."paymentStatus" = 'PAID'
+        AND orders."updatedAt" >= ${start}
+        AND orders."updatedAt" <= ${end}
+        AND (
+          orders."mechanicId" = ${employee.id}
+          OR orders."items" @> jsonb_build_array(
+            jsonb_build_object('type', 'fee', 'employeeId', ${employee.id})
+          )
+        )
+    `;
 
-    const eligibleOrderIds = new Set(feeItems.map((item) => item.orderId));
+    let totalServiceRevenue = 0;
+    let explicitFeeTotal = 0;
+    let explicitFeeFound = false;
+    const linkedOrderIds = new Set<string>();
 
-    if (feeItems.length > 0) {
-      baseSalary = feeItems.reduce((sum, item) => sum + Number(item.totalPrice), 0);
-      details.feeItemIds = feeItems.map((item) => item.id);
-      details.motorCount = eligibleOrderIds.size;
-    } else {
-      // Backward-compatible fallback for completed orders created before FEE snapshots.
-      const completedOrders = await prisma.order.findMany({
-        where: {
-          mechanicId: employee.id,
-          status: "COMPLETED",
-          paymentStatus: "PAID",
-          updatedAt: { gte: start, lte: end },
-        },
-        select: { id: true, items: true },
-      });
+    for (const order of completedOrders) {
+      if (!Array.isArray(order.items)) {
+        continue;
+      }
+      for (const item of order.items) {
+        if (!item || typeof item !== "object") continue;
 
-      let totalServiceRevenue = 0;
-      for (const order of completedOrders) {
-        if (!Array.isArray(order.items)) {
-          continue;
+        // Only count unpaid fee items
+        if (
+          ('type' in item || 'itemType' in item) &&
+          ["fee", "internal_fee"].includes(String(item.type || item.itemType).toLowerCase()) &&
+          "employeeId" in item &&
+          item.employeeId === employee.id &&
+          !item.isPaid
+        ) {
+          const quantity = Number(item.qty ?? item.quantity ?? 1);
+          const price = Number(item.price ?? item.unitPrice ?? 0);
+          explicitFeeTotal += Number(item.totalPrice ?? quantity * price);
+          explicitFeeFound = true;
+          linkedOrderIds.add(order.id);
         }
-        for (const item of order.items) {
-          if (
-            item &&
-            typeof item === "object" &&
-            "type" in item &&
-            String(item.type).toLowerCase() === "service"
-          ) {
-            const quantity = "qty" in item ? Number(item.qty) : 0;
-            const price = "price" in item ? Number(item.price) : 0;
-            totalServiceRevenue +=
-              (Number.isFinite(quantity) ? quantity : 0) *
-              (Number.isFinite(price) ? price : 0);
-          }
+
+        if (
+          order.mechanicId === employee.id &&
+          ('type' in item || 'itemType' in item) &&
+          String(item.type || item.itemType).toLowerCase() === "service"
+        ) {
+          const quantity = Number(item.qty ?? item.quantity ?? 0);
+          const price = Number(item.price ?? item.unitPrice ?? 0);
+          totalServiceRevenue +=
+            (Number.isFinite(quantity) ? quantity : 0) *
+            (Number.isFinite(price) ? price : 0);
+          linkedOrderIds.add(order.id);
         }
       }
+    }
 
+    if (explicitFeeFound) {
+      baseSalary = explicitFeeTotal;
+      details.motorCount = linkedOrderIds.size;
+    } else {
       let ratePercent: number;
       try {
         ratePercent = normalizeCommissionRate(employee.commissionRate);
@@ -215,10 +230,11 @@ async function createPayrollForEmployee(data: GeneratePayrollInput) {
       }
 
       baseSalary = calculateCommission(totalServiceRevenue, ratePercent);
-      details.motorCount = completedOrders.length;
+      details.motorCount = linkedOrderIds.size;
       details.serviceRevenue = totalServiceRevenue;
     }
 
+    details.orderIds = Array.from(linkedOrderIds);
     details.commissionRate = Number(employee.commissionRate);
   }
 

@@ -213,6 +213,7 @@ export interface CashFlowData {
   netChange: number;
   endingCash: number;
   transactions: CashFlowTransaction[];
+  letterhead?: Partial<LetterheadConfig>;
 }
 
 /**
@@ -272,4 +273,5 @@ export interface CombinedFinancialExportData {
   orders: RevenueExportItem[];
   expenses: ExpenseExportItem[];
   incomeStatementAccounts?: CombinedIncomeStatementAccounts;
+  letterhead?: Partial<LetterheadConfig>;
 }

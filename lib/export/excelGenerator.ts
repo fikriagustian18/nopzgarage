@@ -3,6 +3,11 @@ import ExcelJS from "exceljs";
 import { COMPANY_INFO } from "../config/companyInfo";
 import type { LetterheadConfig } from "./types";
 
+function printableValue(value?: string): string {
+  const trimmed = value?.trim() ?? "";
+  return trimmed.includes("[") && trimmed.includes("]") ? "" : trimmed;
+}
+
 export class ExcelGenerator {
   private workbook: ExcelJS.Workbook;
   private currentSheet: ExcelJS.Worksheet | null = null;
@@ -25,12 +30,12 @@ export class ExcelGenerator {
     if (!this.currentSheet) return;
 
     const letterhead = {
-      companyName: config?.companyName || COMPANY_INFO.name,
-      address: config?.address || COMPANY_INFO.address,
-      city: config?.city || COMPANY_INFO.city,
-      phone: config?.phone || COMPANY_INFO.phone,
-      email: config?.email || COMPANY_INFO.email,
-      socialMedia: config?.socialMedia || COMPANY_INFO.socialMedia,
+      companyName: config?.companyName ?? COMPANY_INFO.name,
+      address: config?.address ?? COMPANY_INFO.address,
+      city: config?.city ?? COMPANY_INFO.city,
+      phone: config?.phone ?? COMPANY_INFO.phone,
+      email: config?.email ?? COMPANY_INFO.email,
+      socialMedia: config?.socialMedia ?? COMPANY_INFO.socialMedia,
     };
 
     // Company name (bold and larger)
@@ -40,21 +45,37 @@ export class ExcelGenerator {
     companyRow.getCell(1).font = { bold: true, size: 16 };
 
     // Address
-    this.currentRow++;
-    const addressRow = this.currentSheet.getRow(this.currentRow);
-    addressRow.getCell(1).value = `${letterhead.address}, ${letterhead.city}`;
+    const rawAddress = printableValue(letterhead.address);
+    const rawCity = printableValue(letterhead.city);
+    const fullAddress = [rawAddress, rawCity].filter(Boolean).join(", ");
+    if (fullAddress) {
+      this.currentRow++;
+      const addressRow = this.currentSheet.getRow(this.currentRow);
+      addressRow.getCell(1).value = fullAddress;
+    }
 
     // Contact
-    this.currentRow++;
-    const contactRow = this.currentSheet.getRow(this.currentRow);
-    contactRow.getCell(1).value = `Tel: ${letterhead.phone} | Email: ${letterhead.email}`;
+    const rawPhone = printableValue(letterhead.phone);
+    const rawEmail = printableValue(letterhead.email);
+    const contactParts: string[] = [];
+    if (rawPhone) contactParts.push(`Tel: ${rawPhone}`);
+    if (rawEmail) contactParts.push(`Email: ${rawEmail}`);
+    if (contactParts.length > 0) {
+      this.currentRow++;
+      const contactRow = this.currentSheet.getRow(this.currentRow);
+      contactRow.getCell(1).value = contactParts.join(" | ");
+    }
 
     // Social media
-    if (letterhead.socialMedia) {
+    const socialParts: string[] = [];
+    const instagram = printableValue(letterhead.socialMedia?.instagram).replace(/^@/, "");
+    const facebook = printableValue(letterhead.socialMedia?.facebook);
+    if (instagram) socialParts.push(`Instagram: @${instagram}`);
+    if (facebook) socialParts.push(`Facebook: ${facebook}`);
+    if (socialParts.length > 0) {
       this.currentRow++;
-      const socialLine = `Instagram: ${letterhead.socialMedia.instagram || ""} | Facebook: ${letterhead.socialMedia.facebook || ""}`;
       const socialRow = this.currentSheet.getRow(this.currentRow);
-      socialRow.getCell(1).value = socialLine;
+      socialRow.getCell(1).value = socialParts.join(" | ");
     }
 
     // Empty row

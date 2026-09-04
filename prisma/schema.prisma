@@ -40,7 +40,6 @@ model Employee {
   updatedAt      DateTime    @updatedAt
   user           User?
   orders         Order[]
-  orderItems     OrderItem[]
   payments       Payment[]
   payrolls       Payroll[]
 }
@@ -55,7 +54,7 @@ model Order {
   serviceType   ServiceType   @default(LIGHT_SERVICE)
   status        OrderStatus   @default(PENDING)
   scheduledAt   DateTime?
-  items         Json?
+  items         Json?         @db.JsonB
   totalPrice    Decimal       @default(0) @db.Decimal(12, 2)
   totalPaid     Decimal       @default(0) @db.Decimal(12, 2)
   paymentStatus PaymentStatus @default(UNPAID)
@@ -63,33 +62,12 @@ model Order {
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
   mechanic      Employee?     @relation(fields: [mechanicId], references: [id])
-  orderItems    OrderItem[]
   payments      Payment[]
 
   @@index([status])
   @@index([scheduledAt])
   @@index([mechanicId])
-}
-
-model OrderItem {
-  id          String     @id @default(cuid())
-  orderId     String
-  itemType    String
-  itemName    String
-  quantity    Int        @default(1)
-  unitPrice   Decimal    @db.Decimal(12, 2)
-  totalPrice  Decimal    @db.Decimal(12, 2)
-  sparePartId String?
-  employeeId  String?
-  isPaid      Boolean    @default(false)
-  createdAt   DateTime   @default(now())
-  order       Order      @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  sparePart   SparePart? @relation(fields: [sparePartId], references: [id])
-  employee    Employee?  @relation(fields: [employeeId], references: [id])
-
-  @@index([orderId])
-  @@index([sparePartId])
-  @@index([employeeId])
+  @@index([items], type: Gin)
 }
 
 model SparePart {
@@ -105,7 +83,6 @@ model SparePart {
   isActive   Boolean     @default(true)
   createdAt  DateTime    @default(now())
   updatedAt  DateTime    @updatedAt
-  orderItems OrderItem[]
 
   @@index([stock])
   @@index([category])

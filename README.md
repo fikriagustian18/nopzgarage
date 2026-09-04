@@ -57,9 +57,9 @@ Sistem mengintegrasikan master data jabatan melalui field `jabatan` pada profil 
 
 ### 6. Payroll & Penggajian (`/admin/payroll`)
 
-Sistem Payroll terintegrasi dalam modul karyawan dengan perhitungan otomatis berdasarkan data order. Halaman **Gaji & Payroll** menampilkan history pembayaran gaji dan mendukung bulk generation bagi Owner untuk menghitung gaji seluruh staff dalam rentang periode tertentu. Untuk karyawan bertipe komisi, sistem mengagregasi seluruh item jasa/komisi (`OrderItem` bertipe `FEE`) yang belum dibayar (`isPaid: false`) dikali dengan **Rate Komisi % / Nominal (IDR)** karyawan.
+Sistem Payroll terintegrasi dalam modul karyawan dengan perhitungan otomatis berbasis snapshot periode kerja dan komisi order. Halaman **Gaji & Payroll** menampilkan histori slip gaji dan mendukung kalkulasi bagi Owner untuk menghitung gaji seluruh staff dalam rentang periode tertentu. Untuk karyawan bertipe komisi, sistem mengagregasi pendapatan jasa servis dari seluruh order selesai (`COMPLETED` & `PAID`) yang ditangani mekanik terkait dikalikan dengan **Rate Komisi % / Nominal (IDR)** karyawan.
 
-Proses pencairan gaji mendukung pembayaran via Cash atau Bank Transfer (terhubung ke akun kas & bank pada tabel `Account`). Ketika pembayaran dikonfirmasi, sistem secara otomatis: (1) membuat record `Payment` baru dengan status/type `SALARY`, (2) mengubah status `isPaid` pada semua transaksi item komisi mekanik menjadi `true`, dan (3) memotong saldo rekening Kas/Bank terkait secara otomatis (`Account.currentBalance`). Slip gaji yang digenerate dapat dicetak dalam format slip fisik terstruktur.
+Data slip gaji dicatat pada tabel model `Payroll`. Proses pencairan gaji mendukung pembayaran via Cash atau Bank Transfer (terhubung ke akun kas & bank pada tabel `Account`). Ketika pembayaran dikonfirmasi, sistem secara otomatis: (1) membuat record `Payment` baru dengan status/type `PAYROLL`, (2) memperbarui status `Payroll` menjadi `PAID`, dan (3) memotong saldo rekening Kas/Bank terkait secara otomatis (`Account.currentBalance`). Slip gaji yang digenerate dapat dicetak dalam format slip fisik terstruktur.
 
 ### 7. Pencatatan Pemasukan (`/admin/income`)
 
@@ -78,14 +78,14 @@ Setiap expense yang dicatat akan otomatis memotong saldo akun Kas/Bank terkait (
 Modul Laporan Keuangan menyajikan insight keuangan komprehensif berbasis periode (rentang tanggal) untuk mendukung pengawasan dan pengambilan keputusan bisnis pemilik (Owner).
 
 Halaman ini didesain dalam format **1 halaman utuh (Single-Page Report)** yang menyajikan 4 bagian analisis secara berurutan:
-1. **Ikhtisar Laba Rugi (Income Statement)**: Menyajikan tabel saldo seluruh akun pendapatan, akun beban operasional & HPP, serta kartu kalkulasi laba bersih (*profit/loss*).
+1. **Ikhtisar Laba Rugi (Income Statement)**: Menyajikan tabel saldo seluruh akun pendapatan (401 Jasa Servis & 402 Penjualan Sparepart) dan akun beban (501 Beban Gaji, 502 Operasional, 511 HPP) yang direkonsiliasi dinamis per periode, serta kartu kalkulasi laba bersih (*profit/loss*).
 2. **Laporan Pendapatan (Pemasukan)**: Menyajikan grafik donat persentase pendapatan per kategori (jasa servis dan sparepart) serta tabel riwayat seluruh transaksi pesanan/pemasukan pelanggan terperinci.
 3. **Laporan Pengeluaran (Beban & Biaya)**: Menyajikan tabel rincian klasifikasi pengeluaran (pembelian sparepart, operasional, gaji karyawan/payroll) serta daftar transaksi pengeluaran kas rinci.
 4. **Laporan Arus Kas (Cash Flow Statement) & Rekening**: Menyajikan kartu metrik saldo (saldo awal, kas masuk, kas keluar, saldo akhir), grafik garis arus kas harian, tabel mutasi kas kronologis, serta manajemen rekening kas/bank (`BankAccountsManager`).
 
-Halaman ini dilengkapi fitur ekspor terpadu:
-- **Unduh Laporan Keuangan**: Mengunduh seluruh rincian transaksi pendapatan dan pengeluaran beserta ringkasan laba rugi ke dalam **1 file sekaligus** (tersedia format PDF resmi ber-kop surat dan Excel multi-sheet).
-- **Unduh Arus Kas**: Mengunduh dokumen laporan arus kas dan mutasi saldo kas/bank ke format PDF dan Excel.
+Halaman ini dilengkapi fitur ekspor terpadu ber-kop surat resmi otomatis (mengambil nama bengkel, alamat lengkap, dan kontak telepon dari menu Pengaturan Bengkel / `SystemConfig`):
+- **Unduh Laporan Keuangan**: Mengunduh seluruh rincian transaksi pendapatan dan pengeluaran beserta ringkasan laba rugi ke dalam **1 file sekaligus** (tersedia format PDF resmi ber-kop surat dinamis dan Excel multi-sheet).
+- **Unduh Arus Kas**: Mengunduh dokumen laporan arus kas dan mutasi saldo kas/bank ber-kop surat dinamis ke format PDF dan Excel.
 - **Cetak PDF**: Fitur cetak langsung (*direct print*) via hidden iframe tanpa menyertakan elemen layout navigasi web.
 
 ### 10. Settings & Konfigurasi (`/admin/settings`)
@@ -144,7 +144,7 @@ CUSTOMER                    ADMIN/KASIR                 MEKANIK                 
     │                            │                          │       [5] Transaction:   │
     │                            │                          │       - Update Status    │
     │                            │                          │       - Reduce Stock     │
-    │                            │                          │       - Record OrderItem │
+    │                            │                          │       - Record Items JSON│
     │                            │                          │ ◄────────────────────────│
     │                            │                          │                          │
     │                            │ [6] Status: QUEUE        │                          │
@@ -271,12 +271,12 @@ CUSTOMER                    ADMIN/KASIR                 MEKANIK                 
     │                                                              │
     │  For COMMISSION-based employees:                             │
     │  ┌────────────────────────────────────────────────────────┐  │
-    │  │ SELECT SUM(totalPrice) FROM OrderItem                  │  │
-    │  │ WHERE employeeId = ? AND isPaid = false                │  │
-    │  │ AND itemType = 'FEE'                                   │  │
+    │  │ SUM(service revenue from completed orders)             │  │
+    │  │ * employee.commissionRate                              │  │
+    │  │ - previously paid commission (Payment type PAYROLL)   │  │
     │  └────────────────────────────────────────────────────────┘  │
     │                                                              │
-    │  + Base Salary (dailyRate x working days)                    │
+    │  + Base Salary (dailyRate x working days / monthlyRate)      │
     │  + Bonus / Extra (if any)                                    │
     │  ────────────────────────────────────────                    │
     │  = TOTAL PAYABLE                                             │
@@ -296,12 +296,11 @@ CUSTOMER                    ADMIN/KASIR                 MEKANIK                 
     │                    DATABASE TRANSACTION                       │
     │                                                              │
     │  1. Create Payment Record                                    │
-    │     - employeeId, amount, type: "SALARY"                     │
+    │     - employeeId, amount, type: "PAYROLL"                    │
     │     - bankAccountId, paymentMethod, date                     │
     │                                                              │
-    │  2. Update OrderItems (Commission)                           │
-    │     - SET isPaid = true                                      │
-    │     - WHERE employeeId = ? AND isPaid = false                │
+    │  2. Update Payroll Record                                    │
+    │     - SET status = "PAID", totalPaid += amount               │
     │                                                              │
     │  3. Update Account Balance                                   │
     │     - currentBalance -= amount                               │
@@ -376,10 +375,10 @@ Diagram tersebut dihasilkan dari 9 model aktif dan mengikuti nullability foreign
          │         │                  │                  │         │
          ▼         ▼                  ▼                  ▼         ▼
 ┌────────────────────────────────────────────────────────────────────────────────────────────┐
-│                              D1: ACTIVE DATABASE (9 MODELS)                               │
-│ ┌──────┐ ┌──────────┐ ┌───────┐ ┌───────────┐ ┌───────────┐ ┌─────────┐ ┌───────┐ ┌──────┐ │
-│ │ User │ │ Employee │ │ Order │ │ OrderItem │ │ SparePart │ │ Account │ │Payment│ │Config│ │
-│ └──────┘ └──────────┘ └───────┘ └───────────┘ └───────────┘ └─────────┘ └───────┘ └──────┘ │
+│                              D1: ACTIVE DATABASE (8 MODELS)                               │
+│ ┌──────┐ ┌──────────┐ ┌───────┐ ┌───────────┐ ┌─────────┐ ┌───────┐ ┌─────────┐ ┌──────┐   │
+│ │ User │ │ Employee │ │ Order │ │ SparePart │ │ Account │ │Payment│ │ Payroll │ │Config│   │
+│ └──────┘ └──────────┘ └───────┘ └───────────┘ └─────────┘ └───────┘ └─────────┘ └──────┘   │
 └────────────────────────────────────────────────────────────────────────────────────────────┘
          ▲                            ▲                            ▲
          │                            │                            │
@@ -567,18 +566,19 @@ Diagram tersebut dihasilkan dari 9 model aktif dan mengikuti nullability foreign
      │                   │               │ - role: string              │
      ▼                   ▼               │ - employeeId: string?       │
 ┌─────────────────┐ ┌─────────────────┐  │ - resetToken: string?       │
-│    OrderItem    │ │     Payment     │  │ - forgotRequests: Json?     │
+│     Payroll     │ │     Payment     │  │ - forgotRequests: Json?     │
 ├─────────────────┤ ├─────────────────┤  │ - isActive: boolean         │
 │ - id: string    │ │ - id: string    │  ├─────────────────────────────┤
-│ - orderId: str  │ │ - date: DateTime│  │ + login(): Session          │
-│ - itemType: str │ │ - amount: Dec   │  │ + logout(): void            │
-│ - itemName: str │ │ - type: string  │  │ + requestReset(): void      │
-│ - quantity: int │ │ - note: string? │  └─────────────────────────────┘
-│ - unitPrice: Dec│ │ - orderId: str? │
-│ - totalPrice:Dec│ │ - empId: string?│
-│ - isPaid: bool  │ │ - bankAccId: str│
-│ - sparePartId   │ │ - payMethod: str│
-│ - employeeId    │ └────────┬────────┘
+│ - employeeId:str│ │ - date: DateTime│  │ + login(): Session          │
+│ - startDate:Date│ │ - amount: Dec   │  │ + logout(): void            │
+│ - endDate: Date │ │ - type: string  │  │ + requestReset(): void      │
+│ - salaryType:str│ │ - note: string? │  └─────────────────────────────┘
+│ - baseSalary:Dec│ │ - orderId: str? │
+│ - bonus: Decimal│ │ - empId: string?│
+│ - totalEarned   │ │ - bankAccId: str│
+│ - totalPaid: Dec│ │ - payMethod: str│
+│ - status: enum  │ └────────┬────────┘
+│ - details: str? │          │
 └────────┬────────┘          │
          │                   │
          ▼                   ▼
@@ -831,19 +831,6 @@ erDiagram
         datetime createdAt
         datetime updatedAt
     }
-    OrderItem {
-        string id PK
-        string orderId FK
-        string itemType
-        string itemName
-        int quantity
-        decimal unitPrice
-        decimal totalPrice
-        string sparePartId FK
-        string employeeId FK
-        boolean isPaid
-        datetime createdAt
-    }
     SparePart {
         string id PK
         string code UK
@@ -918,12 +905,9 @@ erDiagram
 
     Employee o|--o| User : "optional account"
     Employee o|--o{ Order : "optional mechanic"
-    Employee o|--o{ OrderItem : "optional fee owner"
     Employee o|--o{ Payment : "optional payee"
     Employee ||--o{ Payroll : "payroll slips"
-    Order ||--o{ OrderItem : "order items"
     Order o|--o{ Payment : "optional order payment"
-    SparePart o|--o{ OrderItem : "optional stock item"
     Account o|--o{ Payment : "optional bank account"
     Payroll o|--o{ Payment : "optional payroll payment"
 ```

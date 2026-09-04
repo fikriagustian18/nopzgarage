@@ -4,6 +4,32 @@ Semua perubahan penting pada proyek **NopzGarage Management System** akan dicata
 
 Format dokumen ini mengacu pada [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [2.4.0] - 2026-09-04
+
+### 🗄️ Database Normalization (8 Core Tables)
+- **Normalisasi dan Penggabungan Entitas `OrderItem` ke dalam `Order.items` (JSON)**:
+  - Mengeliminasi tabel `OrderItem` dan relasinya (`Employee`, `Order`, `SparePart`) pada [`prisma/schema.prisma`](prisma/schema.prisma) untuk mencapai struktur ringkas tepat 8 tabel inti: `User`, `Employee`, `Order`, `SparePart`, `Account`, `Payment`, `Payroll`, `SystemConfig`.
+  - Menambahkan migration [`20260904000000_embed_order_items_in_orders`](prisma/migrations/20260904000000_embed_order_items_in_orders/migration.sql) untuk memindahkan seluruh item pesanan yang ada ke field `items` (JSON), memverifikasi jumlah item per order, lalu melepas tabel lama hanya jika verifikasi berhasil.
+  - Memperbarui Server Actions ([`lib/actions/orders.ts`](lib/actions/orders.ts), [`lib/actions/employees.ts`](lib/actions/employees.ts), [`lib/actions/inventory.ts`](lib/actions/inventory.ts), [`lib/actions/payroll.ts`](lib/actions/payroll.ts), [`lib/actions/payments.ts`](lib/actions/payments.ts), [`lib/actions/finance.ts`](lib/actions/finance.ts)) agar sepenuhnya beroperasi berbasis `Order.items` JSON dengan backward compatibility penuh bagi antarmuka frontend dan generator invoice.
+  - Memperbarui data seed pada [`prisma/seed.ts`](prisma/seed.ts).
+
+### 🐛 Financial Reports Bugfix & Dynamic Reconciliation
+- **Perbaikan Saldo Rp 0 pada Laporan Keuangan (Income Statement)**:
+  - Mengatasi inkonsistensi di mana baris akun pendapatan (401, 402) dan akun beban (501, 502, 511) menampilkan saldo Rp 0 padahal total pendapatan dan beban memiliki nilai transaksi.
+  - Mengimplementasikan rekonsiliasi dinamis pada `getFinancialReports` ([`lib/actions/finance.ts`](lib/actions/finance.ts)) untuk menghitung saldo nominal per periode dari rincian item order dan transaksi kas masuk/keluar (`Payment`).
+
+### 🏢 Letterhead & Workshop Info Export Integration
+- **Integrasi Informasi Bengkel pada Ekspor Arus Kas & Laporan Keuangan**:
+  - Mengintegrasikan pengambilan data profil bengkel (nama bengkel, alamat lengkap, nomor telepon, dan email) dari `SystemConfig` (kategori General Settings) pada halaman [`app/admin/reports/page.tsx`](app/admin/reports/page.tsx).
+  - Menambahkan field `letterhead` pada tipe `CashFlowData` dan `CombinedFinancialExportData` ([`lib/export/types.ts`](lib/export/types.ts)).
+  - Mengupdate modul generator ekspor ([`lib/export/reports/financialExport.ts`](lib/export/reports/financialExport.ts), [`lib/export/pdfGenerator.ts`](lib/export/pdfGenerator.ts), [`lib/export/excelGenerator.ts`](lib/export/excelGenerator.ts)) agar kop surat resmi pada file PDF dan Excel menampilkan alamat dan nomor kontak riil bengkel secara otomatis tanpa teks placeholder template.
+
+### 📚 Documentation Synchronization
+- **Pembaruan Menyeluruh `README.md` & `/admin/docs`**:
+  - Menyelaraskan seluruh diagram ERD Mermaid, DFD Level 0/1/2, Sequence Diagram, dan diagram ASCII arsitektur sistem ke struktur 8 tabel database konsolidasi (7 relasi aktif).
+
+---
+
 ## [2.3.2] - 2026-08-15
 
 ### 🗄️ Database Schema Cleanup & Documentation Sync
@@ -49,7 +75,7 @@ Format dokumen ini mengacu pada [Keep a Changelog](https://keepachangelog.com/en
 ### 📚 Documentation & Technical Specs Synchronization
 - **Sinkronisasi Technical Documentation (`/admin/docs`)**:
   - Menyelaraskan seluruh metrik statistik (`8` Tables, `8` Relations, `4` Enums, `56` Components, `26` Pages, `90` Server Actions).
-  - Memperbarui daftar 8 model database konsolidasi (`User`, `Employee`, `Order`, `OrderItem`, `SparePart`, `Account`, `Payment`, `SystemConfig`) beserta jumlah kolom dan deskripsi fungsinya.
+  - Memperbarui daftar 8 model database konsolidasi (`User`, `Employee`, `Order`, `SparePart`, `Account`, `Payment`, `Payroll`, `SystemConfig`) beserta jumlah kolom dan deskripsi fungsinya.
   - Menyelaraskan Chart of Accounts (COA) dengan data seed aktif dan memperbarui daftar komponen UI/Dialog utama.
   - Merestrukturisasi diagram Mermaid ERD, DFD Context/Level 1/Level 2, seluruh Flowchart proses order, kasir, penggajian, reset password JSON, dan CMS.
   - Menyelaraskan modul arsitektur sistem (Operational, Finance & Cashflow, Inventory, HR & Payroll) dan struktur direktori `lib/actions/`.
@@ -83,15 +109,15 @@ Format dokumen ini mengacu pada [Keep a Changelog](https://keepachangelog.com/en
 
 ### 🚀 Major Architectural Changes
 - **Konsolidasi Skema Database (33 Tabel -> 8 Tabel Inti)**:
-  - Menggabungkan dan menyederhanakan 33 tabel PostgreSQL lama menjadi **8 tabel inti yang clean dan efisien**:
+  - Menggabungkan dan menyederhanakan tabel database menjadi **8 tabel inti yang clean dan efisien**:
     1. `User`: Pengguna, autentikasi, role, token reset, dan forgot password.
     2. `Employee`: Karyawan, mekanik, skema gaji, dan komisi.
-    3. `Order`: Servis kendaraan, pelanggan, status pengerjaan, dan pembayaran.
-    4. `OrderItem`: Rincian suku cadang, jasa servis, dan fee komisi mekanik.
-    5. `SparePart`: Master inventaris suku cadang, stok, HPP, dan harga jual.
-    6. `Account`: Akun keuangan (Chart of Accounts) & rekening bank.
-    7. `Payment`: Transaksi pembayaran order, pengeluaran, pemasukan, payroll, dan jurnal otomatis (JSON).
-    8. `SystemConfig`: Konfigurasi sistem, CMS website, galeri media, social embed, dan log aktivitas.
+    3. `Order`: Servis kendaraan, pelanggan, status pengerjaan, rincian items (JSON), dan pembayaran.
+    4. `SparePart`: Master inventaris suku cadang, stok, HPP, dan harga jual.
+    5. `Account`: Akun keuangan (Chart of Accounts) & rekening bank.
+    6. `Payment`: Transaksi pembayaran order, pengeluaran, pemasukan, payroll, dan kas.
+    7. `Payroll`: Snapshot hak gaji per karyawan dan periode.
+    8. `SystemConfig`: Konfigurasi sistem, CMS website, galeri media, info bengkel, dan log aktivitas.
 
 ### 🛠 Refactored & Updated
 - **Server Actions & API Layer**:

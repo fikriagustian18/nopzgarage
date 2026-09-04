@@ -18,17 +18,18 @@ export interface CreateSparePartInput {
   isActive?: boolean;
 }
 
-interface OrderHistoryItem {
-  id: string;
-  quantity: number;
-  order?: {
-    id: string;
-    vehicle: string;
-    custName: string;
-    plateNumber?: string | null;
-    mechanic?: { name: string } | null;
-    createdAt: Date | string;
-  } | null;
+interface SparePartUsageRow {
+  itemId: string | null;
+  orderId: string;
+  vehicle: string;
+  custName: string;
+  plateNumber: string | null;
+  mechanicName: string | null;
+  createdAt: Date;
+  quantity: unknown;
+  usageCount: unknown;
+  totalSold: unknown;
+  revenue: unknown;
 }
 
 async function canManageInventory(): Promise<boolean> {
@@ -418,37 +419,87 @@ export async function getSparePartDetail(id: string) {
     if (!(await canManageInventory())) {
       return { success: false, error: 'Access denied: Only Owner and Admin can access inventory.' };
     }
-    const sparePart = await prisma.sparePart.findUnique({
-      where: { id },
-      include: {
-        orderItems: {
-          include: {
-            order: {
-              select: {
-                id: true,
-                vehicle: true,
-                custName: true,
-                plateNumber: true,
-                mechanic: { select: { name: true } },
-                createdAt: true
-              }
-            }
-          },
-          orderBy: { createdAt: 'desc' },
-          take: 20
-        }
-      }
-    });
+    const sparePart = await prisma.sparePart.findUnique({ where: { id } });
 
     if (!sparePart) {
       return { success: false, error: 'Produk tidak ditemukan' };
     }
 
-    const stats = await prisma.orderItem.aggregate({
-      where: { sparePartId: id },
-      _sum: { quantity: true, totalPrice: true },
-      _count: { id: true }
-    });
+    // Aggregate directly in PostgreSQL so totals remain exact without loading
+    // every order JSON document into application memory. Window aggregates are
+    // calculated before LIMIT, while only the latest 20 rows are returned.
+    const usageRows = await prisma.$queryRaw<SparePartUsageRow[]>`
+      WITH matching_items AS (
+        SELECT
+          item->>'id' AS "itemId",
+          orders."id" AS "orderId",
+          orders."vehicle",
+          orders."custName",
+          orders."plateNumber",
+          employee."name" AS "mechanicName",
+          orders."createdAt",
+          COALESCE(
+            NULLIF(item->>'qty', '')::numeric,
+            NULLIF(item->>'quantity', '')::numeric,
+            1
+          ) AS quantity,
+          COALESCE(
+            NULLIF(item->>'totalPrice', '')::numeric,
+            COALESCE(
+              NULLIF(item->>'qty', '')::numeric,
+              NULLIF(item->>'quantity', '')::numeric,
+              1
+            ) * COALESCE(
+              NULLIF(item->>'price', '')::numeric,
+              NULLIF(item->>'unitPrice', '')::numeric,
+              0
+            )
+          ) AS revenue
+        FROM "Order" AS orders
+        CROSS JOIN LATERAL jsonb_array_elements(
+          CASE
+            WHEN jsonb_typeof(orders."items") = 'array' THEN orders."items"
+            ELSE '[]'::jsonb
+          END
+        ) AS item
+        LEFT JOIN "Employee" AS employee ON employee."id" = orders."mechanicId"
+        WHERE (
+             orders."items" @> jsonb_build_array(jsonb_build_object('sparePartId', ${id}))
+             AND item->>'sparePartId' = ${id}
+           )
+           OR (
+             item->>'sparePartId' IS NULL
+             AND lower(COALESCE(item->>'type', item->>'itemType', '')) IN ('part', 'sparepart')
+             AND COALESCE(item->>'name', item->>'itemName') = ${sparePart.name}
+           )
+      )
+      SELECT
+        "itemId",
+        "orderId",
+        "vehicle",
+        "custName",
+        "plateNumber",
+        "mechanicName",
+        "createdAt",
+        quantity,
+        count(*) OVER () AS "usageCount",
+        COALESCE(sum(quantity) OVER (), 0) AS "totalSold",
+        COALESCE(sum(revenue) OVER (), 0) AS revenue
+      FROM matching_items
+      ORDER BY "createdAt" DESC, "orderId" DESC
+      LIMIT 20
+    `;
+
+    const aggregate = usageRows[0];
+    const history = usageRows.map((row, idx) => ({
+      id: row.itemId || `${row.orderId}-${idx}`,
+      vehicle: row.vehicle,
+      custName: row.custName,
+      plateNumber: row.plateNumber,
+      pic: row.mechanicName || 'Unassigned',
+      quantity: Number(row.quantity),
+      date: row.createdAt instanceof Date ? row.createdAt.toISOString() : row.createdAt,
+    }));
 
     const serialized = {
       ...sparePart,
@@ -456,19 +507,11 @@ export async function getSparePartDetail(id: string) {
       sellPrice: sparePart.sellPrice.toNumber(),
       createdAt: sparePart.createdAt instanceof Date ? sparePart.createdAt.toISOString() : sparePart.createdAt,
       updatedAt: sparePart.updatedAt instanceof Date ? sparePart.updatedAt.toISOString() : sparePart.updatedAt,
-      history: sparePart.orderItems.map((item: OrderHistoryItem) => ({
-        id: item.id,
-        vehicle: item.order?.vehicle,
-        custName: item.order?.custName,
-        plateNumber: item.order?.plateNumber,
-        pic: item.order?.mechanic?.name || 'Unassigned',
-        quantity: item.quantity,
-        date: item.order?.createdAt instanceof Date ? item.order.createdAt.toISOString() : item.order?.createdAt,
-      })),
+      history,
       stats: {
-        totalSold: stats._sum.quantity || 0,
-        revenue: stats._sum.totalPrice?.toNumber() || 0,
-        usageCount: stats._count.id
+        totalSold: Number(aggregate?.totalSold || 0),
+        revenue: Number(aggregate?.revenue || 0),
+        usageCount: Number(aggregate?.usageCount || 0),
       }
     };
     return { success: true, sparePart: serialized };
