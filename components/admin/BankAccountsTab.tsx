@@ -1,29 +1,29 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { 
-  getBankAccounts, 
-  createBankAccount, 
-  deleteBankAccount, 
-  toggleBankAccount 
+import {
+  getAllBankAccounts,
+  createBankAccount,
+  deactivateBankAccount,
+  toggleBankAccount
 } from "@/lib/actions/bank";
-import { 
-  Trash2, 
-  Plus, 
+import {
+  Trash2,
+  Plus,
   CreditCard,
   Building2,
-  Power
+  PowerOff
 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Label } from "@/components/ui/Label";
 import { Switch } from "@/components/ui/Switch";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/Card";
-import { 
-  Dialog, 
-  DialogContent, 
-  DialogHeader, 
-  DialogTitle, 
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
   DialogTrigger,
   DialogFooter
 } from "@/components/ui/Dialog";
@@ -46,7 +46,7 @@ export function BankAccountsTab() {
   }, []);
 
   async function loadBanks() {
-    const res = await getBankAccounts();
+    const res = await getAllBankAccounts();
     if (res.success && res.data) {
         setBanks(res.data);
     }
@@ -73,10 +73,10 @@ export function BankAccountsTab() {
   }
 
   async function handleDelete(id: string) {
-      if (!confirm("Yakin ingin menghapus rekening ini?")) return;
-      const res = await deleteBankAccount(id);
+      if (!confirm("Yakin ingin menonaktifkan rekening ini?")) return;
+      const res = await deactivateBankAccount(id);
       if (res.success) {
-          toast.success("Rekening dihapus");
+          toast.success("Rekening berhasil dinonaktifkan");
           loadBanks();
       } else if ('error' in res) {
           toast.error(res.error);
@@ -86,8 +86,10 @@ export function BankAccountsTab() {
   async function handleToggle(id: string, currentStatus: boolean) {
       const res = await toggleBankAccount(id, !currentStatus);
       if (res.success) {
-          toast.success("Status diupdate");
+          toast.success(res.message || "Status diupdate");
           loadBanks();
+      } else if ('error' in res) {
+          toast.error(res.error);
       }
   }
 
@@ -153,26 +155,45 @@ export function BankAccountsTab() {
         ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {banks.map((bank) => (
-                    <div key={bank.id} className="flex flex-col p-4 border rounded-lg bg-card/50 hover:bg-accent/5 transaction-colors">
+                    <div
+                        key={bank.id}
+                        className={`flex flex-col p-4 border rounded-lg transition-colors ${
+                            bank.isActive
+                                ? 'bg-card/50 hover:bg-accent/5'
+                                : 'bg-muted/30 border-dashed opacity-75'
+                        }`}
+                    >
                         <div className="flex justify-between items-start mb-4">
                             <div className="flex items-center gap-3">
-                                <div className="h-10 w-10 bg-primary/10 rounded-full flex items-center justify-center text-primary">
+                                <div className={`h-10 w-10 rounded-full flex items-center justify-center ${
+                                    bank.isActive ? 'bg-primary/10 text-primary' : 'bg-muted text-muted-foreground'
+                                }`}>
                                     <Building2 className="h-5 w-5" />
                                 </div>
                                 <div>
-                                    <h4 className="font-bold text-lg">{bank.bankName}</h4>
+                                    <div className="flex items-center gap-2">
+                                        <h4 className="font-bold text-lg">{bank.bankName}</h4>
+                                        {!bank.isActive && (
+                                            <span className="text-[10px] uppercase font-semibold px-2 py-0.5 rounded bg-muted text-muted-foreground border">
+                                                Nonaktif
+                                            </span>
+                                        )}
+                                    </div>
                                     <p className="text-sm text-muted-foreground">{bank.accountNumber}</p>
                                 </div>
                             </div>
                             <div className="flex gap-2">
-                                <Button
-                                  size="icon"
-                                  variant="ghost"
-                                  className="h-8 w-8 text-destructive hover:bg-destructive/10"
-                                  onClick={() => handleDelete(bank.id)}
-                                >
-                                    <Trash2 className="h-4 w-4" />
-                                </Button>
+                                {bank.isActive && (
+                                    <Button
+                                      size="icon"
+                                      variant="ghost"
+                                      title="Nonaktifkan Rekening"
+                                      className="h-8 w-8 text-destructive hover:bg-destructive/10"
+                                      onClick={() => handleDelete(bank.id)}
+                                    >
+                                        <Trash2 className="h-4 w-4" />
+                                    </Button>
+                                )}
                             </div>
                         </div>
                         <div className="flex justify-between items-center mt-auto pt-4 border-t border-border">
@@ -182,7 +203,7 @@ export function BankAccountsTab() {
                                     checked={bank.isActive} 
                                     onCheckedChange={() => handleToggle(bank.id, bank.isActive)}
                                 />
-                                <span className={`text-xs ${bank.isActive ? 'text-green-500' : 'text-muted-foreground'}`}>
+                                <span className={`text-xs font-medium ${bank.isActive ? 'text-green-500' : 'text-muted-foreground'}`}>
                                     {bank.isActive ? 'Aktif' : 'Nonaktif'}
                                 </span>
                             </div>

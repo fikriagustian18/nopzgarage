@@ -8,6 +8,7 @@ import { isRoleAllowed } from "@/lib/authCheck";
 import { prisma } from "@/lib/prisma";
 import { serializeData, formatOrderNo } from "@/lib/utils";
 import { calculateCommission, normalizeCommissionRate } from "@/lib/payroll/calculations";
+import { getHolidaySettings } from "@/lib/actions/settings";
 import { createLog } from "./logs";
 import type { OrderStatus, ServiceType } from "@prisma/client";
 
@@ -388,6 +389,17 @@ export async function closeOrder(orderId: string) {
  */
 export async function createBooking(data: CreateOrderInput) {
   try {
+    const holiday = await getHolidaySettings();
+    if (holiday.isHoliday) {
+      const reasonText = holiday.reason ? `: ${holiday.reason}` : "";
+      const openAtText = holiday.openAt ? ` Bengkel buka kembali: ${holiday.openAt}.` : "";
+      return {
+        success: false,
+        code: "GARAGE_CLOSED",
+        error: `Bengkel sedang libur/tutup${reasonText}.${openAtText} Silakan coba lagi nanti.`
+      };
+    }
+
     const order = await prisma.order.create({
       data: {
         custName: data.custName,

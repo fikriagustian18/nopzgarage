@@ -217,14 +217,24 @@ export default async function Page() {
               </p>
               
               <div className="pt-6 flex flex-col sm:flex-row items-center justify-center gap-4 animate-in fade-in-0 slide-in-from-bottom-5 duration-1000 delay-300">
-                <Link 
-                  href="/booking" 
-                  className="group w-full sm:w-auto px-8 py-4 bg-primary text-primary-foreground text-base md:text-lg font-bold rounded-2xl hover:scale-[1.02] active:scale-[0.98] transition-all duration-300 shadow-2xl shadow-primary/40 hover:shadow-primary/60 flex items-center justify-center gap-2.5 border-2 border-primary/20"
-                >
-                  <Calendar className="h-5 w-5 transition-transform duration-300 group-hover:scale-110" />
-                  <span>{heroConfig.ctaText ?? "Booking Sekarang"}</span>
-                  <ArrowRight className="h-5 w-5 transition-transform duration-300 group-hover:translate-x-1" />
-                </Link>
+                {holiday.isHoliday ? (
+                  <Button
+                    disabled
+                    className="w-full sm:w-auto px-8 py-4 bg-muted text-muted-foreground text-base md:text-lg font-bold rounded-2xl cursor-not-allowed opacity-80 flex items-center justify-center gap-2.5 border-2 border-border"
+                  >
+                    <Calendar className="h-5 w-5" />
+                    <span>Bengkel Tutup (Libur)</span>
+                  </Button>
+                ) : (
+                  <Link
+                    href="/booking"
+                    className="group w-full sm:w-auto px-8 py-4 bg-primary text-primary-foreground text-base md:text-lg font-bold rounded-2xl hover:scale-[1.02] active:scale-[0.98] transition-all duration-300 shadow-2xl shadow-primary/40 hover:shadow-primary/60 flex items-center justify-center gap-2.5 border-2 border-primary/20"
+                  >
+                    <Calendar className="h-5 w-5 transition-transform duration-300 group-hover:scale-110" />
+                    <span>{heroConfig.ctaText ?? "Booking Sekarang"}</span>
+                    <ArrowRight className="h-5 w-5 transition-transform duration-300 group-hover:translate-x-1" />
+                  </Link>
+                )}
                 <Link 
                   href="/status" 
                   className="group w-full sm:w-auto px-8 py-4 bg-background border-2 border-border hover:border-primary/50 text-foreground text-base md:text-lg font-bold rounded-2xl hover:bg-muted/50 transition-all duration-300 flex items-center justify-center gap-2.5 hover:scale-[1.02] active:scale-[0.98]"
@@ -453,11 +463,26 @@ export default async function Page() {
                 </p>
               </div>
               <div className="pt-8">
-                <Link href="/booking">
-                  <Button className="w-full h-14 text-sm font-bold uppercase tracking-widest hover:scale-[1.02] transition-transform rounded-xl">
-                    Mulai Booking Sekarang
-                  </Button>
-                </Link>
+                {holiday.isHoliday ? (
+                  <div className="space-y-2">
+                    <Button
+                      disabled
+                      className="w-full h-14 text-sm font-bold uppercase tracking-widest bg-muted text-muted-foreground rounded-xl cursor-not-allowed border border-border"
+                    >
+                      Booking Ditutup Sementara
+                    </Button>
+                    <p className="text-xs text-center text-muted-foreground">
+                      {holiday.reason ? `Alasan: ${holiday.reason}` : "Bengkel sedang libur/tutup"}
+                      {holiday.openAt ? ` • Buka kembali: ${holiday.openAt}` : ""}
+                    </p>
+                  </div>
+                ) : (
+                  <Link href="/booking">
+                    <Button className="w-full h-14 text-sm font-bold uppercase tracking-widest hover:scale-[1.02] transition-transform rounded-xl">
+                      Mulai Booking Sekarang
+                    </Button>
+                  </Link>
+                )}
               </div>
             </div>
           </div>
@@ -592,7 +617,12 @@ export default async function Page() {
                     className="group text-muted-foreground hover:text-primary transition-all duration-300 flex items-center gap-3 font-semibold text-sm"
                   >
                     <ChevronRight className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-1" />
-                    Booking Servis
+                    <span>Booking Servis</span>
+                    {holiday.isHoliday && (
+                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-destructive/10 text-destructive font-bold">
+                        Tutup
+                      </span>
+                    )}
                   </Link>
                 </li>
                 <li>

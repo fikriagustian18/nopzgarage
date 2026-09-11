@@ -4,6 +4,32 @@ Semua perubahan penting pada proyek **NopzGarage Management System** akan dicata
 
 Format dokumen ini mengacu pada [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [2.5.0] - 2026-09-11
+
+### 🏦 Bank Account Status & Management Improvement
+- **Pemisahan Query Pengelolaan dan Operasional Rekening Bank**:
+  - Menambahkan Server Action `getAllBankAccounts()` pada [`lib/actions/bank.ts`](lib/actions/bank.ts) khusus role `OWNER` untuk menampilkan seluruh rekening (aktif maupun nonaktif) pada halaman Pengaturan.
+  - Mempertahankan `getBankAccounts()` tetap memfilter `isActive: true` untuk transaksi operasional kasir ([`PaymentDialog.tsx`](components/dialogs/PaymentDialog.tsx), transaksi, dan payroll) agar rekening nonaktif tidak dapat dipilih secara tidak sengaja.
+  - Memperbarui `deleteBankAccount()` menjadi `deactivateBankAccount()` yang melakukan soft deactivation, validasi eksistensi, dan pencatatan audit log `DEACTIVATE_BANK_ACCOUNT`.
+  - Memperbarui `toggleBankAccount()` dengan validasi tipe bank dan audit logging `ACTIVATE_BANK_ACCOUNT` / `DEACTIVATE_BANK_ACCOUNT`.
+  - Memperbarui UI pada [`BankAccountsTab.tsx`](components/admin/BankAccountsTab.tsx) dan [`BankAccountsManager.tsx`](components/admin/BankAccountsManager.tsx) dengan visual cue badge **Nonaktif**, styling border putus-putus, opsi aktifkan kembali, serta penggantian terminologi dari "Hapus" ke "Nonaktifkan".
+
+### 🏖️ Holiday Mode End-to-End System Protection
+- **Proteksi Menyeluruh Sistem Saat Mode Libur Aktif**:
+  - Menambahkan guard server-side pada `createBooking()` ([`lib/actions/orders.ts`](lib/actions/orders.ts)) yang menolak pembuatan pesanan publik dengan kode `GARAGE_CLOSED` saat `holiday.isHoliday === true`. Pembuatan order manual internal oleh Owner/Admin tetap berjalan normal.
+  - Menambahkan helper `getHolidaySettings()` dan invalidasi cache otomatis `revalidatePath("/booking")` dan `revalidatePath("/")` pada [`lib/actions/settings.ts`](lib/actions/settings.ts) saat pengaturan libur diubah.
+  - Membuat komponen baru [`BookingClosedState.tsx`](components/booking/BookingClosedState.tsx) yang otomatis muncul pada halaman [`/booking`](app/booking/page.tsx) saat bengkel libur, lengkap dengan alasan libur, tanggal estimasi buka kembali, info jadwal reguler, dan tombol kontak WhatsApp.
+  - Menonaktifkan seluruh CTA booking pada landing page ([`app/page.tsx`](app/page.tsx)) saat libur dan menambahkan badge status tutup pada footer.
+  - Menambahkan penanganan status `GARAGE_CLOSED` pada wizard dan form booking ([`BookingWizard.tsx`](components/booking/BookingWizard.tsx) & [`BookingForm.tsx`](components/booking/BookingForm.tsx)) dengan feedback notifikasi yang ramah.
+
+### 🧭 Navigation Cleanup for Owner Role
+- **Penyembunyian Menu Non-Inti dari Sidebar Navigasi**:
+  - Menyembunyikan menu **Documentation** (`/admin/docs`), **Konten Website** (`/admin/content`), **Media Gallery** (`/admin/media`), dan **Database Console** (`/query`) dari navigasi desktop ([`AdminSidebar.tsx`](components/layout/AdminSidebar.tsx)) dan mobile ([`MobileSidebar.tsx`](components/layout/MobileSidebar.tsx)).
+  - Membersihkan icon import lucide yang tidak digunakan (`Book`, `Globe`, `ImagePlus`, `Database`).
+  - Halaman, API, Server Actions, dan proteksi RoleGuard untuk menu-menu tersebut tetap dipertahankan untuk akses URL langsung yang sah.
+
+---
+
 ## [2.4.0] - 2026-09-04
 
 ### 🗄️ Database Normalization (8 Core Tables)

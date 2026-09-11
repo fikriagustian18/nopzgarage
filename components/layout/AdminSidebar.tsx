@@ -12,11 +12,7 @@ import {
   LogOut,
   Package,
   Wallet,
-  Globe,
   User,
-  Book,
-  ImagePlus,
-  Database,
   CreditCard,
   Shield,
   Clock,
@@ -89,26 +85,6 @@ export function AdminSidebar() {
       href: "/admin/reports",
       label: "Laporan Keuangan",
       icon: FileText,
-    },
-    {
-      href: "/admin/docs",
-      label: "Documentation",
-      icon: Book,
-    },
-    {
-      href: "/admin/content",
-      label: "Konten Website",
-      icon: Globe,
-    },
-    {
-      href: "/admin/media",
-      label: "Media Gallery",
-      icon: ImagePlus,
-    },
-    {
-      href: "/query",
-      label: "Database Console",
-      icon: Database,
     },
     {
       href: "/admin/users",

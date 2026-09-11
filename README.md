@@ -94,11 +94,11 @@ Halaman Settings adalah pusat konfigurasi seluruh aspek sistem yang dibagi dalam
 
 **General Settings**: Konfigurasi nama bengkel, alamat, nomor telepon, jam operasional, dan informasi umum lainnya yang ditampilkan di landing page dan dokumen.
 
-**Holiday Settings**: Pengaturan hari libur bengkel dan jam operasional khusus untuk hari tertentu.
+**Holiday Settings**: Pengaturan hari libur bengkel dan jam operasional khusus. Dilengkapi proteksi sistem end-to-end: penolakan booking publik di tingkat server (`createBooking`), tampilan state tutup informatif pada `/booking`, dan penonaktifan tombol CTA booking pada landing page.
 
 **User Management**: Pengelolaan akun pengguna sistem termasuk pembuatan user baru, assignment role (admin, employee), linking ke data employee, reset password, dan aktivasi/deaktivasi akun.
 
-**Bank Accounts**: Konfigurasi rekening bank untuk pembayaran transfer, mencakup nama bank, nomor rekening, dan nama pemilik.
+**Bank Accounts**: Konfigurasi rekening bank untuk penerimaan pembayaran transfer. Mendukung pengelolaan status aktif/nonaktif rekening secara aman; rekening nonaktif tetap tersimpan di daftar pengaturan untuk dapat diaktifkan kembali, namun otomatis terfilter dari opsi transaksi operasional kasir/pembayaran.
 
 **Forgot Password Requests**: Dashboard untuk admin menangani permintaan reset password dari user yang lupa password, dengan approval/reject workflow.
 

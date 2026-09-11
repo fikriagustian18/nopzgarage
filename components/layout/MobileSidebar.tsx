@@ -14,15 +14,11 @@ import {
   Package,
   Menu,
   Wallet,
-  Globe,
   User,
-  Database,
   CreditCard,
   Clock,
   Wrench,
   Shield,
-  Book,
-  ImagePlus,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/Button";
@@ -98,26 +94,6 @@ export function MobileSidebar() {
       href: "/admin/reports",
       label: "Laporan Keuangan",
       icon: FileText,
-    },
-    {
-      href: "/admin/docs",
-      label: "Documentation",
-      icon: Book,
-    },
-    {
-      href: "/admin/content",
-      label: "Konten Website",
-      icon: Globe,
-    },
-    {
-      href: "/admin/media",
-      label: "Media Gallery",
-      icon: ImagePlus,
-    },
-    {
-      href: "/query",
-      label: "Database Console",
-      icon: Database,
     },
     {
       href: "/admin/users",

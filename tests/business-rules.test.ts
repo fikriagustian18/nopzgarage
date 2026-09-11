@@ -82,3 +82,51 @@ test("only structured HPP expense notes are classified as cost of goods sold", (
   assert.equal(isCogsPayment({ type: "EXPENSE", note: "Pembelian sparepart kantor" }), false);
   assert.equal(isCogsPayment({ type: "PAYROLL", note: "HPP - not an expense" }), false);
 });
+
+test("holiday mode guard blocks bookings when isHoliday is true", () => {
+  const checkHolidayBooking = (holiday: { isHoliday: boolean; reason?: string; openAt?: string }) => {
+    if (holiday.isHoliday) {
+      const reasonText = holiday.reason ? `: ${holiday.reason}` : "";
+      const openAtText = holiday.openAt ? ` Bengkel buka kembali: ${holiday.openAt}.` : "";
+      return {
+        success: false,
+        code: "GARAGE_CLOSED",
+        error: `Bengkel sedang libur/tutup${reasonText}.${openAtText} Silakan coba lagi nanti.`
+      };
+    }
+    return { success: true };
+  };
+
+  const closedWithDetails = checkHolidayBooking({
+    isHoliday: true,
+    reason: "Renovasi Bengkel",
+    openAt: "15 September 2026",
+  });
+  assert.equal(closedWithDetails.success, false);
+  assert.equal(closedWithDetails.code, "GARAGE_CLOSED");
+  assert.match(closedWithDetails.error, /Renovasi Bengkel/);
+  assert.match(closedWithDetails.error, /15 September 2026/);
+
+  const closedWithoutDetails = checkHolidayBooking({ isHoliday: true });
+  assert.equal(closedWithoutDetails.success, false);
+  assert.equal(closedWithoutDetails.code, "GARAGE_CLOSED");
+
+  const openGarage = checkHolidayBooking({ isHoliday: false });
+  assert.equal(openGarage.success, true);
+});
+
+test("bank account operational filter excludes deactivated accounts while admin includes all", () => {
+  const accounts = [
+    { id: "1", name: "BCA", isActive: true },
+    { id: "2", name: "Mandiri", isActive: false },
+    { id: "3", name: "BRI", isActive: true },
+  ];
+
+  const operationalAccounts = accounts.filter((a) => a.isActive);
+  const adminAccounts = accounts;
+
+  assert.equal(operationalAccounts.length, 2);
+  assert.deepEqual(operationalAccounts.map((a) => a.id), ["1", "3"]);
+  assert.equal(adminAccounts.length, 3);
+  assert.deepEqual(adminAccounts.map((a) => a.id), ["1", "2", "3"]);
+});

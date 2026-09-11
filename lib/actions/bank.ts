@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { createLog } from "@/lib/actions/logs";
 
 export interface BankAccountData {
   id?: string;
@@ -16,6 +17,7 @@ export interface BankAccountData {
 
 /**
  * Fetches all active bank accounts from the database.
+ * Used for operational flows (e.g. payment selection, payroll, transactions).
  * 
  * @returns List of active bank accounts.
  */
@@ -48,6 +50,44 @@ export async function getBankAccounts() {
     };
   } catch (error) {
     console.error("Failed to fetch bank accounts:", error);
+    return { success: false, error: "Failed to fetch bank accounts" };
+  }
+}
+
+/**
+ * Fetches ALL bank accounts (both active and inactive) from the database.
+ * Used for administrative settings and bank accounts management.
+ *
+ * @returns List of all bank accounts.
+ */
+export async function getAllBankAccounts() {
+  try {
+    const session = await auth();
+    if (!session || !["OWNER", "ADMIN"].includes(session.user?.role || "")) {
+      return { success: false, error: "Access denied: Only Owner and Admin can access bank accounts." };
+    }
+    const banks = await prisma.account.findMany({
+      where: {
+        type: "BANK",
+      },
+      orderBy: { createdAt: "asc" },
+    });
+    return {
+      success: true,
+      data: banks.map((b) => ({
+        id: b.id,
+        bankCode: b.bankCode || "OTHER",
+        bankName: b.name.split(" - ")[0] || b.name,
+        accountNumber: b.accountNumber || "",
+        accountName: b.accountName || b.name,
+        currentBalance: Number(b.currentBalance),
+        isActive: b.isActive,
+        createdAt: b.createdAt.toISOString(),
+        updatedAt: b.createdAt.toISOString(),
+      }))
+    };
+  } catch (error) {
+    console.error("Failed to fetch all bank accounts:", error);
     return { success: false, error: "Failed to fetch bank accounts" };
   }
 }
@@ -184,11 +224,15 @@ export async function updateBankBalance(id: string, amount: number, operation: '
   }
 }
 
-export async function deleteBankAccount(id: string) {
+export async function deactivateBankAccount(id: string) {
   try {
     const session = await auth();
     if (!session || session.user?.role !== 'OWNER') {
-      return { success: false, error: 'Akses ditolak: Hanya Owner yang dapat menghapus rekening bank.' };
+      return { success: false, error: 'Akses ditolak: Hanya Owner yang dapat menonaktifkan rekening bank.' };
+    }
+    const existing = await prisma.account.findUnique({ where: { id } });
+    if (!existing || existing.type !== 'BANK') {
+      return { success: false, error: 'Rekening bank tidak ditemukan' };
     }
     await prisma.account.update({
       where: { id },
@@ -196,11 +240,27 @@ export async function deleteBankAccount(id: string) {
     });
     revalidatePath("/admin");
     revalidatePath("/admin/settings");
-    return { success: true, message: "Rekening berhasil dihapus" };
+    revalidatePath("/admin/reports");
+
+    await createLog({
+      action: "DEACTIVATE_BANK_ACCOUNT",
+      title: `Bank Account Deactivated: ${existing.name}`,
+      details: `Rekening ${existing.name} (${existing.accountNumber || ''}) dinonaktifkan oleh Owner`,
+      metadata: { accountId: id, bankCode: existing.bankCode, accountNumber: existing.accountNumber },
+      userId: session.user.id,
+      userName: session.user.employeeName || session.user.email || undefined,
+      role: session.user.role,
+    });
+
+    return { success: true, message: "Rekening berhasil dinonaktifkan" };
   } catch (error) {
-    return { success: false, error: "Gagal menghapus rekening" };
+    console.error("Failed to deactivate bank account:", error);
+    return { success: false, error: "Gagal menonaktifkan rekening" };
   }
 }
+
+/** @deprecated Gunakan deactivateBankAccount untuk kejelasan semantik */
+export const deleteBankAccount = deactivateBankAccount;
 
 export async function toggleBankAccount(id: string, isActive: boolean) {
   try {
@@ -208,14 +268,34 @@ export async function toggleBankAccount(id: string, isActive: boolean) {
     if (!session || session.user?.role !== 'OWNER') {
       return { success: false, error: 'Akses ditolak: Hanya Owner yang dapat merubah status aktif rekening bank.' };
     }
+    const existing = await prisma.account.findUnique({ where: { id } });
+    if (!existing || existing.type !== 'BANK') {
+      return { success: false, error: 'Rekening bank tidak ditemukan' };
+    }
     await prisma.account.update({
       where: { id },
       data: { isActive }
     });
     revalidatePath("/admin");
     revalidatePath("/admin/settings");
-    return { success: true };
+    revalidatePath("/admin/reports");
+
+    await createLog({
+      action: isActive ? "ACTIVATE_BANK_ACCOUNT" : "DEACTIVATE_BANK_ACCOUNT",
+      title: `Bank Account ${isActive ? 'Activated' : 'Deactivated'}: ${existing.name}`,
+      details: `Status rekening ${existing.name} diubah menjadi ${isActive ? 'Aktif' : 'Nonaktif'}`,
+      metadata: { accountId: id, isActive },
+      userId: session.user.id,
+      userName: session.user.employeeName || session.user.email || undefined,
+      role: session.user.role,
+    });
+
+    return {
+      success: true,
+      message: `Rekening berhasil ${isActive ? 'diaktifkan' : 'dinonaktifkan'}`
+    };
   } catch (error) {
+    console.error("Failed to toggle bank account status:", error);
     return { success: false, error: "Gagal update status" };
   }
 }

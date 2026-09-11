@@ -84,6 +84,21 @@ export interface SettingsResult {
   content: LandingPageContent;
 }
 
+const DEFAULT_HOLIDAY: HolidaySettings = {
+  isHoliday: false,
+  reason: "",
+  openAt: ""
+};
+
+/**
+ * Retrieves holiday settings directly.
+ *
+ * @returns Current holiday settings.
+ */
+export async function getHolidaySettings(): Promise<HolidaySettings> {
+  return getSetting<HolidaySettings>("holiday", DEFAULT_HOLIDAY);
+}
+
 /**
  * Retrieves a single system setting value by key.
  * Returns default value if not found.
@@ -135,6 +150,10 @@ export async function updateSetting(key: string, value: unknown): Promise<Update
 
     revalidatePath("/", "layout");
     revalidatePath("/admin/settings");
+    if (key === "holiday") {
+      revalidatePath("/booking");
+      revalidatePath("/");
+    }
     
     await createLog({
       action: "UPDATE_SETTINGS",

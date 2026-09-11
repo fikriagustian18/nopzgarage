@@ -7,7 +7,8 @@ import {
   MoreVertical, 
   Trash2, 
   Edit,
-  Building2
+  Building2,
+  Power
 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/Button";
@@ -36,7 +37,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/DropdownMenu";
 import { INDONESIAN_BANKS, getBankColor } from "@/lib/constants/banks";
-import { getBankAccounts, createBankAccount, deleteBankAccount, updateBankAccount } from "@/lib/actions/bank";
+import { getAllBankAccounts, createBankAccount, deactivateBankAccount, updateBankAccount, toggleBankAccount } from "@/lib/actions/bank";
 
 interface BankAccountItem {
   id: string;
@@ -45,6 +46,7 @@ interface BankAccountItem {
   accountNumber: string;
   accountName: string;
   currentBalance: number;
+  isActive?: boolean;
 }
 
 interface BankAccountFormData {
@@ -75,7 +77,7 @@ export function BankAccountsManager() {
 
   async function fetchAccounts() {
     setIsLoading(true);
-    const result = await getBankAccounts();
+    const result = await getAllBankAccounts();
     if (result.success) {
       setAccounts((result.data as BankAccountItem[]) || []);
     }
@@ -143,19 +145,30 @@ export function BankAccountsManager() {
     }
   }
 
+  async function handleToggleStatus(account: BankAccountItem) {
+    const nextStatus = account.isActive === false ? true : false;
+    const result = await toggleBankAccount(account.id, nextStatus);
+    if (result.success) {
+      toast.success(result.message || (nextStatus ? "Rekening diaktifkan" : "Rekening dinonaktifkan"));
+      fetchAccounts();
+    } else {
+      toast.error((result as any).error || "Gagal mengubah status rekening");
+    }
+  }
+
   async function handleDelete() {
     if (!selectedAccount) {
       return;
     }
     
-    const result = await deleteBankAccount(selectedAccount.id);
+    const result = await deactivateBankAccount(selectedAccount.id);
     if (result.success) {
-      toast.success("Rekening berhasil dihapus");
+      toast.success("Rekening berhasil dinonaktifkan");
       fetchAccounts();
       setIsConfirmDeleteOpen(false);
       setSelectedAccount(null);
     } else {
-      toast.error((result as any).error || "Gagal menghapus rekening");
+      toast.error((result as any).error || "Gagal menonaktifkan rekening");
     }
   }
 
@@ -193,11 +206,13 @@ export function BankAccountsManager() {
           accounts.map((account) => (
             <Card
               key={account.id}
-              className="relative overflow-hidden group"
+              className={`relative overflow-hidden group transition-all ${
+                account.isActive === false ? "opacity-75 border-dashed bg-muted/20" : ""
+              }`}
             >
               <div
                 className="absolute top-0 left-0 w-2 h-full"
-                style={{ backgroundColor: getBankColor(account.bankCode) }}
+                style={{ backgroundColor: account.isActive === false ? "#94a3b8" : getBankColor(account.bankCode) }}
               />
               <CardHeader className="pl-6 pb-2">
                 <div className="flex justify-between items-start">
@@ -206,7 +221,14 @@ export function BankAccountsManager() {
                       <Building2 className="h-4 w-4 text-muted-foreground" />
                     </div>
                     <div className="space-y-1">
-                      <CardTitle className="text-sm font-bold">{account.bankCode}</CardTitle>
+                      <div className="flex items-center gap-1.5">
+                        <CardTitle className="text-sm font-bold">{account.bankCode}</CardTitle>
+                        {account.isActive === false && (
+                          <span className="text-[10px] uppercase font-semibold px-1.5 py-0.5 rounded bg-muted text-muted-foreground border">
+                            Nonaktif
+                          </span>
+                        )}
+                      </div>
                       <CardDescription className="text-xs">{account.bankName}</CardDescription>
                     </div>
                   </div>
@@ -224,15 +246,21 @@ export function BankAccountsManager() {
                       <DropdownMenuItem onClick={() => handleOpenEdit(account)}>
                         <Edit className="h-4 w-4 mr-2" /> Edit
                       </DropdownMenuItem>
-                      <DropdownMenuItem
-                        className="text-destructive"
-                        onClick={() => {
-                          setSelectedAccount(account);
-                          setIsConfirmDeleteOpen(true);
-                        }}
-                      >
-                        <Trash2 className="h-4 w-4 mr-2" /> Hapus
-                      </DropdownMenuItem>
+                      {account.isActive === false ? (
+                        <DropdownMenuItem onClick={() => handleToggleStatus(account)}>
+                          <Power className="h-4 w-4 mr-2 text-green-600" /> Aktifkan
+                        </DropdownMenuItem>
+                      ) : (
+                        <DropdownMenuItem
+                          className="text-destructive"
+                          onClick={() => {
+                            setSelectedAccount(account);
+                            setIsConfirmDeleteOpen(true);
+                          }}
+                        >
+                          <Trash2 className="h-4 w-4 mr-2" /> Nonaktifkan
+                        </DropdownMenuItem>
+                      )}
                     </DropdownMenuContent>
                   </DropdownMenu>
                 </div>
@@ -345,16 +373,16 @@ export function BankAccountsManager() {
         </DialogContent>
       </Dialog>
 
-      {/* DELETE CONFIRM DIALOG */}
+      {/* DEACTIVATE CONFIRM DIALOG */}
       <Dialog
         open={isConfirmDeleteOpen}
         onOpenChange={setIsConfirmDeleteOpen}
       >
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Hapus Rekening?</DialogTitle>
+            <DialogTitle>Nonaktifkan Rekening?</DialogTitle>
             <DialogDescription>
-              Tindakan ini tidak dapat dibatalkan. Rekening <strong>{selectedAccount?.bankName} - {selectedAccount?.accountNumber}</strong> akan dinonaktifkan.
+              Rekening <strong>{selectedAccount?.bankName} - {selectedAccount?.accountNumber}</strong> akan dinonaktifkan dari sistem. Rekening ini tidak akan muncul pada pilihan pembayaran baru.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
@@ -368,7 +396,7 @@ export function BankAccountsManager() {
               variant="destructive"
               onClick={handleDelete}
             >
-              Hapus
+              Nonaktifkan
             </Button>
           </DialogFooter>
         </DialogContent>

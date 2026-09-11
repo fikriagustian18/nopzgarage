@@ -115,9 +115,16 @@ export function BookingForm({
           description: "Silakan simpan nomor antrian Anda."
         });
       } else {
-        toast.error("Gagal", {
-          description: result.error || "Terjadi kesalahan sistem."
-        });
+        if ((result as any).code === "GARAGE_CLOSED") {
+          toast.error("Bengkel Sedang Tutup", {
+            description: result.error || "Maaf, saat ini bengkel sedang libur dan tidak menerima booking.",
+            duration: 8000,
+          });
+        } else {
+          toast.error("Gagal", {
+            description: result.error || "Terjadi kesalahan sistem."
+          });
+        }
       }
     } catch {
       toast.error("Error", { 
