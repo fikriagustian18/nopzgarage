@@ -69,9 +69,9 @@ Daftar pemasukan ditampilkan dalam tabel dengan fitur pencarian dan filter berda
 
 ### 8. Pencatatan Pengeluaran (`/admin/expenses`)
 
-Halaman Expenses mengelola seluruh pengeluaran operasional bengkel seperti pembelian stok, biaya listrik, sewa tempat, pembelian tools, dan pengeluaran rutin lainnya. Sama seperti income, form mencakup tanggal, kategori pengeluaran, jumlah, akun kas/bank sumber, dan deskripsi/referensi nota. Sistem menyediakan kategori pengeluaran yang dapat dikustomisasi sesuai kebutuhan bengkel.
+Halaman Expenses mengelola seluruh pengeluaran operasional bengkel seperti pembelian stok, biaya listrik, sewa tempat, pembelian tools, dan pengeluaran rutin lainnya. Form input mewajibkan pemilihan sumber dana (**Kas Utama** atau **Rekening Bank** aktif) yang dilengkapi dengan tampilan sisa saldo *real-time*. Sistem menyediakan kategori pengeluaran yang dapat dikustomisasi sesuai kebutuhan bengkel.
 
-Setiap expense yang dicatat akan otomatis memotong saldo akun Kas/Bank terkait (`Account.currentBalance`) dan mencatat mutasi pada tabel `Payment`. Tabel pengeluaran menampilkan histori lengkap dengan kemampuan search dan delete. Dashboard expense menampilkan total pengeluaran dan breakdown per kategori.
+Setiap expense yang dicatat diproses secara atomik dalam transaksi database: memvalidasi keaktifan rekening dan kecukupan saldo, memotong saldo akun Kas/Bank terkait (`Account.currentBalance`), serta mencatat mutasi pada tabel `Payment` berelasi dengan `bankAccountId`. Jika data pengeluaran dihapus, sistem secara otomatis mengembalikan (*restore*) saldo ke rekening/kas terkait sebelum menghapus record pembayaran. Tabel pengeluaran menampilkan histori lengkap dengan kolom sumber dana, filter, dan pencarian. Dashboard expense menampilkan total pengeluaran dan breakdown per kategori.
 
 ### 9. Laporan Keuangan (`/admin/reports`)
 
@@ -98,7 +98,7 @@ Halaman Settings adalah pusat konfigurasi seluruh aspek sistem yang dibagi dalam
 
 **User Management**: Pengelolaan akun pengguna sistem termasuk pembuatan user baru, assignment role (admin, employee), linking ke data employee, reset password, dan aktivasi/deaktivasi akun.
 
-**Bank Accounts**: Konfigurasi rekening bank untuk penerimaan pembayaran transfer. Mendukung pengelolaan status aktif/nonaktif rekening secara aman; rekening nonaktif tetap tersimpan di daftar pengaturan untuk dapat diaktifkan kembali, namun otomatis terfilter dari opsi transaksi operasional kasir/pembayaran.
+**Bank Accounts**: Konfigurasi rekening bank untuk penerimaan pembayaran transfer dan sumber dana pengeluaran operasional. Menerapkan pola **hapus jika aman** (*safe deletion*): rekening hanya dapat dihapus permanen oleh Owner apabila telah berstatus nonaktif, saldo tepat Rp0, dan tidak pernah memiliki riwayat transaksi (`transactionCount === 0`). Rekening yang memiliki riwayat transaksi diproteksi sebagai arsip audit historis. Rekening nonaktif dicegah secara ketat di tingkat server untuk transaksi operasional baru (pembayaran order, payroll, dan pengeluaran). Saldo tersisa pada rekening nonaktif tetap diperhitungkan dalam total saldo kas/bank dashboard.
 
 **Forgot Password Requests**: Dashboard untuk admin menangani permintaan reset password dari user yang lupa password, dengan approval/reject workflow.
 
@@ -114,7 +114,11 @@ Halaman Status (`/status`) memungkinkan pelanggan melacak status servis kendaraa
 
 ### 12. Dashboard Karyawan (`/employee`)
 
-Portal khusus untuk karyawan (mekanik/helper) yang login dengan akun employee role. Dashboard ini menampilkan: daftar order yang di-assign ke karyawan tersebut, status order terkini, summary komisi bulan ini, dan komisi yang belum dibayar. Karyawan dapat memperbarui status order yang mereka kerjakan dan melihat detail order tanpa akses ke fitur admin seperti keuangan atau konfigurasi.
+Portal baca saja untuk karyawan (mekanik/helper) dengan role `EMPLOYEE` dan akun yang terhubung ke data karyawan melalui `employeeId`. Dashboard menampilkan pekerjaan aktif, antrian pekerjaan, total pendapatan dari fee/komisi order selesai, total pembayaran payroll, sisa pendapatan yang belum dibayar, riwayat pekerjaan, slip gaji, dan profil karyawan. Ringkasan pendapatan mencakup seluruh riwayat yang dimuat, tanpa filter bulan berjalan.
+
+Data dimuat di server melalui `getEmployeeDetail()` pada [`lib/actions/employees.ts`](lib/actions/employees.ts) dan ditampilkan oleh [`EmployeeDashboardClient.tsx`](app/employee/EmployeeDashboardClient.tsx). Tab **Riwayat** menampilkan maksimal 20 entri fee terbaru dari order berstatus `COMPLETED`. Fee berasal dari item eksplisit bertipe `fee` untuk karyawan tersebut, atau dari perhitungan komisi jasa servis jika karyawan adalah mekanik utama dan tidak memiliki fee eksplisit pada order itu.
+
+Setiap entri `orderFees` menyertakan `order.id`, `order.custName`, `order.vehicle`, dan `order.plateNumber`, baik untuk fee eksplisit maupun komisi hasil perhitungan. ID order digunakan untuk menampilkan lima karakter terakhir, sedangkan nama pelanggan dan informasi kendaraan ditampilkan sebagai identitas pekerjaan. Query order harus mengambil `custName` dan pemetaan kedua jenis fee harus mempertahankan seluruh field tersebut agar tampilan riwayat dapat dirender tanpa error.
 
 ---
 
@@ -923,6 +927,10 @@ erDiagram
 | **PK** | Primary Key | Kunci utama / identitas unik setiap baris tabel |
 | **FK** | Foreign Key | Kunci asing yang merujuk pada tabel relasi |
 | **UK** | Unique Key | Constraint yang menjamin keunikan nilai kolom |
+
+> [!NOTE]
+> **Integritas Relasi Finansial (`ON DELETE RESTRICT`)**:
+> Relasi `Account` ke `Payment` (`bankAccountId`) dikonfigurasi dengan constraint `onDelete: Restrict` baik di tingkat database PostgreSQL maupun validasi Server Actions. Hal ini mencegah *cascade delete* rekening yang memiliki riwayat transaksi moneter, sehingga rekam jejak audit laporan laba rugi, arus kas, dan histori pembayaran tetap utuh tanpa risiko anomali data.
 
 ---
 

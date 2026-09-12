@@ -770,6 +770,7 @@ export async function getEmployeeDetail(id: string) {
           orders."status"::text AS "status",
           orders."createdAt",
           orders."items",
+          orders."custName",
           orders."vehicle",
           orders."plateNumber",
           orders."mechanicId"
@@ -858,6 +859,8 @@ export async function getEmployeeDetail(id: string) {
             id: `${o.id}-fee-${idx}`,
             createdAt: o.createdAt,
             order: {
+              id: o.id,
+              custName: o.custName,
               vehicle: o.vehicle,
               plateNumber: o.plateNumber,
             },
@@ -883,6 +886,8 @@ export async function getEmployeeDetail(id: string) {
             id: `${o.id}-commission`,
             createdAt: o.createdAt,
             order: {
+              id: o.id,
+              custName: o.custName,
               vehicle: o.vehicle,
               plateNumber: o.plateNumber,
             },

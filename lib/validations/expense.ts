@@ -8,7 +8,7 @@ export const expenseSchema = z.object({
     .finite("Nominal pengeluaran wajib berupa angka yang valid.")
     .positive("Nominal pengeluaran harus lebih besar dari 0."),
   reference: z.string().trim().min(1, "Nomor referensi / bukti transaksi wajib diisi."),
-  accountId: z.string().trim().optional(),
+  accountId: z.string().trim().min(1, "Sumber dana wajib dipilih."),
   date: z.date().optional(),
 });
 

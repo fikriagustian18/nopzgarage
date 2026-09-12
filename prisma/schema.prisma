@@ -120,7 +120,7 @@ model Payment {
   order         Order?    @relation(fields: [orderId], references: [id], onDelete: Cascade)
   employee      Employee? @relation(fields: [employeeId], references: [id], onDelete: Cascade)
   payroll       Payroll?  @relation(fields: [payrollId], references: [id], onDelete: SetNull)
-  bankAccount   Account?  @relation(fields: [bankAccountId], references: [id])
+  bankAccount   Account?  @relation(fields: [bankAccountId], references: [id], onDelete: Restrict)
 
   @@index([orderId])
   @@index([employeeId])

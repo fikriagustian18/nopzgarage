@@ -127,14 +127,13 @@ export async function getDashboardStats(): Promise<{ success: boolean; data?: Da
                 createdAt: { gte: firstDayOfMonth, lte: lastDayOfMonth }
             }
         }),
-        // Financial - Cash & Bank Accounts for Saldo Kas
+        // Financial - Cash & Bank Accounts for Saldo Kas (includes inactive bank accounts with remaining balance)
         prisma.account.findMany({
             where: {
                 OR: [
                     { code: '101' },
                     { type: 'BANK' },
                 ],
-                isActive: true,
             }
         }),
         

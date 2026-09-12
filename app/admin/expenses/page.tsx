@@ -44,9 +44,11 @@ import {
 import { toast } from "@/hooks/useToast";
 import {
   getExpenseCategories,
+  getExpenseFundSources,
   createExpense,
   getExpenses,
   deleteExpense,
+  type ExpenseFundSource,
 } from "@/lib/actions/expenses";
 import { expenseSchema } from "@/lib/validations/expense";
 
@@ -58,6 +60,7 @@ interface Expense {
   category: string;
   categoryCode: string;
   amount: number;
+  source: string;
 }
 
 interface ExpenseCategory {
@@ -71,6 +74,7 @@ interface ExpenseFormData {
   amount: string;
   category: string;
   reference: string;
+  accountId: string;
 }
 
 type ExpenseFieldErrors = Partial<Record<keyof ExpenseFormData, string>>;
@@ -81,6 +85,7 @@ type ExpenseFieldErrors = Partial<Record<keyof ExpenseFormData, string>>;
 export default function Page() {
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [categories, setCategories] = useState<ExpenseCategory[]>([]);
+  const [sources, setSources] = useState<ExpenseFundSource[]>([]);
   const [loading, setLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -92,14 +97,19 @@ export default function Page() {
     amount: "",
     category: "Beban Operasional",
     reference: "",
+    accountId: "",
   });
 
-  // Load expense and category records from server
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  // Load expense, category, and fund source records from server
   async function loadData() {
-    setLoading(true);
-    const [expenseRes, categoryRes] = await Promise.all([
+    const [expenseRes, categoryRes, sourceRes] = await Promise.all([
       getExpenses(),
       getExpenseCategories(),
+      getExpenseFundSources(),
     ]);
 
     if (expenseRes.success) {
@@ -108,12 +118,17 @@ export default function Page() {
     if (categoryRes.success) {
       setCategories((categoryRes.accounts as ExpenseCategory[]) ?? []);
     }
+    if (sourceRes.success && sourceRes.sources) {
+      setSources(sourceRes.sources);
+      if (sourceRes.sources.length > 0) {
+        setFormData((prev) => ({
+          ...prev,
+          accountId: prev.accountId || sourceRes.sources![0].id,
+        }));
+      }
+    }
     setLoading(false);
   }
-
-  useEffect(() => {
-    loadData();
-  }, []);
 
   // Handle new expense form submission
   async function handleSubmit() {
@@ -125,6 +140,7 @@ export default function Page() {
         description: flattened.description?.[0],
         amount: flattened.amount?.[0],
         reference: flattened.reference?.[0],
+        accountId: flattened.accountId?.[0],
       });
       toast({
         variant: "destructive",
@@ -141,6 +157,7 @@ export default function Page() {
       amount: validation.data.amount,
       category: validation.data.category,
       reference: validation.data.reference,
+      accountId: validation.data.accountId,
     });
 
     if (result.success) {
@@ -154,6 +171,7 @@ export default function Page() {
         amount: "",
         category: "Beban Operasional",
         reference: "",
+        accountId: sources.length > 0 ? sources[0].id : "",
       });
       setFieldErrors({});
       loadData();
@@ -174,9 +192,17 @@ export default function Page() {
     if (!confirm("Hapus data ini?")) {
       return;
     }
-    await deleteExpense(id);
-    loadData();
-    toast({ description: "Data dihapus" });
+    const result = await deleteExpense(id);
+    if (!result.success) {
+      toast({
+        variant: "destructive",
+        title: "Gagal menghapus pengeluaran",
+        description: result.error || "Terjadi kesalahan saat menghapus data.",
+      });
+      return;
+    }
+    await loadData();
+    toast({ description: "Data pengeluaran dihapus dan saldo sumber dana dipulihkan." });
   }
 
   // Calculate total expense sum
@@ -297,6 +323,36 @@ export default function Page() {
 
                       <div className="space-y-2">
                         <Label>
+                          Sumber Dana <span className="text-red-500">*</span>
+                        </Label>
+                        <Select
+                          value={formData.accountId}
+                          onValueChange={(val) => {
+                            setFormData({ ...formData, accountId: val });
+                            setFieldErrors((errors) => ({ ...errors, accountId: undefined }));
+                          }}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Pilih Sumber Dana / Rekening" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {sources.map((source) => (
+                              <SelectItem
+                                key={source.id}
+                                value={source.id}
+                              >
+                                {source.name} (Saldo: Rp {source.balance.toLocaleString("id-ID")})
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        {fieldErrors.accountId && (
+                          <p className="text-xs text-destructive">{fieldErrors.accountId}</p>
+                        )}
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label>
                           Deskripsi / Keterangan <span className="text-red-500">*</span>
                         </Label>
                         <Input
@@ -392,6 +448,7 @@ export default function Page() {
                       <TableHead>Tanggal</TableHead>
                       <TableHead>Deskripsi</TableHead>
                       <TableHead>Ref</TableHead>
+                      <TableHead>Sumber Dana</TableHead>
                       <TableHead>Kategori</TableHead>
                       <TableHead className="text-right">Nominal</TableHead>
                       <TableHead className="w-[50px]" />
@@ -401,7 +458,7 @@ export default function Page() {
                     {loading ? (
                       <TableRow>
                         <TableCell
-                          colSpan={6}
+                          colSpan={7}
                           className="text-center py-8"
                         >
                           <Loader2 className="mx-auto h-6 w-6 animate-spin text-muted-foreground" />
@@ -410,7 +467,7 @@ export default function Page() {
                     ) : filteredExpenses.length === 0 ? (
                       <TableRow>
                         <TableCell
-                          colSpan={6}
+                          colSpan={7}
                           className="text-center py-8 text-muted-foreground"
                         >
                           {searchQuery
@@ -436,6 +493,9 @@ export default function Page() {
                           </TableCell>
                           <TableCell className="text-xs text-muted-foreground font-mono">
                             {expense.reference ?? "(-)"}
+                          </TableCell>
+                          <TableCell className="text-xs text-muted-foreground font-medium">
+                            {expense.source}
                           </TableCell>
                           <TableCell>
                             <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400 border border-red-200 dark:border-red-900/50">

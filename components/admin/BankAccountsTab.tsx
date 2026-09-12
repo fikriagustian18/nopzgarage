@@ -5,14 +5,16 @@ import {
   getAllBankAccounts,
   createBankAccount,
   deactivateBankAccount,
-  toggleBankAccount
+  deleteBankAccount,
+  toggleBankAccount,
+  type BankAccountAdminItem
 } from "@/lib/actions/bank";
 import {
   Trash2,
   Plus,
   CreditCard,
   Building2,
-  PowerOff
+  Info
 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
@@ -22,6 +24,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
@@ -31,9 +34,10 @@ import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 
 export function BankAccountsTab() {
-  const [banks, setBanks] = useState<any[]>([]);
+  const [banks, setBanks] = useState<BankAccountAdminItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [infoBank, setInfoBank] = useState<BankAccountAdminItem | null>(null);
   
   // Form State
   const [newBank, setNewBank] = useState({
@@ -72,14 +76,25 @@ export function BankAccountsTab() {
       }
   }
 
-  async function handleDelete(id: string) {
-      if (!confirm("Yakin ingin menonaktifkan rekening ini?")) return;
+  async function handleDeactivate(id: string) {
+      if (!confirm("Yakin ingin menonaktifkan rekening ini? Rekening tidak akan muncul di pilihan pembayaran baru.")) return;
       const res = await deactivateBankAccount(id);
       if (res.success) {
           toast.success("Rekening berhasil dinonaktifkan");
           loadBanks();
       } else if ('error' in res) {
           toast.error(res.error);
+      }
+  }
+
+  async function handlePermanentDelete(bank: BankAccountAdminItem) {
+      if (!confirm(`Hapus permanen rekening ${bank.bankName} - ${bank.accountNumber}? Tindakan ini tidak dapat dibatalkan.`)) return;
+      const res = await deleteBankAccount(bank.id);
+      if (res.success) {
+          toast.success(res.message || "Rekening berhasil dihapus permanen");
+          loadBanks();
+      } else {
+          toast.error(res.error || "Gagal menghapus rekening bank");
       }
   }
 
@@ -180,18 +195,48 @@ export function BankAccountsTab() {
                                         )}
                                     </div>
                                     <p className="text-sm text-muted-foreground">{bank.accountNumber}</p>
+                                    {!bank.isActive && (
+                                        <p className="text-[11px] mt-1">
+                                            {bank.canDeletePermanently ? (
+                                                <span className="text-emerald-600 font-medium">Siap dihapus permanen</span>
+                                            ) : (
+                                                <span className="text-amber-600 font-medium">{bank.transactionCount} transaksi (arsip audit)</span>
+                                            )}
+                                        </p>
+                                    )}
                                 </div>
                             </div>
                             <div className="flex gap-2">
-                                {bank.isActive && (
+                                {bank.isActive ? (
                                     <Button
                                       size="icon"
                                       variant="ghost"
                                       title="Nonaktifkan Rekening"
                                       className="h-8 w-8 text-destructive hover:bg-destructive/10"
-                                      onClick={() => handleDelete(bank.id)}
+                                      onClick={() => handleDeactivate(bank.id)}
                                     >
                                         <Trash2 className="h-4 w-4" />
+                                    </Button>
+                                ) : bank.canDeletePermanently ? (
+                                    <Button
+                                      size="icon"
+                                      variant="ghost"
+                                      title="Hapus Permanen Rekening"
+                                      className="h-8 w-8 text-destructive hover:bg-destructive/10"
+                                      onClick={() => handlePermanentDelete(bank)}
+                                    >
+                                        <Trash2 className="h-4 w-4 text-red-600" />
+                                    </Button>
+                                ) : (
+                                    <Button
+                                      type="button"
+                                      size="icon"
+                                      variant="ghost"
+                                      title={bank.reasons?.join(". ") || "Rekening memiliki riwayat transaksi"}
+                                      className="h-8 w-8 text-muted-foreground"
+                                      onClick={() => setInfoBank(bank)}
+                                    >
+                                      <Info className="h-4 w-4 text-muted-foreground" />
                                     </Button>
                                 )}
                             </div>
@@ -212,6 +257,31 @@ export function BankAccountsTab() {
                 ))}
             </div>
         )}
+
+        <Dialog open={Boolean(infoBank)} onOpenChange={(open) => !open && setInfoBank(null)}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Mengapa Rekening Tidak Dapat Dihapus?</DialogTitle>
+              <DialogDescription>
+                {infoBank?.bankName} - {infoBank?.accountNumber} tetap disimpan untuk menjaga histori keuangan.
+              </DialogDescription>
+            </DialogHeader>
+            <ul className="list-disc space-y-1 pl-5 text-sm text-destructive">
+              {infoBank?.reasons.map((reason) => <li key={reason}>{reason}</li>)}
+            </ul>
+            {infoBank && (
+              <div className="space-y-1 rounded-md bg-muted p-3 text-xs">
+                <p>Pembayaran order: {infoBank.usageByType.orderPayments}</p>
+                <p>Pengeluaran: {infoBank.usageByType.expenses}</p>
+                <p>Payroll: {infoBank.usageByType.payroll}</p>
+                <p>Pemasukan lain: {infoBank.usageByType.income}</p>
+              </div>
+            )}
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setInfoBank(null)}>Tutup</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </CardContent>
     </Card>
   );
