@@ -4,6 +4,32 @@ Semua perubahan penting pada proyek **NopzGarage Management System** akan dicata
 
 Format dokumen ini mengacu pada [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [2.6.0] - 2026-09-12
+
+### 🛡️ Safe Bank Account Deletion & Foreign Key Integrity
+- **Penerapan Pola Hapus Jika Aman (*Safe Deletion*)**:
+  - Memperbarui relasi `Payment.bankAccount` pada [`prisma/schema.prisma`](prisma/schema.prisma) menjadi `onDelete: Restrict` dan menambahkan migrasi [`20260912120000_restrict_bank_account_delete`](prisma/migrations/20260912120000_restrict_bank_account_delete/migration.sql) untuk mengganti foreign key lama (`SET NULL`) menjadi `RESTRICT`, mencegah *cascade delete* yang dapat merusak integritas data finansial.
+  - Menghadirkan modul aturan bisnis murni [`lib/bank/rules.ts`](lib/bank/rules.ts) untuk mengevaluasi kelayakan penghapusan rekening secara deterministik.
+  - Memperbarui Server Action `deleteBankAccount()` pada [`lib/actions/bank.ts`](lib/actions/bank.ts) khusus role `OWNER` yang berjalan dalam `prisma.$transaction`. Penghapusan permanen hanya diizinkan jika rekening telah nonaktif (`isActive: false`), saldo tepat Rp0, dan tidak pernah memiliki riwayat transaksi (`transactionCount: 0`).
+  - Mengembalikan kode kegagalan terstruktur (`ACCOUNT_ACTIVE`, `NON_ZERO_BALANCE`, `ACCOUNT_IN_USE`) dan mencatat audit log `DELETE_BANK_ACCOUNT`.
+  - Memperluas query `getAllBankAccounts()` dan `getAccountDeletionInfo()` dengan metadata `canDeletePermanently`, `transactionCount`, `usageByType`, dan `reasons`.
+  - Memperbarui UI pada [`BankAccountsManager.tsx`](components/admin/BankAccountsManager.tsx) dan [`BankAccountsTab.tsx`](components/admin/BankAccountsTab.tsx) dengan badge hijau **Siap dihapus** untuk rekening bersih, dialog konfirmasi hapus permanen, serta dialog rincian pemakaian (*audit archive info*) untuk rekening yang diproteksi karena memiliki riwayat transaksi.
+
+### 💰 Mandatory Expense Fund Source & Atomic Balance Management
+- **Integrasi Sumber Dana Pengeluaran Operasional & Penyesuaian Saldo Otomatis**:
+  - Mewajibkan pemilihan `accountId` pada skema validasi pengeluaran [`lib/validations/expense.ts`](lib/validations/expense.ts).
+  - Menambahkan Server Action `getExpenseFundSources()` pada [`lib/actions/expenses.ts`](lib/actions/expenses.ts) untuk mengambil Kas Utama (101) dan seluruh rekening bank aktif.
+  - Menjalankan `createExpense()` secara atomik dalam transaksi database: memvalidasi keaktifan rekening & kecukupan saldo, mendebit `currentBalance` akun sumber, dan membuat record `Payment` dengan relasi `bankAccountId`.
+  - Menjalankan `deleteExpense()` dengan pemulihan saldo otomatis ke rekening sumber dana sebelum record `Payment` dihapus.
+  - Memperbarui UI form pencatatan pengeluaran pada [`app/admin/expenses/page.tsx`](app/admin/expenses/page.tsx) dengan dropdown wajib **Sumber Dana** yang menampilkan sisa saldo kas/bank secara *real-time*, serta menambahkan kolom sumber dana pada tabel riwayat pengeluaran.
+
+### 🔒 Payment Operational Safeguards & Cash Balance Reconciliation
+- **Proteksi Transaksi Operasional & Rekonsiliasi Saldo Dashboard**:
+  - Menambahkan validasi server-side pada `createPayment()` dan `createPayrollPayment()` ([`lib/actions/payments.ts`](lib/actions/payments.ts)) yang menolak penggunaan rekening berstatus nonaktif.
+  - Memperbarui kalkulasi `cashBalance` pada [`lib/actions/dashboard.ts`](lib/actions/dashboard.ts) agar menyertakan saldo dari seluruh akun kas dan bank (termasuk rekening nonaktif yang masih memiliki saldo tersisa) demi akurasi total aset kas/bank bengkel.
+
+---
+
 ## [2.5.0] - 2026-09-11
 
 ### 🏦 Bank Account Status & Management Improvement

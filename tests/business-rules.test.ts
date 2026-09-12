@@ -8,6 +8,11 @@ import {
 } from "../lib/finance/reportCalculations.ts";
 import { formatOrderNo } from "../lib/utils.ts";
 import { expenseSchema } from "../lib/validations/expense.ts";
+import {
+  evaluateAccountDeletionRules,
+  validateAccountForOperationalUse,
+  calculateBalanceOnExpenseAction,
+} from "../lib/bank/rules.ts";
 
 test("commission is calculated as a percentage of service subtotal", () => {
   assert.equal(calculateCommission(200_000, 25), 50_000);
@@ -26,12 +31,24 @@ test("expense validation rejects empty fields and invalid amounts", () => {
     expenseSchema.safeParse({ category: " ", description: "", amount: 0, reference: "" }).success,
     false
   );
+  // Missing accountId must fail
   assert.equal(
     expenseSchema.safeParse({
       category: "Beban Operasional",
       description: "Listrik",
       amount: "250000",
       reference: "INV-001",
+    }).success,
+    false
+  );
+  // Valid input with accountId
+  assert.equal(
+    expenseSchema.safeParse({
+      category: "Beban Operasional",
+      description: "Listrik",
+      amount: "250000",
+      reference: "INV-001",
+      accountId: "acc-101",
     }).success,
     true
   );
@@ -129,4 +146,113 @@ test("bank account operational filter excludes deactivated accounts while admin 
   assert.deepEqual(operationalAccounts.map((a) => a.id), ["1", "3"]);
   assert.equal(adminAccounts.length, 3);
   assert.deepEqual(adminAccounts.map((a) => a.id), ["1", "2", "3"]);
+});
+
+test("safe bank account deletion rejects active accounts, accounts with balance, and accounts with transactions", () => {
+  // 1. Active account cannot be deleted
+  const activeAccount = evaluateAccountDeletionRules({
+    isActive: true,
+    currentBalance: 0,
+    transactionCount: 0,
+  });
+  assert.equal(activeAccount.canDelete, false);
+  assert.equal(activeAccount.code, "ACCOUNT_ACTIVE");
+  assert.match(activeAccount.reasons[0], /masih aktif/);
+
+  // 2. Inactive account with positive balance cannot be deleted
+  const balanceAccount = evaluateAccountDeletionRules({
+    isActive: false,
+    currentBalance: 500_000,
+    transactionCount: 0,
+  });
+  assert.equal(balanceAccount.canDelete, false);
+  assert.equal(balanceAccount.code, "NON_ZERO_BALANCE");
+  assert.match(balanceAccount.reasons[0], /Saldo harus tepat Rp0/);
+
+  // 3. Inactive account with transactions cannot be deleted
+  const usedAccount = evaluateAccountDeletionRules({
+    isActive: false,
+    currentBalance: 0,
+    transactionCount: 4,
+  });
+  assert.equal(usedAccount.canDelete, false);
+  assert.equal(usedAccount.code, "ACCOUNT_IN_USE");
+  assert.match(usedAccount.reasons[0], /pernah digunakan dalam 4 transaksi/);
+
+  // 4. Combined violations list all reasons
+  const allViolations = evaluateAccountDeletionRules({
+    isActive: true,
+    currentBalance: 1_000_000,
+    transactionCount: 12,
+  });
+  assert.equal(allViolations.canDelete, false);
+  assert.equal(allViolations.reasons.length, 3);
+});
+
+test("safe bank account deletion accepts inactive account with zero balance and zero transactions", () => {
+  const safeAccount = evaluateAccountDeletionRules({
+    isActive: false,
+    currentBalance: 0,
+    transactionCount: 0,
+  });
+  assert.equal(safeAccount.canDelete, true);
+  assert.equal(safeAccount.reasons.length, 0);
+  assert.equal(safeAccount.code, undefined);
+});
+
+test("deactivating an in-use bank account preserves revenue, expense, and net profit calculations", () => {
+  const payments = [
+    { id: "p1", type: "ORDER_PAYMENT", amount: 1_000_000, bankAccountId: "bca-1" },
+    { id: "p2", type: "EXPENSE", amount: 200_000, bankAccountId: "bca-1" },
+    { id: "p3", type: "PAYROLL", amount: 300_000, bankAccountId: "bca-1" },
+  ];
+
+  const beforeDeactivation = calculatePeriodFinancialActivity(payments);
+  const afterDeactivation = calculatePeriodFinancialActivity([...payments]);
+
+  assert.equal(beforeDeactivation.periodRevenue, 1_000_000);
+  assert.equal(beforeDeactivation.periodExpense, 500_000);
+  assert.equal(beforeDeactivation.periodRevenue - beforeDeactivation.periodExpense, 500_000);
+  assert.deepEqual(beforeDeactivation, afterDeactivation);
+});
+
+test("expense fund balance operations maintain atomicity on create and delete", () => {
+  const initialBalance = 1_000_000;
+  const expenseAmount = 250_000;
+
+  // Create expense deducts balance
+  const balanceAfterExpense = calculateBalanceOnExpenseAction(initialBalance, expenseAmount, "create");
+  assert.equal(balanceAfterExpense, 750_000);
+
+  // Insufficient balance throws
+  assert.throws(
+    () => calculateBalanceOnExpenseAction(100_000, 250_000, "create"),
+    /Saldo tidak mencukupi/
+  );
+
+  // Delete expense restores balance exactly
+  const restoredBalance = calculateBalanceOnExpenseAction(balanceAfterExpense, expenseAmount, "delete");
+  assert.equal(restoredBalance, initialBalance);
+});
+
+test("operational payment validation rejects inactive bank accounts", () => {
+  // Active account with sufficient balance passes
+  assert.deepEqual(
+    validateAccountForOperationalUse({ isActive: true, currentBalance: 500_000, requiredAmount: 200_000 }),
+    { isValid: true }
+  );
+
+  // Inactive account is rejected
+  const inactiveResult = validateAccountForOperationalUse({ isActive: false, currentBalance: 500_000 });
+  assert.equal(inactiveResult.isValid, false);
+  assert.match(inactiveResult.error!, /tidak aktif/);
+
+  // Active account with insufficient balance is rejected
+  const insufficientResult = validateAccountForOperationalUse({
+    isActive: true,
+    currentBalance: 50_000,
+    requiredAmount: 200_000,
+  });
+  assert.equal(insufficientResult.isValid, false);
+  assert.match(insufficientResult.error!, /tidak mencukupi/);
 });

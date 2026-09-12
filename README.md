@@ -69,9 +69,9 @@ Daftar pemasukan ditampilkan dalam tabel dengan fitur pencarian dan filter berda
 
 ### 8. Pencatatan Pengeluaran (`/admin/expenses`)
 
-Halaman Expenses mengelola seluruh pengeluaran operasional bengkel seperti pembelian stok, biaya listrik, sewa tempat, pembelian tools, dan pengeluaran rutin lainnya. Sama seperti income, form mencakup tanggal, kategori pengeluaran, jumlah, akun kas/bank sumber, dan deskripsi/referensi nota. Sistem menyediakan kategori pengeluaran yang dapat dikustomisasi sesuai kebutuhan bengkel.
+Halaman Expenses mengelola seluruh pengeluaran operasional bengkel seperti pembelian stok, biaya listrik, sewa tempat, pembelian tools, dan pengeluaran rutin lainnya. Form input mewajibkan pemilihan sumber dana (**Kas Utama** atau **Rekening Bank** aktif) yang dilengkapi dengan tampilan sisa saldo *real-time*. Sistem menyediakan kategori pengeluaran yang dapat dikustomisasi sesuai kebutuhan bengkel.
 
-Setiap expense yang dicatat akan otomatis memotong saldo akun Kas/Bank terkait (`Account.currentBalance`) dan mencatat mutasi pada tabel `Payment`. Tabel pengeluaran menampilkan histori lengkap dengan kemampuan search dan delete. Dashboard expense menampilkan total pengeluaran dan breakdown per kategori.
+Setiap expense yang dicatat diproses secara atomik dalam transaksi database: memvalidasi keaktifan rekening dan kecukupan saldo, memotong saldo akun Kas/Bank terkait (`Account.currentBalance`), serta mencatat mutasi pada tabel `Payment` berelasi dengan `bankAccountId`. Jika data pengeluaran dihapus, sistem secara otomatis mengembalikan (*restore*) saldo ke rekening/kas terkait sebelum menghapus record pembayaran. Tabel pengeluaran menampilkan histori lengkap dengan kolom sumber dana, filter, dan pencarian. Dashboard expense menampilkan total pengeluaran dan breakdown per kategori.
 
 ### 9. Laporan Keuangan (`/admin/reports`)
 
@@ -98,7 +98,7 @@ Halaman Settings adalah pusat konfigurasi seluruh aspek sistem yang dibagi dalam
 
 **User Management**: Pengelolaan akun pengguna sistem termasuk pembuatan user baru, assignment role (admin, employee), linking ke data employee, reset password, dan aktivasi/deaktivasi akun.
 
-**Bank Accounts**: Konfigurasi rekening bank untuk penerimaan pembayaran transfer. Mendukung pengelolaan status aktif/nonaktif rekening secara aman; rekening nonaktif tetap tersimpan di daftar pengaturan untuk dapat diaktifkan kembali, namun otomatis terfilter dari opsi transaksi operasional kasir/pembayaran.
+**Bank Accounts**: Konfigurasi rekening bank untuk penerimaan pembayaran transfer dan sumber dana pengeluaran operasional. Menerapkan pola **hapus jika aman** (*safe deletion*): rekening hanya dapat dihapus permanen oleh Owner apabila telah berstatus nonaktif, saldo tepat Rp0, dan tidak pernah memiliki riwayat transaksi (`transactionCount === 0`). Rekening yang memiliki riwayat transaksi diproteksi sebagai arsip audit historis. Rekening nonaktif dicegah secara ketat di tingkat server untuk transaksi operasional baru (pembayaran order, payroll, dan pengeluaran). Saldo tersisa pada rekening nonaktif tetap diperhitungkan dalam total saldo kas/bank dashboard.
 
 **Forgot Password Requests**: Dashboard untuk admin menangani permintaan reset password dari user yang lupa password, dengan approval/reject workflow.
 
@@ -923,6 +923,10 @@ erDiagram
 | **PK** | Primary Key | Kunci utama / identitas unik setiap baris tabel |
 | **FK** | Foreign Key | Kunci asing yang merujuk pada tabel relasi |
 | **UK** | Unique Key | Constraint yang menjamin keunikan nilai kolom |
+
+> [!NOTE]
+> **Integritas Relasi Finansial (`ON DELETE RESTRICT`)**:
+> Relasi `Account` ke `Payment` (`bankAccountId`) dikonfigurasi dengan constraint `onDelete: Restrict` baik di tingkat database PostgreSQL maupun validasi Server Actions. Hal ini mencegah *cascade delete* rekening yang memiliki riwayat transaksi moneter, sehingga rekam jejak audit laporan laba rugi, arus kas, dan histori pembayaran tetap utuh tanpa risiko anomali data.
 
 ---
 
