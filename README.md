@@ -25,9 +25,15 @@ Sistem ini dibangun menggunakan arsitektur modern dengan Next.js 14 App Router, 
 
 ### 1. Dashboard Admin (`/admin`)
 
-Dashboard Admin merupakan pusat kontrol utama sistem yang menyajikan ringkasan komprehensif mengenai performa bisnis bengkel. Halaman ini menampilkan empat kartu metrik utama yang dilengkapi dengan mini-chart interaktif: Total Revenue (pendapatan keseluruhan dengan tren bulanan), Total Expenses (pengeluaran operasional), Net Profit (keuntungan bersih), dan Active Orders (order yang sedang dalam proses). Setiap kartu menampilkan persentase perubahan dibandingkan periode sebelumnya.
+Dashboard Admin dapat diakses oleh role `OWNER` dan `ADMIN`. Halaman ini menampilkan lima metrik: Total Booking hari ini, Order Servis yang sedang diproses, Selesai Hari Ini, Total Transaksi hari ini, dan Stok Menipis. Ringkasan saldo kas dan rekening bank ditampilkan khusus untuk `OWNER`.
 
-Di bawah kartu metrik, terdapat grafik area yang menunjukkan tren revenue dan expenses dalam 7 hari terakhir, memberikan insight visual tentang arus kas harian. Terdapat juga pie chart distribusi status order yang membantu admin memahami komposisi workload antara order pending, in-progress, dan completed. Panel aktivitas terbaru menampilkan log real-time dari seluruh aktivitas sistem termasuk pembuatan order baru, update status, pembayaran, dan perubahan inventori. Dashboard ini sepenuhnya responsif dan optimal untuk diakses dari desktop maupun perangkat mobile.
+**Grafik Pendapatan** menyediakan pilihan **7 hari terakhir** (default) dan **30 hari terakhir**, termasuk hari ini. Pilihan periode memakai komponen [Select](components/ui/Select.tsx) yang digunakan bersama oleh halaman admin. Grafik menampilkan pendapatan harian dari total harga order berstatus pembayaran `PAID`, dikelompokkan berdasarkan tanggal pembuatan order (`createdAt`), bukan tanggal pembayaran. Hari tanpa pendapatan tetap ditampilkan sebagai Rp0. Batas hari mengikuti zona waktu runtime server.
+
+[Halaman dashboard](app/admin/page.tsx) memuat data 30 hari melalui [getDashboardStats](lib/actions/dashboard.ts) sekali saat halaman dimuat. Pergantian periode hanya memilih bagian data yang ditampilkan, tanpa permintaan ulang ke server. Data tidak diperbarui otomatis selama halaman tetap terbuka. Pemanggil `getDashboardStats()` tanpa argumen tetap menerima data 7 hari. Agregasi pendapatan memindai order sekali sebelum menyusun titik grafik secara kronologis.
+
+Dashboard juga menampilkan diagram status order (Menunggu, Diproses, Selesai), lima order terbaru, dan maksimal lima barang dengan stok menipis. Tata letak menyesuaikan layar desktop dan mobile.
+
+**Catatan kepatuhan kode:** halaman dashboard masih memiliki penggunaan `any` dan pengambilan data melalui `useEffect` dari implementasi lama. Keduanya belum memenuhi pedoman tipe data dan pengambilan data di server, sehingga halaman secara keseluruhan belum dapat dinyatakan sepenuhnya sesuai coding guideline. Tindak lanjutnya adalah memperjelas tipe data serta memindahkan pengambilan data awal ke server dengan interaktivitas grafik di komponen klien.
 
 ### 2. Manajemen Order (`/admin/orders`)
 

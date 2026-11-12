@@ -6,11 +6,22 @@ Format dokumen ini mengacu pada [Keep a Changelog](https://keepachangelog.com/en
 
 ## [Unreleased]
 
+### Added
+
+* Pilihan periode **7 hari terakhir** dan **30 hari terakhir** pada Grafik Pendapatan dashboard admin, termasuk hari ini dan nilai Rp0 untuk hari tanpa pendapatan. Tampilan awal tetap 7 hari dan dropdown menggunakan komponen Select bersama.
+
+### Changed
+
+* Dashboard memuat data pendapatan 30 hari sekali agar pergantian periode tidak membutuhkan permintaan server tambahan. `getDashboardStats()` tetap memakai default 7 hari untuk pemanggil lain.
+* Agregasi pendapatan harian menggunakan satu kali pemindaian order. State statistik dashboard menggunakan interface `DashboardStats` dan data grafik tidak lagi disalin melalui pemetaan yang tidak diperlukan.
+
 ### Fixed
 
 - Memperbaiki error `Cannot read properties of undefined (reading 'slice')` pada riwayat pekerjaan dashboard karyawan. Server Action `getEmployeeDetail()` di [`lib/actions/employees.ts`](lib/actions/employees.ts) kini mengambil `custName` dari order dan menyertakan `order.id` serta `order.custName` pada setiap entri `orderFees`, baik fee eksplisit dari item order maupun komisi hasil perhitungan. [`EmployeeDashboardClient.tsx`](app/employee/EmployeeDashboardClient.tsx) dapat menampilkan ID singkat order dan nama pelanggan dengan data yang lengkap.
 
 ### Documentation
+
+* Memperbarui deskripsi dashboard admin, definisi pendapatan grafik, perilaku pemuatan data, dan catatan ketidaksesuaian kode lama di [README.md](README.md).
 
 - Menyelaraskan penjelasan dashboard karyawan dan kontrak data riwayat pekerjaan pada [`README.md`](README.md) dengan implementasi saat ini.
 

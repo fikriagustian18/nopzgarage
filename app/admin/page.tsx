@@ -4,7 +4,7 @@
 import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 import { RoleGuard } from "@/components/shared/RoleGuard";
-import { getDashboardStats } from "@/lib/actions/dashboard";
+import { getDashboardStats, type DashboardStats } from "@/lib/actions/dashboard";
 import { getEmployees } from "@/lib/actions/employees";
 import { getAdminOrders } from "@/lib/actions/orders";
 import { getSpareParts } from "@/lib/actions/inventory";
@@ -17,6 +17,13 @@ import {
 } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/Select";
 import { 
     DollarSign, 
     TrendingUp, 
@@ -64,11 +71,12 @@ import { getBankColor } from "@/lib/constants/banks";
 export default function Page() {
   const { data: session } = useSession();
   const userRole = session?.user?.role;
-  const [stats, setStats] = useState<any>(null);
+  const [stats, setStats] = useState<DashboardStats | null>(null);
   const [employees, setEmployees] = useState<any[]>([]);
   const [orders, setOrders] = useState<any[]>([]);
   const [inventory, setInventory] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [revenueDays, setRevenueDays] = useState<7 | 30>(7);
 
   useEffect(() => {
     loadData();
@@ -77,7 +85,7 @@ export default function Page() {
   async function loadData() {
     setLoading(true);
     const [statsRes, employeesRes, ordersRes, inventoryRes] = await Promise.all([
-      getDashboardStats(),
+      getDashboardStats(30),
       getEmployees(),
       getAdminOrders({ limit: 5 }),
       getSpareParts(),
@@ -111,10 +119,7 @@ export default function Page() {
   const lowStockItems = inventory.filter((i: any) => i.stock <= i.minStock).slice(0, 5);
 
   // Chart data
-  const revenueChartData = stats.chartData.map((d: any) => ({
-    date: d.date,
-    revenue: d.revenue,
-  }));
+  const revenueChartData = stats.chartData.slice(-revenueDays);
 
   const pendingCount = stats.operational.pendingCount || 0;
   const inProgressCount = stats.operational.inProgressCount || 0;
@@ -194,6 +199,7 @@ export default function Page() {
                   <span className="text-[10px] font-medium">Tambah Akun</span>
                 </div>
               </Link>
+
             </div>
           )}
 
@@ -298,8 +304,27 @@ export default function Page() {
             {/* Revenue Trend Chart */}
             <Card className="col-span-full md:col-span-4 lg:col-span-5 bg-card border-border shadow-md">
               <CardHeader className="p-4">
-                <CardTitle className="text-sm md:text-base font-bold">Grafik Pendapatan (7 Hari Terakhir)</CardTitle>
-                <CardDescription className="text-xs">Analisis performa penjualan 7 hari terakhir</CardDescription>
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="space-y-1">
+                    <CardTitle className="text-sm md:text-base font-bold">Grafik Pendapatan ({revenueDays} Hari Terakhir)</CardTitle>
+                    <CardDescription className="text-xs">Analisis performa penjualan {revenueDays} hari terakhir, termasuk hari ini</CardDescription>
+                  </div>
+                  <Select
+                    value={String(revenueDays)}
+                    onValueChange={(value) => setRevenueDays(value === "30" ? 30 : 7)}
+                  >
+                    <SelectTrigger
+                      aria-label="Periode grafik pendapatan"
+                      className="w-full shrink-0 rounded-lg border-input bg-background text-xs sm:w-[170px]"
+                    >
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="7">7 hari terakhir</SelectItem>
+                      <SelectItem value="30">30 hari terakhir</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
               </CardHeader>
               <CardContent className="p-4 pt-0">
                 <div className="h-[240px] md:h-[280px] w-full">

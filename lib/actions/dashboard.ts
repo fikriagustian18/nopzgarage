@@ -62,7 +62,7 @@ export interface DashboardStats {
  * 
  * @returns Dashboard statistics payload.
  */
-export async function getDashboardStats(): Promise<{ success: boolean; data?: DashboardStats; error?: string }> {
+export async function getDashboardStats(revenueDays: 7 | 30 = 7): Promise<{ success: boolean; data?: DashboardStats; error?: string }> {
 
   try {
     const session = await auth();
@@ -214,10 +214,11 @@ export async function getDashboardStats(): Promise<{ success: boolean; data?: Da
     const totalAssetValue = allParts.reduce((sum, part) => sum + (part.stock * Number(part.buyPrice)), 0);
     const lowStockCount = allParts.filter(p => p.stock <= p.minStock).length;
 
-    const sevenDaysAgo = startOfDay(subDays(now, 6));
+    const chartDays = revenueDays === 30 ? 30 : 7;
+    const chartStart = startOfDay(subDays(now, chartDays - 1));
     const recentPaidOrders = await prisma.order.findMany({
       where: {
-        createdAt: { gte: sevenDaysAgo },
+        createdAt: { gte: chartStart, lte: endOfToday },
         paymentStatus: 'PAID'
       },
       select: {
@@ -226,14 +227,19 @@ export async function getDashboardStats(): Promise<{ success: boolean; data?: Da
       }
     });
 
-    const chartData = [];
-    for (let i = 6; i >= 0; i--) {
+    // Group once instead of scanning every order again for each chart day.
+    // Use the same local day boundaries as the query and dashboard metrics.
+    const revenueByDay = new Map<number, number>();
+    for (const order of recentPaidOrders) {
+      const dayKey = startOfDay(order.createdAt).getTime();
+      revenueByDay.set(dayKey, (revenueByDay.get(dayKey) ?? 0) + Number(order.totalPrice || 0));
+    }
+
+    const chartData: DashboardStats['chartData'] = [];
+    for (let i = chartDays - 1; i >= 0; i--) {
       const d = subDays(now, i);
       const dayStart = startOfDay(d);
-      const dayEnd = endOfDay(d);
-      const dayRevenue = recentPaidOrders
-        .filter(o => o.createdAt >= dayStart && o.createdAt <= dayEnd)
-        .reduce((sum, o) => sum + Number(o.totalPrice || 0), 0);
+      const dayRevenue = revenueByDay.get(dayStart.getTime()) ?? 0;
       chartData.push({
         date: format(d, 'dd MMM', { locale: id }),
         revenue: dayRevenue
